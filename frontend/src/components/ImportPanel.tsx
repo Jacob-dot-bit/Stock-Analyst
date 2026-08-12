@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { ImportBatch } from '../api/types'
+import { useI18n } from '../i18n'
 
 interface Props {
   onImported: () => void
 }
 
 export function ImportPanel({ onImported }: Props) {
+  const { t } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ImportBatch | null>(null)
@@ -29,14 +31,12 @@ export function ImportPanel({ onImported }: Props) {
 
   return (
     <div className="card">
-      <h2>Importer un relevé XTB</h2>
+      <h2>{t('import.title')}</h2>
 
       <p className="muted" style={{ marginTop: 0 }}>
-        Dans xStation&nbsp;: <strong>Account history</strong> → <strong>Export</strong> → période
-        «&nbsp;All&nbsp;», type <strong>Full report</strong>, format <strong>Excel</strong>.
-        L'API XTB ayant été fermée le 14&nbsp;mars&nbsp;2025, l'export de fichier est le seul moyen
-        fiable de récupérer vos positions. Aucun identifiant n'est demandé ni stocké.
+        {t('import.instructions')}
       </p>
+      <p className="muted">{t('import.multiAccount')}</p>
 
       <div
         className={`dropzone${dragging ? ' dragging' : ''}`}
@@ -52,9 +52,7 @@ export function ImportPanel({ onImported }: Props) {
           if (file) void upload(file)
         }}
       >
-        <p style={{ margin: '0 0 0.7rem' }}>
-          Glissez le fichier ici, ou choisissez-le manuellement (.xlsx ou .csv)
-        </p>
+        <p style={{ margin: '0 0 0.7rem' }}>{t('import.dropzone')}</p>
         <input
           ref={inputRef}
           type="file"
@@ -67,13 +65,13 @@ export function ImportPanel({ onImported }: Props) {
           }}
         />
         <button className="primary" disabled={busy} onClick={() => inputRef.current?.click()}>
-          {busy ? 'Import en cours…' : 'Choisir un fichier'}
+          {busy ? t('import.importing') : t('import.chooseFile')}
         </button>
       </div>
 
       {error && (
         <div className="notice error" style={{ marginTop: '1rem', marginBottom: 0 }}>
-          Échec de l'import&nbsp;: {error}
+          {t('import.failed', { error })}
         </div>
       )}
 
@@ -83,28 +81,44 @@ export function ImportPanel({ onImported }: Props) {
 }
 
 function ImportReport({ batch }: { batch: ImportBatch }) {
+  const { t } = useI18n()
   const nothingFound = batch.positions_found === 0 && batch.transactions_found === 0
 
   return (
-    <div className={`notice ${nothingFound ? 'warning' : 'info'}`} style={{ marginTop: '1rem', marginBottom: 0 }}>
-      <strong>{batch.filename}</strong> — {batch.positions_found} position(s) ouverte(s),{' '}
-      {batch.transactions_found} opération(s) détectée(s), dont {batch.transactions_inserted}{' '}
-      nouvelle(s) en base.
+    <div
+      className={`notice ${nothingFound ? 'warning' : 'info'}`}
+      style={{ marginTop: '1rem', marginBottom: 0 }}
+    >
+      {t('import.summary', {
+        filename: batch.filename,
+        positions: batch.positions_found,
+        transactions: batch.transactions_found,
+        inserted: batch.transactions_inserted,
+      })}
 
       {batch.warnings.length > 0 && (
         <ul>
           {batch.warnings.map((warning, index) => (
-            <li key={index}>{warning}</li>
+            // Warnings arrive as {code, params}: the backend stays language-neutral
+            // and the wording is chosen here, in the user's language.
+            <li key={index}>{t(warning.code, warning.params)}</li>
           ))}
         </ul>
       )}
 
-      {batch.detected_sections.length > 0 && (
+      {batch.sections.length > 0 && (
         <details className="raw" style={{ marginTop: '0.6rem' }}>
-          <summary>Sections détectées dans le fichier</summary>
+          <summary>{t('import.sectionsTitle')}</summary>
           <ul>
-            {batch.detected_sections.map((section, index) => (
-              <li key={index}>{section}</li>
+            {batch.sections.map((section, index) => (
+              <li key={index}>
+                {t('import.sectionLine', {
+                  sheet: section.sheet,
+                  count: section.count,
+                  kind: t(`section.${section.kind}`),
+                  rows: section.source_rows,
+                })}
+              </li>
             ))}
           </ul>
         </details>

@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    // Le backend tourne sur 8000 : on relaie /api pour éviter toute question de CORS
-    // et garder une seule origine côté navigateur.
+    // The backend runs on 8000: proxying /api keeps everything on a single origin
+    // in the browser, so CORS never enters the picture.
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

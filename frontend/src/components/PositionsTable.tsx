@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Position } from '../api/types'
-import { formatDate, formatMoney, formatNumber, formatQuantity, signClass } from '../format'
+import { signClass } from '../format'
+import { useI18n } from '../i18n'
 import { MappingCell } from './MappingCell'
 
 interface Props {
@@ -10,18 +11,15 @@ interface Props {
   onUpdated: () => void
 }
 
-type SortKey = 'symbol' | 'value' | 'pl' | 'plPct'
+type SortKey = 'symbol' | 'value' | 'unrealized' | 'performance'
 
 export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }: Props) {
+  const { t, formatNumber, formatSignedPercent, formatDate } = useI18n()
   const [sortKey, setSortKey] = useState<SortKey>('value')
   const [account, setAccount] = useState<string>('all')
 
   if (positions.length === 0) {
-    return (
-      <div className="empty">
-        Aucune position. Importez un relevé XTB ou ajoutez une ligne manuellement.
-      </div>
-    )
+    return <div className="empty">{t('table.empty')}</div>
   }
 
   const accounts = [...new Set(positions.map((p) => p.account).filter(Boolean))] as string[]
@@ -33,9 +31,9 @@ export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }:
       switch (sortKey) {
         case 'symbol':
           return a.instrument.broker_symbol.localeCompare(b.instrument.broker_symbol)
-        case 'pl':
+        case 'unrealized':
           return (b.broker_net_pl ?? -Infinity) - (a.broker_net_pl ?? -Infinity)
-        case 'plPct':
+        case 'performance':
           return (b.broker_net_pl_pct ?? -Infinity) - (a.broker_net_pl_pct ?? -Infinity)
         default:
           return (b.broker_market_value ?? -Infinity) - (a.broker_market_value ?? -Infinity)
@@ -47,9 +45,9 @@ export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }:
       <div className="form-row" style={{ marginBottom: '0.8rem' }}>
         {accounts.length > 1 && (
           <div className="field">
-            <label htmlFor="filter-account">Compte</label>
+            <label htmlFor="filter-account">{t('filters.account')}</label>
             <select id="filter-account" value={account} onChange={(e) => setAccount(e.target.value)}>
-              <option value="all">Tous</option>
+              <option value="all">{t('filters.all')}</option>
               {accounts.map((name) => (
                 <option key={name} value={name}>
                   {name}
@@ -59,12 +57,12 @@ export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }:
           </div>
         )}
         <div className="field">
-          <label htmlFor="sort-key">Trier par</label>
+          <label htmlFor="sort-key">{t('filters.sortBy')}</label>
           <select id="sort-key" value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
-            <option value="value">Valeur de marché</option>
-            <option value="pl">Résultat latent</option>
-            <option value="plPct">Performance %</option>
-            <option value="symbol">Symbole</option>
+            <option value="value">{t('sort.value')}</option>
+            <option value="unrealized">{t('sort.unrealized')}</option>
+            <option value="performance">{t('sort.performance')}</option>
+            <option value="symbol">{t('sort.symbol')}</option>
           </select>
         </div>
       </div>
@@ -73,16 +71,16 @@ export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }:
         <table>
           <thead>
             <tr>
-              <th>Titre</th>
-              <th>Correspondance</th>
-              <th className="num">Qté</th>
-              <th className="num">Prix de revient</th>
-              <th className="num">Cours</th>
-              <th className="num">Valeur ({baseCurrency})</th>
-              <th className="num">Latent ({baseCurrency})</th>
-              <th className="num">Perf.</th>
-              <th>Depuis</th>
-              <th>Compte</th>
+              <th>{t('table.instrument')}</th>
+              <th>{t('table.mapping')}</th>
+              <th className="num">{t('table.quantity')}</th>
+              <th className="num">{t('table.avgPrice')}</th>
+              <th className="num">{t('table.price')}</th>
+              <th className="num">{t('table.value', { currency: baseCurrency })}</th>
+              <th className="num">{t('table.unrealized', { currency: baseCurrency })}</th>
+              <th className="num">{t('table.performance')}</th>
+              <th>{t('table.since')}</th>
+              <th>{t('table.account')}</th>
               <th />
             </tr>
           </thead>
@@ -95,41 +93,40 @@ export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }:
                     {position.instrument.category && position.instrument.category !== 'STOCK' && (
                       <span className="tag neutral">{position.instrument.category}</span>
                     )}
-                    {position.quantity < 0 && <span className="tag neutral">short</span>}
+                    {position.quantity < 0 && <span className="tag neutral">{t('table.short')}</span>}
                   </div>
                   {position.instrument.name && (
                     <div className="muted" style={{ fontSize: '0.78rem' }}>
                       {position.instrument.name}
-                      {position.lots_count > 1 && ` · ${position.lots_count} lots`}
+                      {position.lots_count > 1 && ` · ${t('table.lots', { count: position.lots_count })}`}
                     </div>
                   )}
                 </td>
                 <td>
                   <MappingCell instrument={position.instrument} onUpdated={onUpdated} />
                 </td>
-                <td className="num">{formatQuantity(position.quantity)}</td>
-                <td className="num">{formatMoney(position.avg_price, position.currency)}</td>
+                <td className="num">{formatNumber(position.quantity, 4)}</td>
+                <td className="num">
+                  {formatNumber(position.avg_price)}
+                  {position.currency ? ` ${position.currency}` : ''}
+                </td>
                 <td className="num">{formatNumber(position.market_price)}</td>
                 <td className="num">{formatNumber(position.broker_market_value)}</td>
                 <td className={`num ${signClass(position.broker_net_pl)}`}>
                   {formatNumber(position.broker_net_pl)}
                 </td>
                 <td className={`num ${signClass(position.broker_net_pl_pct)}`}>
-                  {position.broker_net_pl_pct === null
-                    ? '—'
-                    : `${position.broker_net_pl_pct > 0 ? '+' : ''}${formatNumber(
-                        position.broker_net_pl_pct,
-                      )} %`}
+                  {formatSignedPercent(position.broker_net_pl_pct)}
                 </td>
                 <td>{formatDate(position.opened_at)}</td>
                 <td>
                   <span className={`tag ${position.source === 'MANUAL' ? 'manual' : 'neutral'}`}>
-                    {position.account ?? (position.source === 'MANUAL' ? 'manuelle' : '—')}
+                    {position.account ?? (position.source === 'MANUAL' ? t('table.manual') : '—')}
                   </span>
                 </td>
                 <td>
                   <button className="link" onClick={() => onDelete(position.id)}>
-                    Supprimer
+                    {t('common.delete')}
                   </button>
                 </td>
               </tr>

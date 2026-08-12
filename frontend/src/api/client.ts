@@ -1,6 +1,6 @@
 import type { Health, ImportBatch, Instrument, Portfolio, Position } from './types'
 
-/** Remonte le message d'erreur du backend plutôt qu'un « 500 » opaque. */
+/** Surface the backend's error message rather than an opaque "500". */
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
 
@@ -10,7 +10,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       const body = await response.json()
       if (body?.detail) detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)
     } catch {
-      // Réponse non-JSON : on garde le statut HTTP.
+      // Non-JSON response: keep the HTTP status.
     }
     throw new Error(detail)
   }

@@ -1,50 +1,48 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { useI18n } from './i18n'
 import { Placeholder } from './pages/Placeholder'
 import { Portfolio } from './pages/Portfolio'
 
 export default function App() {
+  const { t } = useI18n()
+
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">Stock Analyst</span>
+        <span className="brand">{t('app.title')}</span>
         <nav className="nav">
-          <NavLink to="/portefeuille">Portefeuille</NavLink>
-          <NavLink to="/watchlist">Watchlist</NavLink>
-          <NavLink to="/pepites">Pépites</NavLink>
+          <NavLink to="/portfolio">{t('nav.portfolio')}</NavLink>
+          <NavLink to="/watchlist">{t('nav.watchlist')}</NavLink>
+          <NavLink to="/gems">{t('nav.gems')}</NavLink>
         </nav>
+        <LanguageSwitcher />
       </header>
 
       <main className="content">
         <Routes>
-          <Route path="/" element={<Navigate to="/portefeuille" replace />} />
-          <Route path="/portefeuille" element={<Portfolio />} />
+          <Route path="/" element={<Navigate to="/portfolio" replace />} />
+          <Route path="/portfolio" element={<Portfolio />} />
           <Route
             path="/watchlist"
             element={
               <Placeholder
-                title="Watchlist"
-                description="Titres suivis mais non détenus, et analyse du moment d'entrée."
-                phase="phase 4"
+                titleKey="watchlist.title"
+                descriptionKey="watchlist.description"
+                phaseKey="phase.4"
               />
             }
           />
           <Route
-            path="/pepites"
+            path="/gems"
             element={
-              <Placeholder
-                title="Pépites"
-                description="Recherche de titres prometteurs par filtrage sur un univers d'indices."
-                phase="phase 5"
-              />
+              <Placeholder titleKey="gems.title" descriptionKey="gems.description" phaseKey="phase.5" />
             }
           />
         </Routes>
       </main>
 
-      <footer className="disclaimer">
-        Cet outil produit des indicateurs à partir de données publiques&nbsp;; ce ne sont pas des
-        conseils en investissement. Les décisions restent les vôtres.
-      </footer>
+      <footer className="disclaimer">{t('app.disclaimer')}</footer>
     </div>
   )
 }

@@ -5,9 +5,11 @@ import { ImportPanel } from '../components/ImportPanel'
 import { ManualPositionForm } from '../components/ManualPositionForm'
 import { PositionsTable } from '../components/PositionsTable'
 import { UnresolvedPanel } from '../components/UnresolvedPanel'
-import { formatDate, formatNumber, formatPercent, signClass } from '../format'
+import { signClass } from '../format'
+import { useI18n } from '../i18n'
 
 export function Portfolio() {
+  const { t, formatDate } = useI18n()
   const [data, setData] = useState<PortfolioData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -39,10 +41,11 @@ export function Portfolio() {
   return (
     <>
       <div className="page-header">
-        <h1>Portefeuille</h1>
+        <h1>{t('portfolio.title')}</h1>
         <p>
-          Positions détenues et résultat latent.
-          {data?.last_import_at && ` Dernier import : ${formatDate(data.last_import_at)}.`}
+          {t('portfolio.subtitle')}
+          {data?.last_import_at &&
+            ` ${t('portfolio.lastImport', { date: formatDate(data.last_import_at) })}`}
         </p>
       </div>
 
@@ -57,9 +60,9 @@ export function Portfolio() {
       <ManualPositionForm onCreated={() => void load()} />
 
       <div className="card">
-        <h2>Positions ouvertes</h2>
+        <h2>{t('portfolio.openPositions')}</h2>
         {loading ? (
-          <div className="empty">Chargement…</div>
+          <div className="empty">{t('common.loading')}</div>
         ) : (
           data && (
             <PositionsTable
@@ -76,48 +79,59 @@ export function Portfolio() {
 }
 
 function Totals({ data }: { data: PortfolioData }) {
+  const { t, formatNumber, formatSignedPercent } = useI18n()
   const { totals, accounts } = data
 
   return (
     <>
       <div className="stat-grid" style={{ marginBottom: '1.1rem' }}>
         <div className="stat">
-          <div className="label">Positions</div>
+          <div className="label">{t('totals.positions')}</div>
           <div className="value">{totals.positions_count}</div>
         </div>
         <div className="stat">
-          <div className="label">Valeur de marché ({totals.base_currency})</div>
+          <div className="label">{t('totals.marketValue', { currency: totals.base_currency })}</div>
           <div className={`value${totals.market_value === null ? ' muted' : ''}`}>
-            {totals.market_value === null ? 'non calculable' : formatNumber(totals.market_value)}
+            {totals.market_value === null ? t('common.notComputable') : formatNumber(totals.market_value)}
           </div>
         </div>
         <div className="stat">
-          <div className="label">Résultat latent ({totals.base_currency})</div>
-          <div className={`value ${totals.unrealized_pl === null ? 'muted' : signClass(totals.unrealized_pl)}`}>
-            {totals.unrealized_pl === null ? 'non calculable' : formatNumber(totals.unrealized_pl)}
+          <div className="label">{t('totals.unrealized', { currency: totals.base_currency })}</div>
+          <div
+            className={`value ${totals.unrealized_pl === null ? 'muted' : signClass(totals.unrealized_pl)}`}
+          >
+            {totals.unrealized_pl === null
+              ? t('common.notComputable')
+              : formatNumber(totals.unrealized_pl)}
           </div>
         </div>
         <div className="stat">
-          <div className="label">Performance</div>
-          <div className={`value ${totals.unrealized_pl_pct === null ? 'muted' : signClass(totals.unrealized_pl_pct)}`}>
-            {totals.unrealized_pl_pct === null ? 'non calculable' : formatPercent(totals.unrealized_pl_pct)}
+          <div className="label">{t('totals.performance')}</div>
+          <div
+            className={`value ${
+              totals.unrealized_pl_pct === null ? 'muted' : signClass(totals.unrealized_pl_pct)
+            }`}
+          >
+            {totals.unrealized_pl_pct === null
+              ? t('common.notComputable')
+              : formatSignedPercent(totals.unrealized_pl_pct)}
           </div>
         </div>
       </div>
 
       {accounts.length > 1 && (
         <div className="card">
-          <h2>Par compte</h2>
+          <h2>{t('accounts.title')}</h2>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Compte</th>
-                  <th className="num">Positions</th>
-                  <th className="num">Investi</th>
-                  <th className="num">Valeur</th>
-                  <th className="num">Latent</th>
-                  <th className="num">Perf.</th>
+                  <th>{t('accounts.account')}</th>
+                  <th className="num">{t('accounts.positions')}</th>
+                  <th className="num">{t('accounts.invested')}</th>
+                  <th className="num">{t('accounts.value')}</th>
+                  <th className="num">{t('accounts.unrealized')}</th>
+                  <th className="num">{t('accounts.performance')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,7 +147,7 @@ function Totals({ data }: { data: PortfolioData }) {
                       {formatNumber(account.unrealized_pl)}
                     </td>
                     <td className={`num ${signClass(account.unrealized_pl_pct)}`}>
-                      {formatPercent(account.unrealized_pl_pct)}
+                      {formatSignedPercent(account.unrealized_pl_pct)}
                     </td>
                   </tr>
                 ))}
@@ -145,10 +159,7 @@ function Totals({ data }: { data: PortfolioData }) {
 
       {totals.has_incomplete_data && (
         <div className="notice warning">
-          {totals.excluded_positions} position(s) ne fournissent pas de valorisation — typiquement
-          des lignes saisies à la main. Elles sont <strong>exclues des totaux</strong> plutôt que
-          comptées à zéro, ce qui donnerait un total faux à l'apparence juste. Les cours de marché
-          seront branchés à l'étape suivante du projet.
+          {t('totals.incomplete', { count: totals.excluded_positions })}
         </div>
       )}
     </>

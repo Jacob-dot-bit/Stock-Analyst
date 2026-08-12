@@ -1,21 +1,23 @@
+import { useI18n } from '../i18n'
+
 interface Props {
-  title: string
-  description: string
-  phase: string
+  titleKey: string
+  descriptionKey: string
+  phaseKey: string
 }
 
-export function Placeholder({ title, description, phase }: Props) {
+export function Placeholder({ titleKey, descriptionKey, phaseKey }: Props) {
+  const { t } = useI18n()
+
   return (
     <>
       <div className="page-header">
-        <h1>{title}</h1>
-        <p>{description}</p>
+        <h1>{t(titleKey)}</h1>
+        <p>{t(descriptionKey)}</p>
       </div>
 
       <div className="card">
-        <div className="empty">
-          Cette page arrive avec la <strong>{phase}</strong> du projet.
-        </div>
+        <div className="empty">{t('placeholder.comingIn', { phase: t(phaseKey) })}</div>
       </div>
     </>
   )

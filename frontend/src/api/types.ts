@@ -1,12 +1,38 @@
 export type MappingStatus = 'RESOLVED' | 'MANUAL' | 'UNRESOLVED'
 
+/**
+ * A translatable message from the API.
+ *
+ * The backend never returns prose: it returns a key into the i18n catalogues plus
+ * the parameters needed to render it. That is what lets the same import report be
+ * read in English, French or Polish.
+ */
+export interface ApiMessage {
+  code: string
+  params: Record<string, string | number | string[]>
+}
+
+export type SectionKind =
+  | 'open_positions'
+  | 'closed_positions'
+  | 'cash_operations'
+  | 'unknown'
+
+export interface ImportSection {
+  sheet: string
+  kind: SectionKind
+  count: number
+  /** Raw row count before aggregation — larger than `count` when lots are listed. */
+  source_rows: number
+}
+
 export interface Instrument {
   id: number
   broker_symbol: string
   provider_symbol: string | null
   mapping_status: MappingStatus
   name: string | null
-  /** Catégorie fournie par le courtier : STOCK, ETF, CFD… */
+  /** Category supplied by the broker: STOCK, ETF, CFD... */
   category: string | null
   currency: string | null
   country: string | null
@@ -17,13 +43,13 @@ export interface Position {
   id: number
   instrument: Instrument
   source: 'IMPORT' | 'MANUAL'
-  /** Compte d'origine : « My Trades », « PEA »… */
+  /** Originating account: "My Trades", "PEA"... */
   account: string | null
   quantity: number
   avg_price: number
   currency: string | null
   opened_at: string | null
-  /** Nombre de lots agrégés dans cette position. */
+  /** How many lots this holding aggregates. */
   lots_count: number
   broker_market_value: number | null
   broker_net_pl: number | null
@@ -71,8 +97,8 @@ export interface ImportBatch {
   positions_found: number
   transactions_found: number
   transactions_inserted: number
-  warnings: string[]
-  detected_sections: string[]
+  warnings: ApiMessage[]
+  sections: ImportSection[]
   accounts: string[]
 }
 

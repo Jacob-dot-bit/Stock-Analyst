@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { api } from '../api/client'
+import { useI18n } from '../i18n'
 
 interface Props {
   onCreated: () => void
 }
 
 export function ManualPositionForm({ onCreated }: Props) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [symbol, setSymbol] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -14,6 +16,8 @@ export function ManualPositionForm({ onCreated }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Accept both decimal separators: a French or Polish keyboard produces a comma,
+  // and rejecting "12,5" would look like a bug rather than a format rule.
   const quantityValue = Number(quantity.replace(',', '.'))
   const priceValue = Number(price.replace(',', '.'))
   const valid =
@@ -50,14 +54,14 @@ export function ManualPositionForm({ onCreated }: Props) {
   if (!open) {
     return (
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}
+        >
           <div>
-            <h2 style={{ marginBottom: '0.2rem' }}>Position saisie manuellement</h2>
-            <span className="muted">
-              Pour un titre absent de l'export, ou détenu chez un autre courtier.
-            </span>
+            <h2 style={{ marginBottom: '0.2rem' }}>{t('manual.title')}</h2>
+            <span className="muted">{t('manual.subtitle')}</span>
           </div>
-          <button onClick={() => setOpen(true)}>Ajouter</button>
+          <button onClick={() => setOpen(true)}>{t('common.add')}</button>
         </div>
       </div>
     )
@@ -65,11 +69,11 @@ export function ManualPositionForm({ onCreated }: Props) {
 
   return (
     <div className="card">
-      <h2>Nouvelle position</h2>
+      <h2>{t('manual.newTitle')}</h2>
 
       <div className="form-row">
         <div className="field">
-          <label htmlFor="mp-symbol">Symbole XTB</label>
+          <label htmlFor="mp-symbol">{t('manual.symbol')}</label>
           <input
             id="mp-symbol"
             value={symbol}
@@ -78,26 +82,25 @@ export function ManualPositionForm({ onCreated }: Props) {
           />
         </div>
         <div className="field">
-          <label htmlFor="mp-qty">Quantité</label>
+          <label htmlFor="mp-qty">{t('manual.quantity')}</label>
           <input id="mp-qty" value={quantity} placeholder="10" onChange={(e) => setQuantity(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="mp-price">Prix de revient</label>
-          <input id="mp-price" value={price} placeholder="185,50" onChange={(e) => setPrice(e.target.value)} />
+          <label htmlFor="mp-price">{t('manual.avgPrice')}</label>
+          <input id="mp-price" value={price} placeholder="185.50" onChange={(e) => setPrice(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="mp-ccy">Devise</label>
+          <label htmlFor="mp-ccy">{t('manual.currency')}</label>
           <input id="mp-ccy" value={currency} placeholder="USD" onChange={(e) => setCurrency(e.target.value)} />
         </div>
         <button className="primary" disabled={!valid || busy} onClick={() => void submit()}>
-          {busy ? 'Ajout…' : 'Enregistrer'}
+          {busy ? t('common.saving') : t('common.save')}
         </button>
-        <button onClick={() => setOpen(false)}>Annuler</button>
+        <button onClick={() => setOpen(false)}>{t('common.cancel')}</button>
       </div>
 
       <p className="muted" style={{ marginBottom: 0 }}>
-        Une position manuelle n'a pas de valorisation fournie par le courtier&nbsp;: elle ne
-        comptera pas dans les totaux tant que les cours de marché ne sont pas branchés.
+        {t('manual.note')}
       </p>
 
       {error && (

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api/client'
 import type { Instrument } from '../api/types'
+import { useI18n } from '../i18n'
 
 interface Props {
   instrument: Instrument
@@ -8,15 +9,15 @@ interface Props {
 }
 
 /**
- * Affiche la correspondance symbole courtier → symbole fournisseur, et permet de la
- * corriger sur place.
+ * Shows the broker-symbol → provider-symbol mapping, and lets it be fixed in place.
  *
- * La conversion automatique ne transforme que le suffixe de place, jamais la racine
- * du symbole : « ERICB.SE » devient « ERICB.ST » alors que Yahoo attend « ERIC-B.ST ».
- * Une correspondance automatique est donc présentée comme *non vérifiée* et non comme
- * validée — l'afficher en vert donnerait une assurance que rien ne justifie.
+ * Automatic conversion only rewrites the listing suffix, never the root of the
+ * symbol: "ERICB.SE" becomes "ERICB.ST" where Yahoo expects "ERIC-B.ST". An automatic
+ * mapping is therefore shown as *unverified* rather than validated — displaying it in
+ * green would imply a confidence nothing supports.
  */
 export function MappingCell({ instrument, onUpdated }: Props) {
+  const { t } = useI18n()
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(instrument.provider_symbol ?? '')
   const [busy, setBusy] = useState(false)
@@ -46,7 +47,7 @@ export function MappingCell({ instrument, onUpdated }: Props) {
         <input
           autoFocus
           value={value}
-          placeholder="ex. ERIC-B.ST"
+          placeholder={t('mapping.placeholder')}
           style={{ width: 130 }}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
@@ -55,10 +56,10 @@ export function MappingCell({ instrument, onUpdated }: Props) {
           }}
         />
         <button disabled={busy || !value.trim()} onClick={() => void save()}>
-          {busy ? '…' : 'OK'}
+          {busy ? '…' : t('common.ok')}
         </button>
         <button className="link" onClick={() => setEditing(false)}>
-          Annuler
+          {t('common.cancel')}
         </button>
         {error && <span style={{ color: 'var(--negative)', fontSize: '0.78rem' }}>{error}</span>}
       </div>
@@ -71,21 +72,18 @@ export function MappingCell({ instrument, onUpdated }: Props) {
     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
       {provider_symbol ? <code>{provider_symbol}</code> : null}
 
-      {mapping_status === 'MANUAL' && <span className="tag manual">confirmée</span>}
+      {mapping_status === 'MANUAL' && <span className="tag manual">{t('mapping.confirmed')}</span>}
 
       {mapping_status === 'RESOLVED' && (
-        <span
-          className="tag neutral"
-          title="Conversion automatique du suffixe de place. La racine du symbole n'a pas été vérifiée auprès d'un fournisseur."
-        >
-          non vérifiée
+        <span className="tag neutral" title={t('mapping.unverifiedTooltip')}>
+          {t('mapping.unverified')}
         </span>
       )}
 
-      {mapping_status === 'UNRESOLVED' && <span className="tag unresolved">à corriger</span>}
+      {mapping_status === 'UNRESOLVED' && <span className="tag unresolved">{t('mapping.toFix')}</span>}
 
       <button className="link" onClick={() => setEditing(true)}>
-        corriger
+        {t('mapping.fix')}
       </button>
     </div>
   )
