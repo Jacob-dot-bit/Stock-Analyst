@@ -49,10 +49,20 @@ app.include_router(prices.router)
 
 @app.get("/api/health", tags=["system"])
 def health() -> dict:
-    """Application status and which optional integrations are configured."""
+    """Application status and which optional integrations are configured.
+
+    ``env_files`` reports where settings were looked for and whether each file
+    exists — the quickest way to see why a key that "was added" is not being read.
+    """
+    from app.config import BACKEND_DIR, PROJECT_ROOT
+
     return {
         "status": "ok",
         "base_currency": settings.base_currency,
+        "env_files": {
+            str(path): path.exists()
+            for path in (PROJECT_ROOT / ".env", BACKEND_DIR / ".env")
+        },
         "integrations": {
             "finnhub": settings.finnhub_enabled,
             "twelvedata": bool(settings.twelvedata_api_key),

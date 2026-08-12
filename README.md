@@ -101,6 +101,18 @@ Network tests are marked `@pytest.mark.network` and excluded by default. They *s
 rather than fail when a provider is throttling: being rate-limited says nothing about
 whether our code is correct.
 
+Two things that silently disable a key, both worth knowing:
+
+- **Location.** `.env` belongs at the **project root**, not in `backend/`. Both are read
+  (the root wins if both exist), but only the root is the documented spot.
+- **Placeholders.** A value left as `votre_cle`, `your_key`, `changeme` and similar is
+  treated as *unset*. Forwarding a placeholder to a provider produces an opaque 401
+  halfway through a refresh, which is much harder to diagnose than the feature simply
+  staying off.
+
+`GET /api/health` shows which `.env` files were found and which integrations are actually
+enabled — the fastest way to check a key is being read.
+
 > **If price refreshes return nothing but "rate limited":** Yahoo blocks by IP, and a
 > block can persist for a long time once tripped. Add a free `TWELVEDATA_API_KEY` to
 > `.env` — signup takes an email and no card — and the fallback takes over. The app tells
