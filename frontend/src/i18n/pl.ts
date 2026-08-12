@@ -184,6 +184,8 @@ export const pl: Catalogue = {
     'Odświeżanie już trwa. Dwa naraz zużywają podwójny limit bez żadnej korzyści — poczekaj na zakończenie pierwszego.',
   'prices.stillUnavailable':
     '{symbol}: nadal brak notowań. Już pytaliśmy dzisiaj — żaden skonfigurowany dostawca nie obejmuje tego rynku w darmowym planie.',
+  'prices.needsIsin':
+    '{symbol}: żadne źródło nie mogło nawet spróbować — brakuje identyfikatora. Wpisz ISIN w wierszu (znajdziesz go na stronie instrumentu u brokera), a przy następnym odświeżeniu zostanie podjęta próba.',
   'prices.noProvider': '{symbol}: brak dostępnego dostawcy danych.',
   'prices.failed': '{symbol}: pobieranie przez {provider} nie powiodło się.',
   'prices.budgetReached': 'Budżet czasu wyczerpany, pozostało instrumentów: {remaining}.',

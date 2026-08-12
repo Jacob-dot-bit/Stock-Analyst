@@ -800,6 +800,48 @@ nobody has entered yet, and one CFD, which has no fundamentals by nature. Each c
 fixed in the UI by typing an ISIN, and the interface explains why it is not filled in
 automatically.
 
+## Bug 2c.2 — "No source covers this market" when the truth was "we never had an identifier"
+
+**Symptom.** Five ETFs reported *no configured provider covers this market on its free
+plan*. That was wrong: Frankfurt had never been offered them at all, because they had no
+ISIN recorded.
+
+**Cause.** `stillUnavailable` was emitted for any instrument asked today with nothing
+stored, collapsing two different situations — *every source declined* and *no source
+could even try*.
+
+**Why it mattered.** The message sent the user looking for a coverage problem, when a
+12-character field was the actual fix. A misleading diagnosis is worse than a vague one.
+
+**Fix.** A distinct `prices.needsIsin`, which names the action. The pair now forms an
+honest progression: no identifier → *needs an ISIN*; identifier present but nothing
+found → *still unavailable*.
+
+## Decision 2c.4 — ETF ISINs proposed, but only the corroborated one applied
+
+The five ETFs were searched and candidate ISINs found with matching tickers. Each was
+then checked the same way as the equities — against the price XTB already reported:
+
+| Symbol | Candidate | Result |
+|---|---|---|
+| INR.FR | FR0010361683 | 25.71 vs 25.86 → **0.6%, accepted** |
+| DCAM.FR | FR001400U5Q4 | not listed in Frankfurt |
+| PAEEM.FR | FR0013412020 | not listed in Frankfurt |
+| CAC.FR | 3 candidates | none listed in Frankfurt |
+| SPEA.FR | 3 candidates | none listed in Frankfurt |
+
+Only the corroborated one was applied. The other four were left unset **on purpose**:
+they could not be verified, and — more to the point — Frankfurt does not list those
+funds, so a correct ISIN would change nothing today. Recording an unverified identifier
+to create the appearance of completeness is exactly the failure mode this project keeps
+refusing.
+
+These four are Euronext Paris listings that Yahoo does cover under the symbols already
+derived (`DCAM.PA`, `PAEEM.PA`...). They will resolve on their own the day Yahoo is
+reachable — no ISIN needed.
+
+**Coverage: 33 of 38 holdings priced.**
+
 ---
 
 # Up next

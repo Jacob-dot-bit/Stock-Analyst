@@ -138,7 +138,7 @@ def refresh_instrument(
         # instrument no provider covers has nothing stored, and calling that up to
         # date would hide the gap behind a reassuring label.
         if last is None:
-            return Message(PriceOutcome.STILL_UNAVAILABLE, {"symbol": symbol})
+            return Message(_no_data_reason(instrument), {"symbol": symbol})
         return Message(PriceOutcome.ALREADY_FRESH, {"symbol": symbol})
 
     # Re-fetch a short overlap so revised closes are picked up, instead of trusting
@@ -186,6 +186,18 @@ def refresh_instrument(
         PriceOutcome.UPDATED,
         {"symbol": symbol, "bars": inserted, "provider": result.provider},
     )
+
+
+def _no_data_reason(instrument: Instrument) -> str:
+    """Say *why* there is still no data, in terms the user can act on.
+
+    An instrument with no ISIN was never offered to the European source at all, which
+    is a different situation from one every provider declined. Reporting the second
+    when it is really the first sends the user looking for a problem elsewhere.
+    """
+    if not instrument.isin:
+        return PriceOutcome.NEEDS_ISIN
+    return PriceOutcome.STILL_UNAVAILABLE
 
 
 def _asked_today(instrument: Instrument, today: date) -> bool:

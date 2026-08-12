@@ -161,8 +161,10 @@ class TestFreshness:
         db.commit()
         second = refresh_instrument(db, instrument, chain)
 
-        assert second.code == PriceOutcome.STILL_UNAVAILABLE
+        # What matters here is that no second request went out. The exact wording of
+        # the shortfall is covered by TestWhyThereIsNoData.
         assert provider.calls == 1
+        assert second.code in {PriceOutcome.NEEDS_ISIN, PriceOutcome.STILL_UNAVAILABLE}
 
     def test_throttling_does_not_count_as_asked(self, db):
         """Rate limiting is temporary, so the instrument must be retried next run."""
@@ -333,3 +335,33 @@ class TestConcurrency:
 
         assert service._refresh_lock.acquire(blocking=False)
         service._refresh_lock.release()
+
+
+class TestWhyThereIsNoData:
+    """"No source covers this" and "we never had an identifier to try" are different.
+
+    Reporting the first when it is really the second sends the user hunting for a
+    problem that is not there, when a 12-character field would fix it.
+    """
+
+    def test_missing_isin_is_reported_as_such(self, db):
+        instrument = make_instrument(db, "CAC.FR", "CAC.PA")
+        chain = ProviderChain([FakeProvider("frankfurt", error=SymbolNotFound("needs ISIN"))])
+
+        refresh_instrument(db, instrument, chain)
+        db.commit()
+        second = refresh_instrument(db, instrument, chain)
+
+        assert second.code == PriceOutcome.NEEDS_ISIN
+
+    def test_with_an_isin_it_is_a_genuine_coverage_gap(self, db):
+        instrument = make_instrument(db, "CAC.FR", "CAC.PA")
+        instrument.isin = "FR0007052782"
+        db.commit()
+        chain = ProviderChain([FakeProvider("frankfurt", error=SymbolNotFound("not listed"))])
+
+        refresh_instrument(db, instrument, chain)
+        db.commit()
+        second = refresh_instrument(db, instrument, chain)
+
+        assert second.code == PriceOutcome.STILL_UNAVAILABLE

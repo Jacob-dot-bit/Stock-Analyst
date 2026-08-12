@@ -61,6 +61,10 @@ class PriceOutcome:
     #: Asked today, but still nothing stored. Reporting these as "already fresh" would
     #: dress an instrument with no data at all as one that is up to date.
     STILL_UNAVAILABLE = "prices.stillUnavailable"  # {symbol}
+    #: No provider could even try, because the identifiers they need are missing.
+    #: Distinct from "no source covers this market": here there is something the user
+    #: can actually do, and telling them the wrong reason sends them nowhere.
+    NEEDS_ISIN = "prices.needsIsin"  # {symbol}
     FAILED = "prices.failed"  # {symbol, provider, error}
     BUDGET_REACHED = "prices.budgetReached"  # {remaining}
     #: Every provider throttled and no keyed fallback is configured. Emitted once per

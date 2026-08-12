@@ -180,6 +180,8 @@ export const en: Catalogue = {
     'A refresh is already running. Two at once double the quota spent for no benefit — wait for the first to finish.',
   'prices.stillUnavailable':
     '{symbol}: still no price data. Already asked today — no configured provider covers this market on its free plan.',
+  'prices.needsIsin':
+    '{symbol}: no price source could even try — none of them has an identifier for it. Add its ISIN on the row (find it on your broker\u2019s instrument page) and it will be attempted on the next refresh.',
   'prices.noProvider': '{symbol}: no data provider is available.',
   'prices.failed': '{symbol}: retrieval failed via {provider}.',
   'prices.budgetReached': 'Time budget reached, {remaining} instrument(s) left.',

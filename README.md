@@ -257,6 +257,9 @@ actually served the data.
   free service tested maps a ticker to an ISIN reliably. Type the ISIN on the position
   row (it is on your broker's instrument page). It is never guessed: a wrong ISIN would
   silently return **another company's** prices.
+- **Frankfurt does not list every European fund.** French PEA ETFs in particular are
+  absent, so an ISIN will not help them; they need Yahoo, which covers them under the
+  `.PA` symbols already derived.
 - **Frankfurt prices are the Frankfurt listing.** For a Paris- or Amsterdam-listed share
   the two track closely (0–3% in practice) but they are different venues.
 - **Refreshing prices is deliberately slow.** Free providers throttle, so a refresh is
