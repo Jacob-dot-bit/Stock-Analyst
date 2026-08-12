@@ -1,4 +1,4 @@
-"""Tests de la persistance d'un import en base."""
+"""Tests for persisting an import to the database."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base
+from app.messages import MessageCode
 from app.ingest.service import import_export_file
 from app.models import (
     Instrument,
@@ -86,7 +87,7 @@ class TestImport:
 
 
 class TestIdempotency:
-    """Réimporter le même fichier ne doit rien dupliquer."""
+    """Re-importing the same file must not duplicate anything."""
 
     def test_transactions_are_not_duplicated(self, db, xtb_export):
         first = import_export_file(db, xtb_export, "EUR_1234567.xlsx")
@@ -97,10 +98,10 @@ class TestIdempotency:
         assert len(db.execute(select(Transaction)).scalars().all()) == first.transactions_inserted
 
     def test_partial_closes_sharing_a_position_id_survive_a_reimport(self, db, xtb_export):
-        """Deux clôtures partielles portent le même « Position ID ».
+        """Two partial closes share one "Position ID".
 
-        Elles doivent rester deux enregistrements distincts, sans faire échouer la
-        contrainte d'unicité ni se dupliquer au réimport.
+        They must stay two distinct records, without breaking the unique constraint
+        and without duplicating on re-import.
         """
         import_export_file(db, xtb_export, "EUR_1234567.xlsx")
         import_export_file(db, xtb_export, "EUR_1234567.xlsx")
@@ -137,7 +138,7 @@ class TestIdempotency:
 
 
 class TestMultipleAccounts:
-    """Un export ne couvre qu'un compte : importer le PEA ne doit pas vider le compte titres."""
+    """One export covers one account: importing the PEA must not empty the brokerage account."""
 
     def test_both_accounts_coexist(self, db, xtb_export, xtb_pea_export):
         import_export_file(db, xtb_export, "EUR_1234567.xlsx")
@@ -190,7 +191,7 @@ class TestCategoryDrivenMapping:
         assert instrument.category == "CFD"
 
     def test_stock_named_like_a_commodity_is_still_mapped(self, db):
-        """« GOLD.US » est Barrick Gold : la catégorie du courtier prime sur le nom."""
+        """"GOLD.US" is Barrick Gold: the broker category outranks the name."""
         content = build_xtb_workbook(
             [
                 (
@@ -213,7 +214,7 @@ class TestCategoryDrivenMapping:
         assert instrument.mapping_status == MappingStatus.RESOLVED
 
     def test_cfd_is_not_reported_as_a_problem(self, db):
-        """L'absence de correspondance d'un CFD est normale : ne pas la signaler comme anomalie."""
+        """A CFD having no mapping is expected: do not report it as a problem."""
         content = build_xtb_workbook(
             [
                 (
@@ -229,7 +230,7 @@ class TestCategoryDrivenMapping:
         )
         batch = import_export_file(db, content, "cfd.xlsx")
 
-        assert not any("sans correspondance" in w for w in batch.warnings)
+        assert not any(w["code"] == MessageCode.UNRESOLVED_SYMBOLS for w in batch.warnings)
 
 
 class TestOverrides:
@@ -268,7 +269,7 @@ class TestWarnings:
                     [["Account number", 1]],
                     OPEN_HEADERS,
                     [
-                        # Code CVR : ni un ticker classique, ni un dérivé.
+                        # A CVR code: neither a normal ticker nor a derivative.
                         ["My Trades", "CVR", "US592CVR0133", "STOCK", None, 1.0, 0.0, None,
                          0.0, None, None, None, 0.0, 0.0, 0.0, None, None, None],
                     ],
@@ -277,4 +278,6 @@ class TestWarnings:
         )
         batch = import_export_file(db, content, "cvr.xlsx")
 
-        assert any("sans correspondance" in w for w in batch.warnings)
+        warning = next(w for w in batch.warnings if w["code"] == MessageCode.UNRESOLVED_SYMBOLS)
+        assert warning["params"]["count"] == 1
+        assert warning["params"]["symbols"] == ["US592CVR0133"]

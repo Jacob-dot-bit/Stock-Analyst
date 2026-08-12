@@ -1,4 +1,4 @@
-"""Tests des endpoints HTTP."""
+"""Tests for the HTTP endpoints."""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from app.main import app
 
 @pytest.fixture
 def client():
-    # StaticPool : sans lui, chaque connexion à "sqlite://" ouvre une base
-    # en mémoire distincte et les tables créées ici seraient invisibles
-    # du thread qui sert les requêtes.
+    # StaticPool: without it every connection to "sqlite://" opens a separate
+    # in-memory database, and the tables created here would be invisible to the
+    # thread serving the requests.
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -45,7 +45,7 @@ class TestHealth:
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "ok"
-        # L'application doit démarrer sans aucune clé API configurée.
+        # The application must start with no API key configured at all.
         assert set(body["integrations"]) == {"finnhub", "edgar", "perplexity"}
 
 
@@ -81,10 +81,10 @@ class TestImportEndpoint:
         totals = portfolio["totals"]
 
         assert len(portfolio["positions"]) == 2
-        # Valeurs de marché : 1558.00 + 1312.08 ; P&L : 834.30 + 614.27.
+        # Market values: 1558.00 + 1312.08; P&L: 834.30 + 614.27.
         assert totals["market_value"] == pytest.approx(2870.08)
         assert totals["unrealized_pl"] == pytest.approx(1448.57)
-        # La valeur d'achat se déduit exactement de la valeur de marché et du P&L.
+        # Purchase value follows exactly from market value and P&L.
         assert totals["invested_value"] == pytest.approx(1421.51)
         assert totals["has_incomplete_data"] is False
 
@@ -110,6 +110,48 @@ class TestImportEndpoint:
 
         assert response.status_code == 200
         assert response.json()["warnings"]
+
+    def test_sections_describe_each_sheet(self, client, xtb_export):
+        response = client.post(
+            "/api/imports/xtb",
+            files={"file": ("EUR_1234567.xlsx", xtb_export, "application/octet-stream")},
+        )
+
+        sections = {s["kind"]: s for s in response.json()["sections"]}
+        assert set(sections) == {"open_positions", "closed_positions", "cash_operations"}
+        # Two holdings, but five rows in the sheet: the lots are visible in source_rows.
+        assert sections["open_positions"]["count"] == 2
+        assert sections["open_positions"]["source_rows"] == 5
+
+
+class TestLanguageNeutrality:
+    """The API must never return prose: the client owns the wording.
+
+    Without this guarantee, a French message reaching a Polish or English user could
+    not be translated by any amount of frontend work — the meaning is lost as soon as
+    the backend commits to one language.
+    """
+
+    def test_warnings_are_codes_with_parameters(self, client):
+        response = client.post(
+            "/api/imports/xtb", files={"file": ("report.pdf", b"%PDF-1.4", "application/pdf")}
+        )
+
+        warning = response.json()["warnings"][0]
+        assert warning["code"] == "import.unsupportedFileType"
+        assert warning["params"] == {"extension": ".pdf"}
+
+    def test_no_warning_contains_a_sentence(self, client, xtb_export):
+        client.post(
+            "/api/imports/xtb",
+            files={"file": ("EUR_1234567.xlsx", xtb_export, "application/octet-stream")},
+        )
+
+        for batch in client.get("/api/imports").json():
+            for warning in batch["warnings"]:
+                # A code is a dotted identifier, never a sentence.
+                assert " " not in warning["code"]
+                assert warning["code"].count(".") >= 1
 
 
 class TestManualPosition:
@@ -157,7 +199,7 @@ class TestSymbolOverride:
 
 
 class TestIncompleteData:
-    """Une position sans valeurs courtier ne doit pas être comptée comme un zéro."""
+    """A position without broker figures must not be counted as zero."""
 
     def test_totals_flag_incomplete_data(self, client):
         client.post(

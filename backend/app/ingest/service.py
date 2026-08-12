@@ -1,14 +1,14 @@
-"""Persistance d'un export courtier analysé.
+"""Persisting a parsed broker export.
 
-Sémantique d'import assumée :
+Import semantics:
 
-* Les **positions ouvertes** sont un instantané, mais un export ne couvre qu'un
-  compte à la fois (« My Trades », « PEA »…). Le remplacement est donc limité aux
-  comptes présents dans le fichier — sinon importer le relevé PEA effacerait les
-  positions du compte titres. Les positions saisies à la main sont préservées.
-* Les **transactions** sont un journal cumulatif, dédupliqué sur l'identifiant
-  d'opération du courtier (ou une clé synthétique quand il n'y en a pas), ce qui
-  rend un réimport du même fichier sans effet de bord.
+* **Open positions** are a snapshot, but one export only ever covers a single
+  account ("My Trades", "PEA"...). Replacement is therefore limited to the accounts
+  present in the file — otherwise importing the PEA statement would wipe the
+  brokerage account's holdings. Manually entered positions are always preserved.
+* **Transactions** are a cumulative ledger, deduplicated on the broker operation id
+  (or a content-derived key when there is none), which makes re-importing the same
+  file a no-op.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ingest.xtb_import import ParsedExport, parse_xtb_export
+from app.messages import Message, MessageCode
 from app.models import (
     ImportBatch,
     Instrument,
@@ -48,14 +49,14 @@ def get_or_create_instrument(
     name: str | None = None,
     category: str | None = None,
 ) -> Instrument:
-    """Retrouve un instrument par son symbole courtier, ou le crée en résolvant le mapping."""
+    """Find an instrument by broker symbol, or create it by resolving the mapping."""
     broker_symbol = broker_symbol.strip().upper()
     instrument = db.execute(
         select(Instrument).where(Instrument.broker_symbol == broker_symbol)
     ).scalar_one_or_none()
 
     if instrument is not None:
-        # L'export enrichit un instrument déjà connu sans écraser ce qui existe.
+        # An export enriches a known instrument without overwriting what is set.
         if currency and not instrument.currency:
             instrument.currency = currency
         if name and not instrument.name:
@@ -64,9 +65,9 @@ def get_or_create_instrument(
             instrument.category = category
         return instrument
 
-    # La catégorie du courtier (STOCK / ETF / CFD) fait autorité : elle est plus
-    # fiable qu'une heuristique sur le symbole, qui prendrait « GOLD.US »
-    # (Barrick Gold, une action) pour une matière première.
+    # The broker category (STOCK / ETF / CFD) is authoritative: more reliable than a
+    # symbol heuristic, which would mistake "GOLD.US" (Barrick Gold, an equity) for a
+    # commodity.
     resolution = mapping.resolve(
         broker_symbol, overrides if overrides is not None else {}, category=category
     )
@@ -95,12 +96,11 @@ def _insert_transaction(
     seen: set[tuple[str, str]],
     **fields: Any,
 ) -> bool:
-    """Insère une transaction si elle n'existe pas déjà. Retourne True si insérée.
+    """Insert a transaction unless it already exists. Returns True when inserted.
 
-    ``seen`` protège des doublons *à l'intérieur* d'un même import : les objets
-    ajoutés à la session ne sont pas encore visibles d'un SELECT, si bien que deux
-    lignes de clé identique passeraient toutes deux le contrôle en base avant de
-    faire échouer la contrainte d'unicité au flush.
+    ``seen`` guards against duplicates *within* a single import: objects added to the
+    session are not yet visible to a SELECT, so two rows sharing a key would both pass
+    the database check before failing the unique constraint at flush time.
     """
     if external_id:
         key = (external_id, tx_type)
@@ -131,14 +131,14 @@ def _insert_transaction(
 
 
 def import_export_file(db: Session, content: bytes, filename: str) -> ImportBatch:
-    """Analyse puis enregistre un export xStation. Retourne le lot d'import créé."""
+    """Parse then persist an xStation export. Returns the import batch created."""
     parsed: ParsedExport = parse_xtb_export(content, filename)
 
     batch = ImportBatch(
         filename=filename,
         file_hash=hashlib.sha256(content).hexdigest(),
-        warnings=list(parsed.warnings),
-        detected_sections=list(parsed.detected_sections),
+        warnings=[message.as_dict() for message in parsed.warnings],
+        sections=[section.as_dict() for section in parsed.sections],
         accounts=list(parsed.accounts),
         positions_found=len(parsed.open_positions),
         transactions_found=len(parsed.closed_positions) + len(parsed.cash_operations),
@@ -150,15 +150,15 @@ def import_export_file(db: Session, content: bytes, filename: str) -> ImportBatc
     inserted = 0
     seen: set[tuple[str, str]] = set()
 
-    # --- Positions ouvertes : instantané, remplacé compte par compte ---
+    # --- Open positions: a snapshot, replaced account by account ---
     if parsed.open_positions:
         accounts = set(parsed.accounts)
         stale = db.execute(
             select(Position).where(Position.source == Source.IMPORT)
         ).scalars().all()
         for position in stale:
-            # Sans information de compte, on retombe sur un remplacement global :
-            # c'est le comportement des exports mono-compte.
+            # With no account information we fall back to a global replacement:
+            # that is the behaviour of single-account exports.
             if not accounts or position.account in accounts or position.account is None:
                 db.delete(position)
         db.flush()
@@ -197,7 +197,7 @@ def import_export_file(db: Session, content: bytes, filename: str) -> ImportBatc
                 )
             )
 
-    # --- Positions fermées : journal des allers-retours réalisés ---
+    # --- Closed positions: the ledger of completed round trips ---
     for item in parsed.closed_positions:
         instrument = get_or_create_instrument(
             db,
@@ -225,7 +225,7 @@ def import_export_file(db: Session, content: bytes, filename: str) -> ImportBatc
             raw=item.get("raw"),
         )
 
-    # --- Opérations de caisse ---
+    # --- Cash operations ---
     for item in parsed.cash_operations:
         instrument = (
             get_or_create_instrument(
@@ -253,9 +253,9 @@ def import_export_file(db: Session, content: bytes, filename: str) -> ImportBatc
 
     batch.transactions_inserted = inserted
 
-    # Les symboles non résolus doivent être visibles, pas découverts par surprise.
-    # Les CFD sont exclus du décompte : leur absence de correspondance est normale
-    # et attendue, la signaler comme une anomalie serait du bruit.
+    # Unresolved symbols must be visible, not discovered by surprise. CFDs are left
+    # out of the count: having no mapping is normal and expected for them, so flagging
+    # it as a problem would only be noise.
     unresolved = db.execute(
         select(Instrument).where(
             Instrument.mapping_status == MappingStatus.UNRESOLVED,
@@ -264,10 +264,15 @@ def import_export_file(db: Session, content: bytes, filename: str) -> ImportBatc
     ).scalars().all()
     if unresolved:
         batch.warnings = list(batch.warnings) + [
-            f"{len(unresolved)} symbole(s) sans correspondance fournisseur : "
-            f"{', '.join(i.broker_symbol for i in unresolved[:10])}"
-            f"{'…' if len(unresolved) > 10 else ''}. "
-            "Corrigez-les depuis la page Portefeuille pour activer leur analyse."
+            Message(
+                MessageCode.UNRESOLVED_SYMBOLS,
+                {
+                    "count": len(unresolved),
+                    # Capped so a badly mapped file cannot produce an unreadable wall
+                    # of symbols; the full list stays available on the portfolio page.
+                    "symbols": [i.broker_symbol for i in unresolved[:10]],
+                },
+            ).as_dict()
         ]
 
     db.commit()

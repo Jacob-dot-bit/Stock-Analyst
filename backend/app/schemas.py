@@ -1,10 +1,34 @@
-"""Schémas Pydantic exposés par l'API."""
+"""Pydantic schemas exposed by the API.
+
+The API is language-neutral: it never returns prose. Anything meant to be read by a
+human is a ``MessageOut`` — a code plus its parameters — which the client renders in
+the user's language. See ``app/messages.py``.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class MessageOut(BaseModel):
+    """A translatable message. The client owns the wording."""
+
+    code: str
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class SectionOut(BaseModel):
+    """What one sheet of the imported workbook contained."""
+
+    sheet: str
+    kind: str
+    count: int
+    #: Raw row count before aggregation. Larger than ``count`` on open positions,
+    #: where the export lists one aggregate row per holding plus one row per lot.
+    source_rows: int
 
 
 class InstrumentOut(BaseModel):
@@ -34,7 +58,7 @@ class PositionOut(BaseModel):
     opened_at: datetime | None
     lots_count: int
 
-    # Valeurs rapportées par le courtier, dans la devise du compte.
+    # Values reported by the broker, in the account currency.
     broker_market_value: float | None
     broker_net_pl: float | None
     broker_net_pl_pct: float | None
@@ -47,7 +71,7 @@ class PositionOut(BaseModel):
 
 
 class AccountTotals(BaseModel):
-    """Totaux d'un compte (« My Trades », « PEA »…)."""
+    """Totals for one account ("My Trades", "PEA"...)."""
 
     account: str
     positions_count: int
@@ -58,15 +82,14 @@ class AccountTotals(BaseModel):
 
 
 class PortfolioTotals(BaseModel):
-    """Totaux du portefeuille.
+    """Portfolio totals.
 
-    Les montants proviennent des valeurs rapportées par le courtier, déjà exprimées
-    dans la devise du compte. Aucune conversion de change n'est appliquée : convertir
-    sans taux fiable produirait des totaux faux.
+    Amounts come from the values reported by the broker, already expressed in the
+    account currency. No FX conversion is applied: converting without a trustworthy
+    rate would produce wrong totals.
 
-    L'export ne fournit pas de « valeur d'achat » pour les positions ouvertes ; elle
-    est donc déduite exactement par ``valeur de marché − résultat latent``, les deux
-    étant dans la même devise.
+    The export provides no "purchase value" for open positions, so it is derived
+    exactly as ``market value − unrealised P&L``, both being in the same currency.
     """
 
     base_currency: str
@@ -77,10 +100,10 @@ class PortfolioTotals(BaseModel):
     unrealized_pl_pct: float | None = None
     has_incomplete_data: bool = Field(
         default=False,
-        description="Vrai si au moins une position ne fournit pas les valeurs nécessaires au total.",
+        description="True when at least one position lacks the values needed for the totals.",
     )
     excluded_positions: int = Field(
-        default=0, description="Positions exclues des totaux faute de valorisation."
+        default=0, description="Positions left out of the totals for lack of valuation."
     )
 
 
@@ -101,8 +124,8 @@ class ImportBatchOut(BaseModel):
     positions_found: int
     transactions_found: int
     transactions_inserted: int
-    warnings: list[str]
-    detected_sections: list[str]
+    warnings: list[MessageOut]
+    sections: list[SectionOut]
     accounts: list[str]
 
 

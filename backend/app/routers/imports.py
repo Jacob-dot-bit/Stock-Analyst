@@ -1,4 +1,4 @@
-"""Endpoints d'import de fichiers courtier."""
+"""Broker-file import endpoints."""
 
 from __future__ import annotations
 
@@ -20,18 +20,17 @@ MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 async def import_xtb(
     file: UploadFile = File(...), db: Session = Depends(get_db)
 ) -> ImportBatchOut:
-    """Importe un rapport xStation (Account history → Export → Full report).
+    """Import an xStation report (Account history → Export).
 
-    L'import est idempotent : les transactions sont dédupliquées sur l'identifiant
-    d'opération du courtier, et les positions ouvertes remplacent l'instantané
-    précédent issu d'un import.
+    The import is idempotent: transactions are deduplicated on the broker operation
+    id, and open positions replace the previous snapshot of the same account.
     """
     content = await file.read()
 
     if not content:
-        raise HTTPException(status_code=400, detail="Fichier vide.")
+        raise HTTPException(status_code=400, detail="Empty file.")
     if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="Fichier trop volumineux (limite 25 Mo).")
+        raise HTTPException(status_code=413, detail="File too large (25 MB limit).")
 
     batch = import_export_file(db, content, file.filename or "export")
     return ImportBatchOut.model_validate(batch)

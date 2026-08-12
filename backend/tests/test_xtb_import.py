@@ -1,4 +1,4 @@
-"""Tests du parser d'export xStation."""
+"""Tests for the xStation export parser."""
 
 from __future__ import annotations
 
@@ -13,8 +13,18 @@ from app.ingest.xtb_import import (
     parse_number,
     parse_xtb_export,
 )
+from app.messages import MessageCode, SectionKind
 from app.models import TxType
 from tests.conftest import CASH_HEADERS, OPEN_HEADERS, build_workbook, build_xtb_workbook
+
+
+def codes(result) -> list[str]:
+    """Message codes emitted by a parse, in order.
+
+    Tests assert on codes rather than sentences: the API is language-neutral, so
+    there is no prose to match against.
+    """
+    return [warning.code for warning in result.warnings]
 
 
 class TestParseNumber:
@@ -23,13 +33,13 @@ class TestParseNumber:
         [
             (1234.56, 1234.56),
             ("1234.56", 1234.56),
-            ("1 234,56", 1234.56),  # français avec espace de milliers
-            ("1\xa0234,56", 1234.56),  # espace insécable, courant dans les exports
-            ("1,234.56", 1234.56),  # anglais
-            ("1,234", 1234.0),  # virgule = séparateur de milliers
-            ("12,5", 12.5),  # virgule = décimale
+            ("1 234,56", 1234.56),  # French, with a thousands space
+            ("1\xa0234,56", 1234.56),  # non-breaking space, common in exports
+            ("1,234.56", 1234.56),  # English
+            ("1,234", 1234.0),  # comma as thousands separator
+            ("12,5", 12.5),  # comma as decimal separator
             ("-58,70", -58.70),
-            ("(1 234,56)", -1234.56),  # notation comptable
+            ("(1 234,56)", -1234.56),  # accounting notation
             ("0,00", 0.0),
             ("", None),
             (None, None),
@@ -50,7 +60,7 @@ class TestParseDatetime:
     @pytest.mark.parametrize(
         "raw",
         [
-            "2025-02-25 18:05:02.266000",  # format réel des exports XTB
+            "2025-02-25 18:05:02.266000",  # the real XTB export format
             "2025-02-25 18:05:02",
             "12.01.2024 10:30:00",
             "12/01/2024 10:30",
@@ -72,7 +82,7 @@ class TestClassifyCashType:
     @pytest.mark.parametrize(
         ("label", "expected"),
         [
-            # Libellés relevés dans de vrais exports
+            # Labels observed in real exports
             ("Dividend", TxType.DIVIDEND),
             ("Dividend equivalent", TxType.DIVIDEND),
             ("Withholding tax", TxType.TAX),
@@ -91,7 +101,7 @@ class TestClassifyCashType:
             ("Close trade", TxType.CLOSED_TRADE),
             ("Correction", TxType.OTHER),
             ("Fractional shares", TxType.OTHER),
-            # Français
+            # French
             ("Dividende", TxType.DIVIDEND),
             ("Retrait", TxType.WITHDRAWAL),
         ],
@@ -100,7 +110,7 @@ class TestClassifyCashType:
         assert classify_cash_type(label) == expected
 
     def test_interest_tax_is_a_tax_not_an_interest(self):
-        """« Free funds interest tax » contient « interest » : l'ordre des règles compte."""
+        """"Free funds interest tax" contains "interest": rule order matters."""
         assert classify_cash_type("Free funds interest tax") == TxType.TAX
 
 
@@ -115,7 +125,7 @@ class TestTotalRows:
 
 
 class TestRealFormat:
-    """Structure vérifiée sur de vrais exports xStation 2026."""
+    """Structure verified against real 2026 xStation exports."""
 
     def test_all_sections_are_detected(self, xtb_export):
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
@@ -123,11 +133,11 @@ class TestRealFormat:
         assert result.warnings == []
         assert len(result.open_positions) == 2  # ASML + NVDA, lots exclus
         assert len(result.closed_positions) == 4
-        # 6 opérations : la ligne « Total » est écartée
+        # 6 operations: the "Total" row is discarded
         assert len(result.cash_operations) == 6
 
     def test_ticker_is_the_symbol_not_the_company_name(self, xtb_export):
-        """« Ticker » porte le symbole, « Instrument » la raison sociale."""
+        """"Ticker" holds the symbol, "Instrument" holds the company name."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
         asml = next(p for p in result.open_positions if p["broker_symbol"] == "ASML.NL")
 
@@ -135,33 +145,33 @@ class TestRealFormat:
         assert asml["name"] == "ASML"
 
     def test_lots_are_not_counted_as_positions(self, xtb_export):
-        """Nvidia a deux lots : une seule position doit en résulter."""
+        """Nvidia has two lots: exactly one position must result."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
         nvidia = [p for p in result.open_positions if p["broker_symbol"] == "NVDA.US"]
 
         assert len(nvidia) == 1
-        assert nvidia[0]["quantity"] == 2.0  # valeur agrégée, pas 1 + 1 en double
+        assert nvidia[0]["quantity"] == 2.0  # aggregate value, not 1 + 1 counted twice
         assert nvidia[0]["lots_count"] == 2
 
     def test_position_uses_aggregate_values(self, xtb_export):
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
         nvidia = next(p for p in result.open_positions if p["broker_symbol"] == "NVDA.US")
 
-        assert nvidia["avg_price"] == 106.53  # prix de revient moyen
+        assert nvidia["avg_price"] == 106.53  # average cost
         assert nvidia["market_value"] == 1312.08
         assert nvidia["net_pl"] == 614.27
         assert nvidia["net_pl_pct"] == 88.03
 
     def test_current_price_comes_from_the_lots(self, xtb_export):
-        """La ligne agrégée ne porte pas le cours : il est repris des lots."""
+        """The aggregate row carries no price: it is taken from the lots."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
         nvidia = next(p for p in result.open_positions if p["broker_symbol"] == "NVDA.US")
 
-        # Cours en devise de l'instrument (USD), pas « valeur / quantité » en EUR.
+        # Price in the instrument currency (USD), not value / quantity in EUR.
         assert nvidia["market_price"] == 217.46
 
     def test_open_date_comes_from_earliest_lot(self, xtb_export):
-        """La ligne agrégée n'a pas de date : on prend celle du lot le plus ancien."""
+        """The aggregate row has no date: take the earliest lot's."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
         nvidia = next(p for p in result.open_positions if p["broker_symbol"] == "NVDA.US")
 
@@ -179,7 +189,7 @@ class TestRealFormat:
         assert all(p["account"] == "My Trades" for p in result.open_positions)
 
     def test_summary_table_is_not_mistaken_for_data(self, xtb_export):
-        """Le tableau « Product | Metric | Amount | Currency » n'est pas une table de données."""
+        """The "Product | Metric | Amount | Currency" block is not a data table."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
 
         assert all(op["type"] != TxType.OTHER or op["raw_type"] for op in result.cash_operations)
@@ -191,7 +201,7 @@ class TestRealFormat:
         assert not any(op["raw_type"] == "Total" for op in result.cash_operations)
 
     def test_closed_positions_get_a_unique_stable_key(self, xtb_export):
-        """Le « Position ID » ne suffit pas : les clôtures partielles le partagent."""
+        """"Position ID" is not enough: partial closes share it."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
 
         ids = [c["external_id"] for c in result.closed_positions]
@@ -206,7 +216,7 @@ class TestRealFormat:
         assert apld[0]["external_id"] != apld[1]["external_id"]
 
     def test_numeric_ids_are_not_rendered_as_floats(self, xtb_export):
-        """openpyxl renvoie les entiers en flottants : « 1677685567 », pas « 1677685567.0 »."""
+        """openpyxl returns integers as floats: expect "1677685567", not "1677685567.0"."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
 
         assert all(not c["position_id"].endswith(".0") for c in result.closed_positions)
@@ -260,7 +270,7 @@ class TestShortPositions:
 
 class TestFallbackWithoutAggregateRows:
     def test_lots_become_positions_when_no_aggregate_level_exists(self):
-        """Certains exports n'ont pas de niveau agrégé : les lots ne doivent pas être perdus."""
+        """Some exports have no aggregate level: the lots must not be lost."""
         content = build_xtb_workbook(
             [
                 (
@@ -289,7 +299,8 @@ class TestFailureModes:
         result = parse_xtb_export(b"whatever", "report.pdf")
 
         assert result.is_empty
-        assert any("non prise en charge" in w for w in result.warnings)
+        assert codes(result) == [MessageCode.UNSUPPORTED_FILE_TYPE]
+        assert result.warnings[0].params["extension"] == ".pdf"
 
     def test_corrupt_file_is_reported(self):
         result = parse_xtb_export(b"ceci n'est pas un xlsx", "report.xlsx")
@@ -325,7 +336,8 @@ class TestFailureModes:
         result = parse_xtb_export(content, "partiel.xlsx")
 
         assert len(result.open_positions) == 1
-        assert any("KO.US" in w for w in result.warnings)
+        assert MessageCode.POSITION_SKIPPED in codes(result)
+        assert any(w.params.get("symbol") == "KO.US" for w in result.warnings)
 
 
 class TestCsvExport:

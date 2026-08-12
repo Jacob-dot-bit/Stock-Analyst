@@ -1,20 +1,19 @@
-"""Fixtures partagées.
+"""Shared fixtures.
 
-Les classeurs de test reproduisent la structure réelle des exports xStation 2026,
-vérifiée sur des fichiers de production : une feuille par section, un préambule de
-métadonnées, puis la table. Points reproduits fidèlement car ce sont ceux qui
-cassent un parser naïf :
+The test workbooks reproduce the real structure of 2026 xStation exports, verified
+against production files: one sheet per section, a metadata preamble, then the table.
+The details below are reproduced faithfully because they are exactly what breaks a
+naive parser:
 
-* ``Ticker`` porte le symbole, ``Instrument`` la raison sociale ;
-* les positions ouvertes sont sur deux niveaux — une ligne agrégée par titre
-  (catégorie renseignée, sens vide) suivie d'une ligne par lot (sens renseigné,
-  catégorie vide) ;
-* le « Position ID » des positions fermées **n'est pas unique** : une position soldée
-  en plusieurs fois produit plusieurs lignes portant le même identifiant ;
-* les opérations de trésorerie contiennent des lignes « Total » à écarter.
+* ``Ticker`` holds the symbol, ``Instrument`` holds the company name;
+* open positions come in two levels — one aggregate row per holding (category set,
+  direction blank) followed by one row per lot (direction set, category blank);
+* the ``Position ID`` of closed positions **is not unique**: a holding closed in
+  several parts produces several rows sharing one id;
+* cash operations contain "Total" rows that must be discarded.
 
-Les numéros de compte sont fictifs : les fixtures ne doivent jamais contenir de
-données personnelles réelles, le dépôt ayant vocation à être publié.
+Account numbers here are fictional: fixtures must never carry real personal data,
+since this repository is meant to be published.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ os.environ.setdefault("BASE_CURRENCY", "EUR")
 
 
 def build_xtb_workbook(sheets: list[tuple[str, list[list], list[str], list[list]]]) -> bytes:
-    """Construit un classeur (nom de feuille, préambule, en-têtes, lignes)."""
+    """Build a workbook from (sheet name, preamble, headers, rows) tuples."""
     workbook = Workbook()
     workbook.remove(workbook.active)
 
@@ -47,10 +46,10 @@ def build_xtb_workbook(sheets: list[tuple[str, list[list], list[str], list[list]
 
 
 def build_workbook(blocks: list[tuple[str, list[str], list[list]]]) -> bytes:
-    """Variante « blocs empilés sur une seule feuille », pour les cas limites."""
+    """Variant with blocks stacked on a single sheet, for edge cases."""
     workbook = Workbook()
     sheet = workbook.active
-    sheet.title = "Rapport"
+    sheet.title = "Report"
 
     for section_label, headers, rows in blocks:
         sheet.append([section_label])
@@ -70,7 +69,7 @@ OPEN_HEADERS = [
     "Net Profit %", "Net Profit", "Gross Profit", "Margin", "Open Commission", "Swap",
 ]
 
-# Les 25 colonnes réelles de la feuille « Closed Positions ».
+# The 25 real columns of the "Closed Positions" sheet.
 CLOSED_HEADERS = [
     "Instrument", "Ticker", "Category", "Type", "Volume", "Open Price", "Open Time (UTC)",
     "Close Price", "Close Time (UTC)", "Product", "Profit/Loss", "Gross Profit",
@@ -79,26 +78,26 @@ CLOSED_HEADERS = [
     "Position ID", "Comment",
 ]
 
-
-def closed_row(
-    name, ticker, volume, open_price, open_time, close_price, close_time, pl, position_id
-):
-    """Construit une ligne de position fermée au format réel (25 colonnes)."""
-    return [
-        name, ticker, "STOCK", "BUY", volume, open_price, open_time, close_price, close_time,
-        "My Trades", pl, pl, None, None, None, None, 0.0, None, None, None,
-        1.0, 1.0, "Android", position_id, None,
-    ]
-
 CASH_HEADERS = [
     "Type", "Instrument", "Ticker", "Category", "Time", "Amount", "ID", "Comment",
     "Product", "Position ID",
 ]
 
 
+def closed_row(
+    name, ticker, volume, open_price, open_time, close_price, close_time, pl, position_id
+):
+    """Build a closed-position row in the real 25-column layout."""
+    return [
+        name, ticker, "STOCK", "BUY", volume, open_price, open_time, close_price, close_time,
+        "My Trades", pl, pl, None, None, None, None, 0.0, None, None, None,
+        1.0, 1.0, "Android", position_id, None,
+    ]
+
+
 @pytest.fixture
 def xtb_export() -> bytes:
-    """Export réaliste d'un compte titres, structure identique aux fichiers réels."""
+    """A realistic brokerage-account export, structured like the real files."""
     return build_xtb_workbook(
         [
             (
@@ -107,7 +106,7 @@ def xtb_export() -> bytes:
                     ["Account number", 1234567],
                     ["Open Positions"],
                     ["Data as of report generated", "2026-08-11 23:16:37"],
-                    # Petit tableau de synthèse qui précède la vraie table.
+                    # Small summary table that precedes the real one.
                     ["Product", "Metric", "Amount", "Currency"],
                     ["My Trades", "Value", 2870.08, "EUR"],
                     ["My Trades", "Profit", 1448.57, "EUR"],
@@ -116,10 +115,10 @@ def xtb_export() -> bytes:
                 ],
                 OPEN_HEADERS,
                 [
-                    # Ligne agrégée : catégorie présente, sens et heure absents.
+                    # Aggregate row: category set, direction and time absent.
                     ["My Trades", "ASML", "ASML.NL", "STOCK", None, 1.0, 1558.0, None,
                      723.7, None, None, None, 115.28, 834.3, 834.3, None, None, None],
-                    # Lot correspondant : sens et heure présents, catégorie absente.
+                    # Its lot: direction and time set, category absent.
                     ["My Trades", 1636247573, "ASML.NL", None, "BUY", 1.0, 1558.0, 1558.0,
                      723.7, "2025-01-31 13:33:28", None, None, 115.28, 834.3, 834.3, None, None, None],
 
@@ -144,8 +143,8 @@ def xtb_export() -> bytes:
                                90.07, "2026-05-29 16:06:15", 2.83, 1677685560.0),
                     closed_row("Nestle", "NESN.CH", 1.0, 72.18, "2025-09-22 08:10:38",
                                80.035, "2026-05-29 11:38:30", 9.78, 1677685561.0),
-                    # Clôture partielle : même « Position ID » que la ligne suivante.
-                    # Constaté sur des exports réels (223 lignes pour 220 identifiants).
+                    # Partial close: same "Position ID" as the row below. Seen on real
+                    # exports (223 rows for 220 distinct ids).
                     closed_row("Applied Digital", "APLD.US", 1.0, 7.88, "2025-03-31 15:55:55",
                                37.25, "2026-01-16 20:57:06", 24.35, 1677685567.0),
                     closed_row("Applied Digital", "APLD.US", 1.0, 7.88, "2025-03-31 15:55:55",
@@ -172,8 +171,8 @@ def xtb_export() -> bytes:
                     ["Stock purchase", "Nvidia", "NVDA.US", "STOCK", "2025-01-28 15:06:48",
                      -120.2, 1130937303, "OPEN BUY 1 @ 120.2", "My Trades", 1630937303],
                     ["Deposit", None, None, None, "2024-01-01 00:00:00",
-                     5000.0, 1000000001, "Virement initial", "My Trades", None],
-                    # Ligne de sous-total : ne doit pas devenir une opération.
+                     5000.0, 1000000001, "Initial transfer", "My Trades", None],
+                    # Subtotal row: must not become an operation.
                     ["Total", None, None, None, None, 4881.4, None, None, None, None],
                 ],
             ),
@@ -183,7 +182,7 @@ def xtb_export() -> bytes:
 
 @pytest.fixture
 def xtb_pea_export() -> bytes:
-    """Export du second compte (PEA), pour vérifier l'isolation entre comptes."""
+    """The second account's export (PEA), to verify accounts stay isolated."""
     return build_xtb_workbook(
         [
             (

@@ -1,7 +1,7 @@
-"""Configuration de l'application, lue depuis l'environnement / le fichier .env.
+"""Application settings, read from the environment / the .env file.
 
-Aucune clé n'est écrite en dur. Les fonctionnalités dont la clé est absente
-se désactivent proprement plutôt que de faire échouer le démarrage.
+No key is ever hardcoded. Features whose key is missing disable themselves cleanly
+rather than failing startup.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# backend/app/config.py -> backend/app -> backend -> racine du projet
+# backend/app/config.py -> backend/app -> backend -> project root
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
 
@@ -23,25 +23,25 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # --- Base de données ---
+    # --- Database ---
     database_url: str = f"sqlite:///{DATA_DIR / 'stock_analyst.db'}"
 
-    # --- Devise de référence du compte, utilisée pour les totaux du portefeuille ---
+    # --- Account base currency, used for portfolio totals ---
     base_currency: str = "EUR"
 
-    # --- Clés API optionnelles (phases 2+) ---
+    # --- Optional API keys (phase 2 onwards) ---
     finnhub_api_key: str | None = None
     perplexity_api_key: str | None = None
 
-    # SEC EDGAR impose un User-Agent nominatif avec une adresse de contact.
-    # Sans lui, les requêtes sont rejetées : le provider EDGAR reste alors désactivé.
+    # SEC EDGAR requires a named User-Agent with a contact address. Without it
+    # requests are rejected, so the EDGAR provider stays disabled.
     sec_user_agent: str | None = None
 
-    # --- Garde-fous de coût pour Perplexity (phase 6) ---
+    # --- Cost guardrails for Perplexity (phase 6) ---
     perplexity_model: str = "sonar"
     perplexity_cache_ttl_days: int = 7
 
-    # --- CORS : origine du serveur de dev Vite ---
+    # --- CORS: the Vite dev server origin ---
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @property

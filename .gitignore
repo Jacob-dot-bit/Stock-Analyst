@@ -6,12 +6,12 @@ venv/
 *.egg-info/
 .pytest_cache/
 
-# Secrets — ne jamais committer
+# Secrets — never commit
 .env
 .env.*
 !.env.example
 
-# Données locales (base SQLite, cache HTTP, exports broker)
+# Local data (SQLite database, HTTP cache, broker exports)
 data/*.db
 data/*.sqlite
 data/cache/
@@ -22,7 +22,7 @@ node_modules/
 dist/
 .vite/
 
-# Éditeurs / OS
+# Editors / OS
 .vscode/
 .idea/
 .DS_Store

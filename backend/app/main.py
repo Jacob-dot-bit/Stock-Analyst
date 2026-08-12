@@ -1,4 +1,4 @@
-"""Point d'entrée de l'API Stock Analyst."""
+"""Stock Analyst API entry point."""
 
 from __future__ import annotations
 
@@ -23,10 +23,12 @@ settings = get_settings()
 app = FastAPI(
     title="Stock Analyst",
     description=(
-        "Suivi et analyse d'un portefeuille d'actions. Les données de portefeuille "
-        "proviennent d'un export de fichier courtier : l'API XTB a été supprimée le "
-        "14 mars 2025 et aucune synchronisation automatique n'est possible.\n\n"
-        "Cet outil produit des indicateurs, pas des conseils en investissement."
+        "Tracking and analysis of an equity portfolio. Portfolio data comes from a "
+        "broker file export: the XTB API was shut down on 14 March 2025 and no "
+        "automatic synchronisation is possible.\n\n"
+        "This tool produces indicators, not investment advice.\n\n"
+        "The API is language-neutral: human-readable text is returned as message "
+        "codes with parameters, and rendered by the client."
     ),
     version="0.1.0",
     lifespan=lifespan,
@@ -46,7 +48,7 @@ app.include_router(imports.router)
 
 @app.get("/api/health", tags=["system"])
 def health() -> dict:
-    """État de l'application et des intégrations optionnelles."""
+    """Application status and which optional integrations are configured."""
     return {
         "status": "ok",
         "base_currency": settings.base_currency,

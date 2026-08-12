@@ -1,11 +1,11 @@
-"""Modèles ORM.
+"""ORM models.
 
-Choix structurant : les transactions importées sont conservées telles quelles
-(table `transactions`, avec la ligne source brute en JSON). Les positions sont
-stockées séparément car l'export XTB les fournit déjà consolidées et fiables —
-on préfère la valeur du courtier à une reconstitution potentiellement fausse
-(splits, frais, multidevise). La ligne brute permet de tout recalculer plus tard
-sans redemander le fichier.
+Structural choice: imported transactions are kept verbatim (``transactions`` table,
+with the raw source row stored as JSON). Positions live in their own table because
+the XTB export already provides them consolidated and reliable — the broker's own
+figures beat a reconstruction that could go wrong on splits, fees or multi-currency
+holdings. Keeping the raw row means everything can be recomputed later without
+asking the user for the file again.
 """
 
 from __future__ import annotations
@@ -32,15 +32,15 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-# --- Constantes de domaine (chaînes plutôt qu'Enum SQL, pour rester souple sur SQLite) ---
+# --- Domain constants (plain strings rather than SQL enums, to stay flexible on SQLite) ---
 
 
 class TxType:
     BUY = "BUY"
     SELL = "SELL"
-    # Position fermée telle que rapportée par le courtier (aller-retour complet).
-    # Conservée comme un type distinct plutôt que forcée en BUY/SELL, car l'export
-    # ne fournit qu'une ligne agrégée avec son P&L réalisé.
+    # A closed position as reported by the broker (a complete round trip). Kept as its
+    # own type rather than forced into BUY/SELL, because the export only provides one
+    # aggregate row carrying the realised P&L.
     CLOSED_TRADE = "CLOSED_TRADE"
     DIVIDEND = "DIVIDEND"
     TAX = "TAX"
@@ -52,9 +52,9 @@ class TxType:
 
 
 class MappingStatus:
-    RESOLVED = "RESOLVED"  # symbole fournisseur déterminé automatiquement
-    MANUAL = "MANUAL"  # corrigé à la main par l'utilisateur
-    UNRESOLVED = "UNRESOLVED"  # à corriger — signalé dans l'UI, jamais ignoré
+    RESOLVED = "RESOLVED"  # provider symbol derived automatically
+    MANUAL = "MANUAL"  # corrected by hand by the user
+    UNRESOLVED = "UNRESOLVED"  # needs fixing — surfaced in the UI, never ignored
 
 
 class Source:
@@ -63,25 +63,25 @@ class Source:
 
 
 class Instrument(Base):
-    """Un titre. Pivot entre le symbole du courtier et celui des fournisseurs de données."""
+    """A tradable instrument. The pivot between broker symbol and provider symbol."""
 
     __tablename__ = "instruments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    # Symbole tel qu'il apparaît chez XTB, ex. "AAPL.US", "BMW.DE"
+    # Symbol as it appears at XTB, e.g. "AAPL.US", "BMW.DE"
     broker_symbol: Mapped[str] = mapped_column(String(40), unique=True, index=True)
 
-    # Symbole résolu pour les fournisseurs (Yahoo & co), ex. "AAPL", "BMW.DE", "TTE.PA"
+    # Symbol resolved for data providers (Yahoo & co), e.g. "AAPL", "BMW.DE", "TTE.PA"
     provider_symbol: Mapped[str | None] = mapped_column(String(40), index=True)
     mapping_status: Mapped[str] = mapped_column(String(20), default=MappingStatus.UNRESOLVED)
 
     isin: Mapped[str | None] = mapped_column(String(12), index=True)
     name: Mapped[str | None] = mapped_column(String(200))
 
-    # Catégorie fournie par le courtier : STOCK, ETF, CFD…
-    # Fiable, contrairement à une heuristique sur le symbole : un CFD n'a pas de
-    # fondamentaux et ne doit jamais recevoir de score.
+    # Category supplied by the broker: STOCK, ETF, CFD...
+    # Reliable, unlike a heuristic on the symbol: a CFD has no fundamentals and must
+    # never be scored.
     category: Mapped[str | None] = mapped_column(String(20), index=True)
 
     exchange: Mapped[str | None] = mapped_column(String(40))
@@ -96,12 +96,12 @@ class Instrument(Base):
     positions: Mapped[list[Position]] = relationship(back_populates="instrument", cascade="all, delete-orphan")
     transactions: Mapped[list[Transaction]] = relationship(back_populates="instrument")
 
-    def __repr__(self) -> str:  # pragma: no cover - confort de debug
+    def __repr__(self) -> str:  # pragma: no cover - debugging convenience
         return f"<Instrument {self.broker_symbol} -> {self.provider_symbol}>"
 
 
 class ImportBatch(Base):
-    """Trace d'un import de fichier courtier — permet l'idempotence et l'audit."""
+    """Record of one broker-file import — enables idempotency and auditing."""
 
     __tablename__ = "import_batches"
 
@@ -114,22 +114,24 @@ class ImportBatch(Base):
     transactions_found: Mapped[int] = mapped_column(Integer, default=0)
     transactions_inserted: Mapped[int] = mapped_column(Integer, default=0)
 
-    # Tout ce que le parser n'a pas su interpréter est remonté ici, jamais avalé en silence.
+    #: Anything the parser could not interpret, as {code, params} message objects.
+    #: Never swallowed silently, and never pre-translated: the client renders them.
     warnings: Mapped[list] = mapped_column(JSON, default=list)
-    detected_sections: Mapped[list] = mapped_column(JSON, default=list)
-    #: Comptes dont l'instantané de positions a été remplacé par cet import.
+    #: What each sheet turned out to contain, as {sheet, kind, count, source_rows}.
+    sections: Mapped[list] = mapped_column(JSON, default=list)
+    #: Accounts whose position snapshot this import replaced.
     accounts: Mapped[list] = mapped_column(JSON, default=list)
 
 
 class Transaction(Base):
-    """Une ligne du journal du courtier, conservée fidèlement."""
+    """One line of the broker ledger, preserved faithfully."""
 
     __tablename__ = "transactions"
     __table_args__ = (UniqueConstraint("external_id", "type", name="uq_tx_external"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    # Identifiant de l'opération chez le courtier, sert de clé de déduplication
+    # The broker's operation id; used as the deduplication key
     external_id: Mapped[str | None] = mapped_column(String(64), index=True)
 
     instrument_id: Mapped[int | None] = mapped_column(ForeignKey("instruments.id"), index=True)
@@ -140,7 +142,7 @@ class Transaction(Base):
 
     quantity: Mapped[float | None] = mapped_column(Float)
     price: Mapped[float | None] = mapped_column(Float)
-    amount: Mapped[float | None] = mapped_column(Float)  # montant net dans la devise du compte
+    amount: Mapped[float | None] = mapped_column(Float)  # net amount in the account currency
     currency: Mapped[str | None] = mapped_column(String(8))
     commission: Mapped[float | None] = mapped_column(Float)
     swap: Mapped[float | None] = mapped_column(Float)
@@ -148,12 +150,12 @@ class Transaction(Base):
     comment: Mapped[str | None] = mapped_column(Text)
 
     import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
-    # Ligne d'origine du fichier, pour pouvoir tout rejouer sans réimporter
+    # The original file row, so everything can be replayed without re-importing
     raw: Mapped[dict | None] = mapped_column(JSON)
 
 
 class Position(Base):
-    """Une position ouverte. Provient de l'export courtier ou d'une saisie manuelle."""
+    """An open holding. Comes from a broker export or from manual entry."""
 
     __tablename__ = "positions"
 
@@ -165,22 +167,22 @@ class Position(Base):
     external_id: Mapped[str | None] = mapped_column(String(64), index=True)
     source: Mapped[str] = mapped_column(String(20), default=Source.IMPORT)
 
-    # Compte d'origine (colonne « Product » de l'export : « My Trades », « PEA »…).
-    # Un export ne couvre qu'un compte : le remplacement de l'instantané est donc
-    # limité aux comptes présents dans le fichier, sinon importer le relevé PEA
-    # effacerait les positions du compte titres.
+    # Originating account (the export's "Product" column: "My Trades", "PEA"...).
+    # One export only covers one account, so snapshot replacement is limited to the
+    # accounts present in the file — otherwise importing the PEA statement would wipe
+    # the brokerage account's holdings.
     account: Mapped[str | None] = mapped_column(String(40), index=True)
 
     quantity: Mapped[float] = mapped_column(Float)
-    avg_price: Mapped[float] = mapped_column(Float)  # prix de revient, devise de l'instrument
+    avg_price: Mapped[float] = mapped_column(Float)  # average cost, instrument currency
     currency: Mapped[str | None] = mapped_column(String(8))
     opened_at: Mapped[datetime | None] = mapped_column(DateTime)
 
-    # Nombre de lots agrégés dans cette position (l'export les détaille ligne à ligne).
+    # How many lots this holding aggregates (the export lists them row by row).
     lots_count: Mapped[int] = mapped_column(Integer, default=1)
 
-    # Valeurs telles que rapportées par le courtier (devise du compte).
-    # On les affiche comme référence plutôt que de les recalculer à l'aveugle.
+    # Values as reported by the broker (account currency). Shown as the reference
+    # rather than recomputed blindly.
     broker_gross_pl: Mapped[float | None] = mapped_column(Float)
     broker_net_pl: Mapped[float | None] = mapped_column(Float)
     broker_net_pl_pct: Mapped[float | None] = mapped_column(Float)
@@ -198,10 +200,10 @@ class Position(Base):
 
 
 class WatchlistItem(Base):
-    """Un titre suivi mais non détenu — l'équivalent local des favoris xStation.
+    """A watched but unheld instrument — the local equivalent of xStation favourites.
 
-    L'API XTB ayant été supprimée le 14/03/2025, les favoris ne peuvent pas être
-    récupérés automatiquement : cette liste est tenue dans l'application.
+    Since the XTB API was shut down on 2025-03-14, favourites cannot be fetched
+    automatically: this list is maintained inside the application.
     """
 
     __tablename__ = "watchlist_items"
@@ -216,7 +218,7 @@ class WatchlistItem(Base):
 
 
 class SymbolOverride(Base):
-    """Correction manuelle d'une correspondance symbole courtier -> symbole fournisseur."""
+    """A manual correction of a broker-symbol to provider-symbol mapping."""
 
     __tablename__ = "symbol_overrides"
 
@@ -228,7 +230,7 @@ class SymbolOverride(Base):
 
 
 class PriceBar(Base):
-    """Chandelier journalier mis en cache localement (phase 2)."""
+    """A daily candle cached locally (phase 2)."""
 
     __tablename__ = "price_bars"
     __table_args__ = (UniqueConstraint("instrument_id", "bar_date", name="uq_bar"),)
@@ -243,6 +245,6 @@ class PriceBar(Base):
     close: Mapped[float | None] = mapped_column(Float)
     volume: Mapped[float | None] = mapped_column(Float)
 
-    # Fournisseur ayant réellement servi la donnée — affiché dans l'UI
+    # Which provider actually served this data — surfaced in the UI
     provider: Mapped[str | None] = mapped_column(String(30))
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

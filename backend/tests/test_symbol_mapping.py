@@ -1,9 +1,10 @@
-"""Tests de la correspondance des symboles XTB vers les fournisseurs de données."""
+"""Tests for mapping XTB symbols onto data-provider symbols."""
 
 from __future__ import annotations
 
 import pytest
 
+from app.messages import SymbolReason
 from app.models import MappingStatus
 from app.symbols import mapping
 
@@ -12,14 +13,14 @@ class TestResolve:
     @pytest.mark.parametrize(
         ("broker_symbol", "expected"),
         [
-            ("AAPL.US", "AAPL"),  # US : aucun suffixe chez Yahoo
+            ("AAPL.US", "AAPL"),  # US: no suffix at Yahoo
             ("TTE.FR", "TTE.PA"),  # Paris
-            ("BMW.DE", "BMW.DE"),  # Xetra : suffixe identique
-            ("VOD.UK", "VOD.L"),  # Londres
+            ("BMW.DE", "BMW.DE"),  # Xetra: identical suffix
+            ("VOD.UK", "VOD.L"),  # London
             ("ASML.NL", "ASML.AS"),  # Amsterdam
             ("ENI.IT", "ENI.MI"),  # Milan
-            ("NESN.CH", "NESN.SW"),  # Suisse
-            ("KGH.PL", "KGH.WA"),  # Varsovie
+            ("NESN.CH", "NESN.SW"),  # Switzerland
+            ("KGH.PL", "KGH.WA"),  # Warsaw
         ],
     )
     def test_suffix_conversion(self, broker_symbol, expected):
@@ -27,17 +28,19 @@ class TestResolve:
 
         assert resolution.provider_symbol == expected
         assert resolution.status == MappingStatus.RESOLVED
+        assert resolution.reason == SymbolReason.SUFFIX_CONVERTED
 
     def test_lowercase_input_is_normalised(self):
         assert mapping.resolve("aapl.us").provider_symbol == "AAPL"
 
     def test_override_takes_precedence(self):
-        # Cas réel que la conversion de suffixe ne peut pas deviner :
-        # la racine du symbole diffère entre XTB et Yahoo.
+        # A real case suffix conversion cannot guess: the root of the symbol differs
+        # between XTB and Yahoo.
         resolution = mapping.resolve("ERICB.SE", {"ERICB.SE": "ERIC-B.ST"})
 
         assert resolution.provider_symbol == "ERIC-B.ST"
         assert resolution.status == MappingStatus.MANUAL
+        assert resolution.reason == SymbolReason.MANUAL_OVERRIDE
 
     def test_currency_hint(self):
         assert mapping.resolve("AAPL.US").currency_hint == "USD"
@@ -47,7 +50,7 @@ class TestResolve:
 class TestNonEquities:
     @pytest.mark.parametrize("symbol", ["US500", "DE40", "EURUSD", "GOLD", "OIL.WTI"])
     def test_non_equities_are_unresolved(self, symbol):
-        """Indices, FX et matières premières n'ont pas de fondamentaux : on les écarte."""
+        """Indices, FX and commodities have no fundamentals: keep them out."""
         resolution = mapping.resolve(symbol)
 
         assert resolution.provider_symbol is None
@@ -57,19 +60,19 @@ class TestNonEquities:
         resolution = mapping.resolve("XYZ.ZZ")
 
         assert resolution.provider_symbol is None
-        assert resolution.status == MappingStatus.UNRESOLVED
+        assert resolution.reason == SymbolReason.UNKNOWN_FORMAT
 
-    def test_reason_is_always_provided(self):
-        """L'UI doit pouvoir expliquer pourquoi un symbole n'est pas analysable."""
+    def test_a_reason_is_always_provided(self):
+        """The UI must be able to explain why a symbol cannot be analysed."""
         assert mapping.resolve("US500").reason
         assert mapping.resolve("AAPL.US").reason
 
 
 class TestCategoryTakesPrecedence:
-    """La catégorie du courtier fait autorité sur l'heuristique de nommage."""
+    """The broker category outranks any naming heuristic."""
 
     def test_stock_named_like_a_commodity_resolves(self):
-        # Barrick Gold : « GOLD » dans le symbole ne doit pas le disqualifier.
+        # Barrick Gold: "GOLD" in the symbol must not disqualify it.
         resolution = mapping.resolve("GOLD.US", category="STOCK")
 
         assert resolution.provider_symbol == "GOLD"
@@ -79,11 +82,12 @@ class TestCategoryTakesPrecedence:
         assert mapping.resolve("US500").status == MappingStatus.UNRESOLVED
 
     def test_cfd_never_resolves_even_on_a_valid_ticker(self):
-        # IJR est un ETF, mais proposé en CFD : pas de fondamentaux applicables.
+        # IJR is an ETF, but offered as a CFD: no fundamentals apply.
         resolution = mapping.resolve("IJR.US", category="CFD")
 
         assert resolution.provider_symbol is None
-        assert "CFD" in resolution.reason
+        assert resolution.reason == SymbolReason.DERIVATIVE
+        assert resolution.reason_params == {"category": "CFD"}
 
     def test_etf_resolves(self):
         assert mapping.resolve("IWDA.NL", category="ETF").provider_symbol == "IWDA.AS"
@@ -98,7 +102,7 @@ class TestCategoryTakesPrecedence:
         resolution = mapping.resolve("US592CVR0133", category="STOCK")
 
         assert resolution.provider_symbol is None
-        assert resolution.reason
+        assert resolution.reason == SymbolReason.UNKNOWN_FORMAT
 
 
 class TestLooksLikeEquity:

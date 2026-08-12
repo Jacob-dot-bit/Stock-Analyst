@@ -1,25 +1,25 @@
-"""Correspondance entre les symboles XTB et ceux des fournisseurs de données.
+"""Mapping between XTB broker symbols and data-provider symbols.
 
-XTB suffixe ses actions par pays (``AAPL.US``, ``TTE.FR``, ``BMW.DE``) alors que
-Yahoo suffixe par place de cotation (``AAPL``, ``TTE.PA``, ``BMW.DE``). Il n'existe
-aucune table de correspondance officielle : on applique donc une conversion de
-suffixes, complétée par des corrections manuelles stockées en base.
+XTB suffixes equities by country (``AAPL.US``, ``TTE.FR``) while Yahoo suffixes by
+listing venue (``AAPL``, ``TTE.PA``). No official mapping table exists, so we convert
+suffixes and keep a table of manual corrections for the rest.
 
-Limite assumée : la conversion de suffixe ne peut pas deviner les différences de
-*racine* du symbole. Exemple réel : ``ERICB.SE`` chez XTB correspond à ``ERIC-B.ST``
-chez Yahoo — le suffixe est bon, la racine non. Ces cas sortent en ``UNRESOLVED``
-ou en correspondance fausse, et se corrigent via ``SymbolOverride``. Une
-correspondance jamais vérifiée ne doit pas être présentée comme certaine.
+Known limitation: suffix conversion cannot guess differences in the *root* of the
+symbol. Real example — XTB's ``ERICB.SE`` corresponds to Yahoo's ``ERIC-B.ST``: the
+suffix is right, the root is not. Such cases end up unresolved or silently wrong, and
+are fixed through ``SymbolOverride``. A mapping that has never been verified must not
+be presented as certain.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.messages import SymbolReason
 from app.models import MappingStatus
 
-#: Suffixe pays XTB -> suffixe place de cotation Yahoo.
-#: Une valeur vide signifie « aucun suffixe » (marchés américains).
+#: XTB country suffix -> Yahoo listing-venue suffix.
+#: An empty value means "no suffix" (US markets).
 SUFFIX_MAP: dict[str, str] = {
     "US": "",
     "UK": ".L",
@@ -43,7 +43,7 @@ SUFFIX_MAP: dict[str, str] = {
     "CA": ".TO",
 }
 
-#: Suffixe XTB -> devise attendue, utilisé comme indication seulement.
+#: XTB suffix -> expected currency. Indicative only.
 CURRENCY_HINTS: dict[str, str] = {
     "US": "USD",
     "UK": "GBP",
@@ -57,19 +57,19 @@ CURRENCY_HINTS: dict[str, str] = {
     "CA": "CAD",
 }
 
-#: Repli utilisé **uniquement** quand le courtier ne fournit pas de catégorie.
-#: Ces motifs désignent des indices, matières premières, FX ou cryptos, qui n'ont
-#: pas de fondamentaux et ne doivent pas recevoir de score.
+#: Fallback used **only** when the broker gives no category. These patterns denote
+#: indices, commodities, FX or crypto, which have no fundamentals and must not be
+#: scored.
 #:
-#: Cette heuristique est volontairement secondaire : elle produit des faux positifs
-#: (« GOLD.US » est Barrick Gold, une action parfaitement analysable). La catégorie
-#: de l'export — STOCK, ETF, CFD — est toujours préférée quand elle est disponible.
+#: This heuristic is deliberately secondary: it produces false positives
+#: ("GOLD.US" is Barrick Gold, a perfectly analysable equity). The export's category
+#: — STOCK, ETF, CFD — is always preferred when available.
 NON_EQUITY_HINTS = ("US500", "US100", "US30", "DE30", "DE40", "FRA40", "EURUSD", "BITCOIN", "NATGAS")
 
-#: Catégories courtier analysables (fondamentaux et cours disponibles).
+#: Broker categories that can be analysed (prices and fundamentals available).
 ANALYSABLE_CATEGORIES = {"STOCK", "ETF"}
 
-#: Catégories sans fondamentaux : produits dérivés.
+#: Categories without fundamentals: derivatives.
 DERIVATIVE_CATEGORIES = {"CFD"}
 
 
@@ -79,15 +79,16 @@ class SymbolResolution:
     status: str
     country_suffix: str | None
     currency_hint: str | None
+    #: Language-neutral reason code, rendered by the client.
     reason: str
+    reason_params: dict[str, str]
 
 
 def looks_like_equity(broker_symbol: str, category: str | None = None) -> bool:
-    """Indique si l'instrument peut être suivi chez un fournisseur de données.
+    """Whether the instrument can be tracked through a data provider.
 
-    La ``category`` de l'export courtier (STOCK, ETF, CFD) fait autorité quand elle
-    est connue. L'heuristique sur le symbole n'est qu'un repli pour les saisies
-    manuelles, où aucune catégorie n'est disponible.
+    The broker's ``category`` (STOCK, ETF, CFD) is authoritative when known. The
+    symbol heuristic is only a fallback for manual entries, where no category exists.
     """
     symbol = broker_symbol.strip().upper()
 
@@ -96,7 +97,7 @@ def looks_like_equity(broker_symbol: str, category: str | None = None) -> bool:
         if normalized in DERIVATIVE_CATEGORIES:
             return False
         if normalized in ANALYSABLE_CATEGORIES:
-            # On fait confiance au courtier, mais le symbole doit rester exploitable.
+            # Trust the broker, but the symbol still has to be usable.
             return "." in symbol and symbol.rpartition(".")[2] in SUFFIX_MAP
 
     if any(hint in symbol for hint in NON_EQUITY_HINTS):
@@ -111,10 +112,10 @@ def resolve(
     overrides: dict[str, str] | None = None,
     category: str | None = None,
 ) -> SymbolResolution:
-    """Détermine le symbole fournisseur correspondant à un symbole courtier.
+    """Work out the provider symbol for a broker symbol.
 
-    ``overrides`` est la table des corrections manuelles (``SymbolOverride``), qui
-    prime toujours. ``category`` est celle fournie par l'export courtier.
+    ``overrides`` holds manual corrections (``SymbolOverride``) and always wins.
+    ``category`` is the one supplied by the broker export.
     """
     symbol = broker_symbol.strip().upper()
     overrides = overrides or {}
@@ -125,32 +126,25 @@ def resolve(
             status=MappingStatus.MANUAL,
             country_suffix=None,
             currency_hint=None,
-            reason="Correspondance définie manuellement.",
+            reason=SymbolReason.MANUAL_OVERRIDE,
+            reason_params={},
         )
 
     if not looks_like_equity(symbol, category):
         normalized = (category or "").strip().upper()
         if normalized in DERIVATIVE_CATEGORIES:
-            reason = (
-                f"Produit dérivé ({normalized}) : pas de données fondamentales. "
-                "L'analyse ne s'y applique pas."
-            )
+            reason, params = SymbolReason.DERIVATIVE, {"category": normalized}
         elif "." not in symbol or symbol.rpartition(".")[2] not in SUFFIX_MAP:
-            reason = (
-                "Symbole hors du format « RACINE.PAYS » attendu, ou place de cotation "
-                "inconnue. Indiquez le symbole fournisseur à la main si le titre est suivi."
-            )
+            reason, params = SymbolReason.UNKNOWN_FORMAT, {}
         else:
-            reason = (
-                "Instrument non reconnu comme une action (indice, matière première, "
-                "FX ou crypto). L'analyse fondamentale ne s'y applique pas."
-            )
+            reason, params = SymbolReason.NOT_AN_EQUITY, {}
         return SymbolResolution(
             provider_symbol=None,
             status=MappingStatus.UNRESOLVED,
             country_suffix=None,
             currency_hint=None,
             reason=reason,
+            reason_params=params,
         )
 
     root, _, suffix = symbol.rpartition(".")
@@ -161,5 +155,6 @@ def resolve(
         status=MappingStatus.RESOLVED,
         country_suffix=suffix,
         currency_hint=CURRENCY_HINTS.get(suffix, "EUR"),
-        reason=f"Conversion automatique du suffixe .{suffix} vers « {yahoo_suffix or 'aucun'} ».",
+        reason=SymbolReason.SUFFIX_CONVERTED,
+        reason_params={"suffix": suffix, "providerSuffix": yahoo_suffix},
     )

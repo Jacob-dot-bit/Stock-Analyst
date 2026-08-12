@@ -1,4 +1,4 @@
-"""Endpoints du portefeuille : consultation, saisie manuelle, correction de mapping."""
+"""Portfolio endpoints: read, manual entry, mapping correction."""
 
 from __future__ import annotations
 
@@ -26,11 +26,11 @@ router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 
 def _aggregate(positions: list[Position]) -> tuple[float, float, int, int]:
-    """Somme valeur de marché et résultat latent. Retourne (valeur, P&L, comptées, exclues).
+    """Sum market value and unrealised P&L. Returns (value, P&L, counted, excluded).
 
-    Une position dépourvue de valorisation est **exclue** du total plutôt que comptée
-    à zéro : un total faux ayant l'apparence d'un total juste est pire qu'un total
-    explicitement partiel.
+    A position without a valuation is **excluded** from the total rather than counted
+    as zero: a wrong total that looks correct is worse than one that is explicitly
+    partial.
     """
     market_value = 0.0
     unrealized = 0.0
@@ -59,9 +59,8 @@ def _compute_totals(positions: list[Position], base_currency: str) -> PortfolioT
             excluded_positions=excluded,
         )
 
-    # L'export ne donne pas de valeur d'achat pour les positions ouvertes : elle se
-    # déduit exactement de la valeur de marché et du résultat latent, tous deux
-    # exprimés dans la devise du compte.
+    # The export gives no purchase value for open positions: it follows exactly from
+    # market value and unrealised P&L, both expressed in the account currency.
     invested = market_value - unrealized
 
     return PortfolioTotals(
@@ -77,7 +76,7 @@ def _compute_totals(positions: list[Position], base_currency: str) -> PortfolioT
 
 
 def _compute_account_totals(positions: list[Position]) -> list[AccountTotals]:
-    """Détaille les totaux par compte : un export XTB ne couvre qu'un compte à la fois."""
+    """Break totals down per account: one XTB export only covers a single account."""
     by_account: dict[str, list[Position]] = defaultdict(list)
     for position in positions:
         by_account[position.account or "—"].append(position)
@@ -111,8 +110,8 @@ def get_portfolio(db: Session = Depends(get_db)) -> PortfolioOut:
         ).scalars()
     )
 
-    # Les CFD sont volontairement exclus : ils n'ont pas de fondamentaux, leur
-    # absence de correspondance est normale et les lister serait du bruit.
+    # CFDs are deliberately excluded: they have no fundamentals, so having no mapping
+    # is expected and listing them would just be noise.
     unresolved = list(
         db.execute(
             select(Instrument).where(
@@ -137,7 +136,7 @@ def get_portfolio(db: Session = Depends(get_db)) -> PortfolioOut:
 
 @router.post("/positions", response_model=PositionOut, status_code=status.HTTP_201_CREATED)
 def create_manual_position(payload: ManualPositionIn, db: Session = Depends(get_db)) -> PositionOut:
-    """Ajoute une position saisie à la main (titre absent de l'export, ou autre courtier)."""
+    """Add a hand-entered position (instrument missing from the export, or another broker)."""
     instrument = get_or_create_instrument(db, payload.broker_symbol, currency=payload.currency)
 
     position = Position(
@@ -164,7 +163,7 @@ def create_manual_position(payload: ManualPositionIn, db: Session = Depends(get_
 def delete_position(position_id: int, db: Session = Depends(get_db)) -> Response:
     position = db.get(Position, position_id)
     if position is None:
-        raise HTTPException(status_code=404, detail="Position introuvable.")
+        raise HTTPException(status_code=404, detail="Position not found.")
     db.delete(position)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -172,10 +171,10 @@ def delete_position(position_id: int, db: Session = Depends(get_db)) -> Response
 
 @router.put("/symbol-overrides", response_model=InstrumentOut)
 def set_symbol_override(payload: SymbolOverrideIn, db: Session = Depends(get_db)) -> InstrumentOut:
-    """Corrige à la main la correspondance entre un symbole XTB et celui des fournisseurs.
+    """Manually fix the mapping between an XTB symbol and the provider symbol.
 
-    Nécessaire pour les cas que la conversion de suffixe ne peut pas deviner,
-    typiquement les actions à classes multiples (``ERICB.SE`` → ``ERIC-B.ST``).
+    Needed for cases suffix conversion cannot guess, typically multi-class shares
+    (``ERICB.SE`` → ``ERIC-B.ST``).
     """
     broker_symbol = payload.broker_symbol.strip().upper()
     provider_symbol = payload.provider_symbol.strip().upper()
@@ -197,7 +196,7 @@ def set_symbol_override(payload: SymbolOverrideIn, db: Session = Depends(get_db)
     if instrument is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Aucun instrument connu pour le symbole « {broker_symbol} ».",
+            detail=f"No known instrument for symbol '{broker_symbol}'.",
         )
 
     instrument.provider_symbol = provider_symbol
