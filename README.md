@@ -1,60 +1,60 @@
 # Stock Analyst
 
-Application locale de suivi et d'analyse d'un portefeuille d'actions : décider de
-**conserver ou vendre** ses positions, d'**entrer ou attendre** sur les titres suivis, et
-repérer des **pépites** — en croisant plusieurs sources de données publiques.
+A local application for tracking and analysing an equity portfolio: deciding whether to
+**hold or sell** your positions, whether to **enter or wait** on the ones you follow, and
+spotting **hidden gems** — by cross-referencing several public data sources.
 
-> Cet outil produit des indicateurs à partir de données publiques. Ce ne sont pas des
-> conseils en investissement, et les décisions restent les vôtres.
+Available in English, French and Polish.
 
-📓 Le [journal de développement](DEVLOG.md) retrace les étapes, les décisions et leurs
-raisons, ainsi que les bugs rencontrés et leurs causes. Ce README décrit l'état *actuel* du
-projet ; le journal explique *comment on y est arrivé*.
+> This tool produces indicators from public data. It is not investment advice, and the
+> decisions remain yours.
+
+📓 The [development log](DEVLOG.md) records the steps, the decisions and their reasons,
+along with the bugs encountered and their root causes. This README describes the *current
+state* of the project; the log explains *how it got there*.
 
 ---
 
-## À lire en premier : l'API XTB n'existe plus
+## Read this first: the XTB API no longer exists
 
-XTB a **définitivement fermé son API le 14 mars 2025**. Leur centre d'aide est explicite :
-« *API access is no longer available. The service was discontinued on March 14, 2025.* »
+XTB **permanently shut down its API on 14 March 2025**. Their help centre is explicit:
+"*API access is no longer available. The service was discontinued on March 14, 2025.*"
 ([source](https://www.xtb.com/int/help-center/our-platforms-6-4/does-xtb-offer-investment-automation-tools-4))
 
-Concrètement :
+In practice:
 
-- les hôtes `xapi.xtb.com` et `ws.xtb.com` sont coupés ;
-- le domaine de documentation `developers.xstore.pro` ne résout même plus en DNS ;
-- les bibliothèques communautaires ont été archivées (ex. [`pawelkn/xapi-python`](https://github.com/pawelkn/xapi-python), archivée le 26/08/2025) ;
-- XTB ne propose **aucun remplaçant** : ni API, ni trading automatisé, ni copy trading.
+- the `xapi.xtb.com` and `ws.xtb.com` hosts are switched off;
+- the documentation domain `developers.xstore.pro` no longer even resolves in DNS;
+- community libraries have been archived (e.g. [`pawelkn/xapi-python`](https://github.com/pawelkn/xapi-python), archived 2025-08-26);
+- XTB offers **no replacement**: no API, no automated trading, no copy trading.
 
-**Aucune synchronisation automatique du compte n'est donc possible.** L'application est
-alimentée par l'**export de fichier** depuis xStation. C'est la seule voie fiable et
-conforme aux conditions d'utilisation — et elle a l'avantage de ne demander aucun
-identifiant : rien de sensible n'est stocké par l'application.
+**Automatic account synchronisation is therefore impossible.** The application is fed by
+**file exports** from xStation. That is the only reliable, terms-compliant route — and it
+has the advantage of requiring no credentials at all: nothing sensitive is ever stored.
 
-### Exporter ses données depuis xStation
+### Exporting your data from xStation
 
-1. Ouvrir [xStation 5](https://xstation5.xtb.com/) ;
-2. onglet **Account history** → bouton **Export** ;
-3. période **All**, format **Excel** ;
-4. déposer le fichier obtenu dans la page Portefeuille de l'application.
+1. Open [xStation 5](https://xstation5.xtb.com/);
+2. **Account history** tab → **Export** button;
+3. period **All**, format **Excel**;
+4. drop the resulting file onto the Portfolio page.
 
-Le fichier produit contient trois feuilles — *Open Positions*, *Closed Positions*,
-*Cash Operations* — toutes traitées en un seul import.
+The file contains three sheets — *Open Positions*, *Closed Positions*, *Cash Operations* —
+all handled in a single import.
 
-**Un export ne couvre qu'un compte à la fois.** Si vous avez plusieurs comptes (compte
-titres et PEA, par exemple), exportez-les séparément et importez les deux fichiers :
-ils cohabitent sans s'écraser, chacun identifié par sa colonne *Product*.
+**One export only covers one account.** If you hold several (a brokerage account and a
+tax-wrapper account, say), export them separately and import both files: they coexist
+without overwriting each other, each identified by its *Product* column.
 
-L'import est **idempotent** : réimporter le même fichier, ou une période qui se
-chevauche, ne crée aucun doublon. Les positions ouvertes sont un instantané et
-remplacent le précédent import **du même compte uniquement** ; les positions saisies à
-la main sont toujours préservées.
+The import is **idempotent**: re-importing the same file, or an overlapping period,
+creates no duplicates. Open positions are a snapshot and replace the previous import
+**of that account only**; hand-entered positions are always preserved.
 
 ---
 
-## Démarrage
+## Getting started
 
-Prérequis : Python 3.13+, Node 20+.
+Requirements: Python 3.13+, Node 20+.
 
 ### Backend
 
@@ -66,7 +66,7 @@ cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cd backend && .venv/bin/python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Documentation interactive de l'API : <http://127.0.0.1:8000/docs>
+Interactive API docs: <http://127.0.0.1:8000/docs>
 
 ### Frontend
 
@@ -74,21 +74,21 @@ Documentation interactive de l'API : <http://127.0.0.1:8000/docs>
 cd frontend && npm install && npm run dev
 ```
 
-Interface : <http://localhost:5173>. Le serveur de développement relaie `/api` vers le
-backend, il n'y a donc rien à configurer côté CORS.
+UI: <http://localhost:5173>. The dev server proxies `/api` to the backend, so there is no
+CORS setup to worry about.
 
 ### Configuration
 
-Copier `.env.example` vers `.env` à la racine. **Toutes les clés sont optionnelles** :
-l'application démarre sans aucune d'elles, et les fonctionnalités concernées se
-désactivent proprement plutôt que de faire échouer le démarrage.
+Copy `.env.example` to `.env` at the repository root. **Every key is optional**: the
+application starts without any of them, and the affected features disable themselves
+cleanly rather than failing startup.
 
-| Variable | Usage | Coût |
+| Variable | Purpose | Cost |
 |---|---|---|
-| `BASE_CURRENCY` | Devise des totaux du portefeuille | — |
-| `FINNHUB_API_KEY` | Actualités, profils (60 appels/min en gratuit) | gratuit |
-| `SEC_USER_AGENT` | Fondamentaux officiels US via SEC EDGAR. Format `Nom Prénom email@exemple.com` — la SEC rejette les requêtes anonymes | gratuit |
-| `PERPLEXITY_API_KEY` | Synthèse qualitative | **payant** |
+| `BASE_CURRENCY` | Currency used for portfolio totals | — |
+| `FINNHUB_API_KEY` | News, company profiles (60 calls/min on the free tier) | free |
+| `SEC_USER_AGENT` | Official US fundamentals via SEC EDGAR. Format `First Last email@example.com` — the SEC rejects anonymous requests | free |
+| `PERPLEXITY_API_KEY` | Qualitative synthesis | **paid** |
 
 ### Tests
 
@@ -96,7 +96,7 @@ désactivent proprement plutôt que de faire échouer le démarrage.
 cd backend && .venv/bin/python -m pytest
 ```
 
-Les tests réseau sont marqués `@pytest.mark.network` et exclus par défaut.
+Network tests are marked `@pytest.mark.network` and excluded by default.
 
 ---
 
@@ -104,112 +104,131 @@ Les tests réseau sont marqués `@pytest.mark.network` et exclus par défaut.
 
 ```
 backend/app/
-├── config.py            Configuration via .env, aucune clé en dur
-├── models.py            ORM SQLAlchemy (SQLite local)
+├── config.py            Settings from .env, no hardcoded keys
+├── messages.py          Language-neutral message codes
+├── models.py            SQLAlchemy ORM (local SQLite)
 ├── ingest/
-│   ├── xtb_import.py    Parsing de l'export xStation
-│   └── service.py       Persistance, déduplication, idempotence
-├── symbols/mapping.py   Correspondance symboles XTB ↔ fournisseurs
-├── routers/             Endpoints HTTP
-├── providers/           Sources de données (phase 2)
-└── analysis/            Indicateurs et scoring (phase 3)
+│   ├── xtb_import.py    xStation export parser
+│   └── service.py       Persistence, deduplication, idempotency
+├── symbols/mapping.py   Broker symbol ↔ provider symbol
+├── routers/             HTTP endpoints
+├── providers/           Data sources (phase 2)
+└── analysis/            Indicators and scoring (phase 3)
 
 frontend/src/
-├── api/                 Client HTTP typé
-├── components/          Composants réutilisables
-└── pages/               Portefeuille, Watchlist, Pépites
+├── api/                 Typed HTTP client
+├── i18n/                Translation catalogues (en, fr, pl)
+├── components/          Reusable components
+└── pages/               Portfolio, Watchlist, Hidden gems
 ```
 
-### Deux partis pris à connaître
+### Three design commitments worth knowing
 
-**1. Le parser est tolérant, jamais silencieux.** Le format de l'export xStation n'est pas
-documenté publiquement et varie selon la langue de l'interface. Les colonnes sont donc
-reconnues par alias normalisés (français et anglais) et les tables classées par *signature
-de colonnes* plutôt que par titre de section. Tout ce qui n'est pas compris remonte dans
-les avertissements de l'import, et la ligne source est conservée intégralement en base
-(champ `raw`) pour pouvoir tout recalculer sans redemander le fichier.
+**1. The API is language-neutral.** The backend never returns prose. Diagnostics come back
+as a `code` plus parameters, and the client turns them into a sentence:
 
-Si un export ne passe pas, c'est `COLUMN_ALIASES` dans
-[`xtb_import.py`](backend/app/ingest/xtb_import.py) qu'il faut compléter.
+```json
+{ "code": "import.unresolvedSymbols", "params": { "count": 2, "symbols": ["FOO.XX"] } }
+```
 
-Quatre pièges du format réel, tous vérifiés sur des exports de production et couverts par
-des tests — ils valent d'être connus avant toute modification du parser :
+This matters because import diagnostics are the most useful thing the backend produces —
+they say which rows were skipped and why. Committing them to one language would make them
+useless to everyone else, and no amount of frontend work could recover the meaning. A test
+enforces the rule: no warning may contain a sentence.
 
-| Piège | Conséquence si ignoré |
+Polish plural rules are handled through `Intl.PluralRules`: Polish has three categories
+(`one`, `few` for 2–4, `many` for 0 and 5+), so a `count === 1 ? a : b` ternary would be
+wrong twice over.
+
+**2. The parser is tolerant, but never silent.** The xStation export format is not publicly
+documented and varies with the interface language. Columns are therefore matched through
+normalised aliases (English and French) and tables classified by *column signature* rather
+than by heading. Anything not understood is surfaced in the import warnings, and the source
+row is stored verbatim (the `raw` field) so everything can be recomputed without asking for
+the file again.
+
+If an export fails to parse, `COLUMN_ALIASES` in
+[`xtb_import.py`](backend/app/ingest/xtb_import.py) is what needs extending.
+
+Four traps in the real format, all verified against production exports and covered by
+tests — worth knowing before touching the parser:
+
+| Trap | Consequence if ignored |
 |---|---|
-| Le classeur déclare une dimension `A1:A1` erronée | En mode `read_only`, openpyxl s'y fie et le fichier paraît **vide** |
-| `Ticker` porte le symbole, `Instrument` la raison sociale | « Canadian Pacific » serait pris pour un symbole boursier |
-| Les positions ouvertes sont sur **deux niveaux** : une ligne agrégée par titre, puis une ligne par lot | Chaque position serait comptée **deux fois** |
-| Le `Position ID` des positions fermées n'est **pas unique** (clôtures partielles : 223 lignes pour 220 identifiants) | Violation de contrainte d'unicité à l'import |
+| The workbook declares a wrong `A1:A1` dimension | In `read_only` mode openpyxl trusts it and the file looks **empty** |
+| `Ticker` holds the symbol, `Instrument` the company name | "Canadian Pacific" would be treated as a ticker |
+| Open positions come in **two levels**: one aggregate row per holding, then one row per lot | Every holding counted **twice** |
+| The `Position ID` of closed positions is **not unique** (partial closes: 223 rows for 220 ids) | Unique-constraint violation on import |
 
-**2. Une donnée absente n'est jamais traitée comme un zéro.** Une position dont les
-montants manquent est **exclue des totaux** et signalée, plutôt que comptée à zéro — ce
-qui donnerait un total faux avec l'apparence d'un total juste. Le même principe
-s'appliquera au scoring : un pilier sans données est retiré du calcul et les poids
-renormalisés, avec un score marqué « partiel ».
+**3. Missing data is never treated as zero.** A position without figures is **excluded from
+the totals** and flagged, rather than counted as zero — which would produce a wrong total
+wearing the appearance of a correct one. The same principle will apply to scoring: a pillar
+without data is dropped from the calculation and the weights renormalised, with the score
+marked "partial".
 
-### Cohérence des montants
+### Reconciling the amounts
 
-L'export ne fournit pas de « valeur d'achat » pour les positions ouvertes : elle est
-déduite exactement par `valeur de marché − résultat latent`, les deux étant exprimés dans
-la devise du compte. Le cours affiché provient des lignes de lots et reste dans la devise
-de l'instrument — il n'est **pas** recalculé par `valeur / quantité`, ce qui donnerait un
-prix en euros incomparable au prix de revient.
+The export provides no "purchase value" for open positions, so it is derived exactly as
+`market value − unrealised P&L`, both being expressed in the account currency. The price
+shown comes from the lot rows and stays in the instrument's currency — it is **not**
+recomputed as `value / quantity`, which would give a figure in euros that cannot be
+compared to the average cost.
 
-Aucune conversion de change n'est appliquée. Les totaux se vérifient au centime près
-contre les lignes de synthèse du fichier XTB.
+No FX conversion is applied. The totals reconcile to the cent against the summary rows
+inside the XTB file itself.
 
-### Correspondance des symboles
+### Symbol mapping
 
-XTB suffixe par pays (`AAPL.US`, `TTE.FR`), Yahoo par place de cotation (`AAPL`, `TTE.PA`).
-Il n'existe aucune table officielle : l'application convertit les suffixes, ce qui couvre
-la grande majorité des cas.
+XTB suffixes by country (`AAPL.US`, `TTE.FR`), Yahoo by listing venue (`AAPL`, `TTE.PA`).
+No official table exists, so the application converts suffixes, which covers the large
+majority of cases.
 
-**Limite importante** : la conversion ne touche que le suffixe, jamais la racine du
-symbole. `ERICB.SE` devient ainsi `ERICB.ST` alors que Yahoo attend `ERIC-B.ST`. Une
-correspondance automatique est donc affichée comme **« non vérifiée »** tant qu'aucune
-donnée n'a été récupérée avec elle, et se corrige d'un clic depuis le tableau des
-positions. Les corrections sont persistées et réappliquées aux imports suivants.
+**Important limitation**: the conversion only rewrites the suffix, never the root of the
+symbol. `ERICB.SE` becomes `ERICB.ST` where Yahoo expects `ERIC-B.ST`. An automatic mapping
+is therefore displayed as **"unverified"** until data has actually been fetched with it,
+and can be corrected in one click from the positions table. Corrections are persisted and
+reapplied to later imports.
 
-La décision repose sur la **catégorie fournie par le courtier** (`STOCK`, `ETF`, `CFD`),
-et non sur une heuristique de nommage. C'est important : `GOLD.US` est *Barrick Gold*,
-une action parfaitement analysable, qu'un filtre sur le mot « GOLD » rejetterait à tort.
-Les CFD (`US500`, `BITCOIN`, `NATGAS`…) sont laissés sans correspondance — ils n'ont pas
-de fondamentaux — et ne sont pas signalés comme une anomalie, puisque c'est le
-comportement attendu.
+The decision rests on the **category supplied by the broker** (`STOCK`, `ETF`, `CFD`),
+not on a naming heuristic. That matters: `GOLD.US` is *Barrick Gold*, a perfectly
+analysable equity that a filter on the word "GOLD" would wrongly reject. CFDs (`US500`,
+`BITCOIN`, `NATGAS`...) are left unmapped — they have no fundamentals — and are not
+reported as anomalies, since that is the expected outcome.
 
 ---
 
-## État d'avancement
+## Project status
 
-| Phase | Contenu | État |
+| Phase | Content | Status |
 |---|---|---|
-| 1 | Socle, import XTB, page Portefeuille | ✅ terminée |
-| 2 | Couche providers, cours de marché, graphiques | à venir |
-| 3 | Moteur de scoring (5 piliers, `scoring.yaml`) | à venir |
-| 4 | Watchlist et timing d'entrée | à venir |
-| 5 | Page Pépites (screener) | à venir |
-| 6 | Synthèse qualitative Perplexity | à venir |
+| 1 | Foundation, XTB import, Portfolio page | ✅ done |
+| 1b | Real-file hardening (7 bugs) | ✅ done |
+| 1c | Version control, data scrubbing | ✅ done |
+| 1d | English codebase, i18n (en/fr/pl) | ✅ done |
+| 2 | Provider layer, market prices, charts | to do |
+| 3 | Scoring engine (5 pillars, `scoring.yaml`) | to do |
+| 4 | Watchlist and entry timing | to do |
+| 5 | Hidden gems page (screener) | to do |
+| 6 | Qualitative synthesis via Perplexity | to do |
 
-### Sources de données prévues (phase 2)
+### Planned data sources (phase 2)
 
-| Source | Rôle | Portée | Remarque |
+| Source | Role | Coverage | Note |
 |---|---|---|---|
-| yfinance | Cours + fondamentaux de base | mondiale | Seule source gratuite réellement mondiale. Non officielle : **cassera périodiquement**, d'où la chaîne de repli |
-| Stooq | Cours de repli (EOD) | US + Europe | Sans clé, très stable |
-| SEC EDGAR | Fondamentaux officiels (XBRL) | **US uniquement** | Gratuit, officiel, sans clé |
-| Finnhub | Actualités, profils | mondiale | 60 appels/min en gratuit |
-| Perplexity | Synthèse qualitative | mondiale | **Payant** — sur demande, un titre à la fois, mis en cache |
+| yfinance | Prices + basic fundamentals | worldwide | The backbone — the only genuinely worldwide free source. Unofficial: **it will break periodically** |
+| Stooq | Fallback prices (EOD) | US + Europe | No key, very stable |
+| SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |
+| Finnhub | News, profiles | worldwide | 60 calls/min on the free tier |
+| Perplexity | Qualitative synthesis | worldwide | **Paid** — on demand, one instrument at a time, cached |
 
-Asymétrie assumée : la couverture fondamentale est excellente sur les valeurs américaines
-et nettement plus lacunaire ailleurs en gratuit. L'interface affiche systématiquement la
-couverture des données et la source réellement utilisée.
+An asymmetry we accept: fundamentals coverage is excellent for US names and noticeably
+patchier elsewhere on free tiers. The UI always shows the data coverage and which source
+actually served the data.
 
-### Réserves
+### Caveats
 
-- **Aucune donnée en temps réel** : les cours gratuits sont différés. L'outil vise
-  l'analyse de fond, pas le trading intraday.
-- **Objectifs de cours et notes d'analystes** sont très largement passés en payant ; le
-  pilier sentiment reposera surtout sur le flux d'actualités.
-- Pas de scraping de Finviz, TradingView ou Yahoo (hors yfinance) : contraire à leurs
-  conditions d'utilisation.
+- **No real-time data**: free prices are delayed. This tool is for fundamental analysis,
+  not intraday trading.
+- **Price targets and analyst ratings** are now largely paywalled; the sentiment pillar
+  will rest mostly on the news flow.
+- No scraping of Finviz, TradingView or Yahoo (beyond yfinance): against their terms.

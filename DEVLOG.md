@@ -1,436 +1,478 @@
-# Journal de développement
+# Development log
 
-Historique des étapes, décisions, bugs et résultats du projet Stock Analyst.
+A record of the steps, decisions, bugs and outcomes of the Stock Analyst project.
 
-**Rôle de ce document.** Le [README](README.md) décrit l'état *actuel* du projet — ce qu'il
-fait et comment l'utiliser. Ce journal décrit *comment on y est arrivé* : ce qu'on a
-essayé, ce qui a cassé, pourquoi, et ce qu'on en a conclu. Il évite de refaire deux fois
-la même erreur et de revenir sans le savoir sur une décision déjà tranchée.
+**What this document is for.** The [README](README.md) describes the *current* state of the
+project — what it does and how to use it. This log describes *how it got there*: what was
+tried, what broke, why, and what we concluded. It exists so the same mistake is not made
+twice, and so a decision already settled is not silently reopened.
 
 ## Conventions
 
-Une entrée par événement notable, la plus récente en bas de sa section.
+One entry per notable event, most recent at the bottom of its section.
 
-- **Décision** — contexte, choix retenu, raison, conséquences. Une décision annulée n'est
-  jamais effacée : elle est marquée ~~barrée~~ avec un renvoi vers celle qui la remplace.
-- **Bug** — symptôme observé, cause réelle, correctif, vérification. La cause compte plus
-  que le correctif : c'est elle qui empêche la récidive.
-- **Étape** — ce qui a été livré et comment ça a été vérifié.
+- **Decision** — context, the choice made, the reason, the consequences. A reversed
+  decision is never deleted: it is ~~struck through~~ with a pointer to the one replacing
+  it.
+- **Bug** — observed symptom, actual cause, fix, verification. The cause matters more than
+  the fix: it is the cause that prevents a recurrence.
+- **Step** — what was delivered and how it was verified.
 
-Consigner un bug **au moment où on le comprend**, pas après coup : la cause s'oublie vite.
+Record a bug **at the moment it is understood**, not afterwards: the cause is quickly
+forgotten.
 
-**Aucune donnée personnelle dans le dépôt.** Numéros de compte, montants de portefeuille
-et fichiers d'export n'y figurent pas. Les exemples chiffrés sont fictifs mais cohérents,
-et signalés comme tels. Les fixtures de test utilisent des numéros de compte inventés.
+**No personal data in the repository.** Account numbers, portfolio amounts and export
+files are kept out of it. Numeric examples are fictional but internally consistent, and
+flagged as such. Test fixtures use invented account numbers.
 
 ---
 
-# Phase 0 — Cadrage (2026-08-11)
+# Phase 0 — Scoping (2026-08-11)
 
-## Étape — Recherche de faisabilité
+## Step — Feasibility research
 
-Objectif initial : brancher l'application sur l'API XTB pour suivre le portefeuille
-automatiquement.
+Initial goal: connect the application to the XTB API to track the portfolio automatically.
 
-## Décision 0.1 — Abandon de l'API XTB, architecture par import de fichier
+## Decision 0.1 — Drop the XTB API, build around file imports
 
-**Contexte.** La recherche a établi que **l'API XTB n'existe plus**. Elle a été coupée le
-**14 mars 2025**.
+**Context.** Research established that **the XTB API no longer exists**. It was shut down
+on **14 March 2025**.
 
-Sources :
-- Centre d'aide XTB : « *API access is no longer available. The service was discontinued
-  on March 14, 2025.* »
+Sources:
+- XTB help centre: "*API access is no longer available. The service was discontinued on
+  March 14, 2025.*"
   ([xtb.com](https://www.xtb.com/int/help-center/our-platforms-6-4/does-xtb-offer-investment-automation-tools-4))
-- Le domaine de documentation `developers.xstore.pro` ne résout plus en DNS.
-- Les wrappers communautaires sont archivés
-  ([`pawelkn/xapi-python`](https://github.com/pawelkn/xapi-python), archivé le 26/08/2025).
-- XTB ne propose **aucun remplaçant** : ni API, ni trading automatisé, ni copy trading.
+- The documentation domain `developers.xstore.pro` no longer resolves in DNS.
+- Community wrappers are archived
+  ([`pawelkn/xapi-python`](https://github.com/pawelkn/xapi-python), archived 2025-08-26).
+- XTB offers **no replacement**: no API, no automated trading, no copy trading.
 
-**Décision.** L'application est alimentée par l'**export de fichier xStation**, et conçue
-comme **broker-agnostique**.
+**Decision.** The application is fed by **xStation file exports** and designed to be
+**broker-agnostic**.
 
-**Alternative écartée.** Scraper la plateforme web avec les identifiants du compte :
-quasi certainement contraire aux CGU, risque de blocage du compte, et obligerait à stocker
-des identifiants financiers. Écartée sans hésitation.
+**Alternative rejected.** Scraping the web platform with the account credentials: almost
+certainly against the terms of service, risks the account being blocked, and would require
+storing financial credentials. Rejected without hesitation.
 
-**Conséquences.**
-- Pas de synchronisation automatique : l'utilisateur dépose un fichier.
-- Aucun identifiant n'est demandé ni stocké — surface de risque nulle de ce côté.
-- L'outil survit à un changement de courtier.
-- Le parsing devient le point de fragilité principal du projet → d'où l'effort de
-  robustesse et de tests investi en phase 1.
+**Consequences.**
+- No automatic synchronisation: the user drops in a file.
+- No credentials are requested or stored — zero risk surface on that front.
+- The tool survives a change of broker.
+- Parsing becomes the project's main point of fragility → hence the effort spent on
+  robustness and tests in phase 1.
 
-## Décision 0.2 — Stack et périmètre
+## Decision 0.2 — Stack and scope
 
-| Sujet | Choix | Raison |
+| Topic | Choice | Reason |
 |---|---|---|
-| Backend | FastAPI + SQLite | Python pour l'analyse (pandas) ; SQLite suffit en local mono-utilisateur |
-| Frontend | React + Vite + TypeScript | Dashboard multi-pages interactif demandé |
-| Rafraîchissement | À la demande | Pas de tâche de fond à maintenir |
-| Marchés | Mondial | Portefeuille US + Europe |
-| Sources | Gratuites uniquement | Contrainte posée d'entrée |
-| Synthèse qualitative | API Perplexity | Seule dépense acceptée |
+| Backend | FastAPI + SQLite | Python for the analysis (pandas); SQLite is plenty for a local single-user app |
+| Frontend | React + Vite + TypeScript | An interactive multi-page dashboard was requested |
+| Refresh | On demand | No background job to maintain |
+| Markets | Worldwide | The portfolio spans US and Europe |
+| Sources | Free only | A constraint set up front |
+| Qualitative synthesis | Perplexity API | The only accepted expense |
 
-## Décision 0.3 — Encadrement de l'usage de Perplexity
+## Decision 0.3 — Guardrails on Perplexity usage
 
-**Contexte.** Tarification Sonar : coût aux tokens **plus** un frais de **5 à 14 $ par
-1000 requêtes**. Un screening de masse sur quelques milliers de titres coûterait des
-dizaines d'euros par passage.
+**Context.** Sonar pricing: token cost **plus** a fee of **$5–14 per 1000 requests**. Mass
+screening across a few thousand instruments would cost tens of euros per run.
 
-**Décision.** Perplexity est réservé à l'analyse qualitative **d'un titre à la fois, sur
-demande explicite**, avec mise en cache (TTL 7 jours). Jamais de screening de masse. Le
-LLM **ne participe pas au score** : il le commente.
+**Decision.** Perplexity is reserved for qualitative analysis of **one instrument at a
+time, on explicit request**, with caching (7-day TTL). Never mass screening. The LLM
+**does not contribute to the score**: it comments on it.
 
-**Conséquence.** Le screening des « pépites » doit être conçu en deux étages — filtrage
-local sur cache, puis enrichissement réseau du seul top N.
-
----
-
-# Phase 1 — Socle, import XTB, page Portefeuille (2026-08-11)
-
-## Étape 1.1 — Squelette et modèle de données
-
-Livré : arborescence backend/frontend, modèles SQLAlchemy, parser d'export, couche de
-correspondance des symboles, page Portefeuille, 81 tests.
-
-## Décision 1.1 — Conserver la ligne source de chaque import
-
-Chaque transaction et position stocke la ligne d'origine du fichier en JSON (champ `raw`).
-
-**Raison.** Permet de recalculer ou corriger a posteriori sans redemander le fichier à
-l'utilisateur. Le coût de stockage est négligeable à cette échelle.
-
-**Résultat.** Décision payante dès la phase 1b : les colonnes de taux de change, d'abord
-non exploitées, étaient déjà en base.
-
-## Décision 1.2 — Une donnée absente n'est jamais un zéro
-
-Une position sans valorisation est **exclue des totaux** et signalée, jamais comptée à
-zéro.
-
-**Raison.** Un total faux ayant l'apparence d'un total juste est plus dangereux qu'un
-total explicitement partiel. Le même principe s'appliquera au scoring : un pilier sans
-données est retiré du calcul et les poids renormalisés.
-
-## Bug 1.1 — `parse_number("1 234,56 EUR")` retournait `None`
-
-**Symptôme.** Test en échec sur un montant suivi de sa devise.
-
-**Cause.** Le nettoyage filtrait caractère par caractère avec `[^\d,.\-+eE]`, en gardant
-`e`/`E` pour la notation scientifique. Le « E » de « EUR » survivait, produisant
-`"1234.56E"`, invalide.
-
-**Correctif.** Extraction du premier nombre par expression régulière (`_NUMBER_TOKEN`) au
-lieu d'un filtrage. La notation scientifique est explicitement abandonnée : absente des
-exports courtier, elle rendait ambiguë la détection des devises accolées.
-
-**Bénéfice imprévu.** Le passage à l'extraction a permis d'ajouter gratuitement la
-notation comptable `(1 234,56)` → `-1234.56`.
-
-## Bug 1.2 — FastAPI refusait de démarrer sur la route `DELETE`
-
-**Symptôme.** `AssertionError: Status code 204 must not have a response body` au
-chargement du module.
-
-**Cause.** Un `status_code=204` sans `response_class` explicite : FastAPI tente de
-sérialiser un corps de réponse, interdit sur un 204.
-
-**Correctif.** `response_class=Response` et retour d'un `Response(status_code=204)`.
-
-## Bug 1.3 — Tables absentes dans les tests d'API
-
-**Symptôme.** `no such table: instruments`, alors que `create_all` avait été appelé.
-
-**Cause.** `create_engine("sqlite://")` ouvre une base en mémoire **distincte par
-connexion**. Les tables créées sur une connexion sont invisibles depuis le thread qui sert
-les requêtes HTTP. Les tests du service passaient par chance (même thread, même
-connexion réutilisée), ce qui masquait le problème.
-
-**Correctif.** `poolclass=StaticPool` sur les moteurs de test.
-
-**Leçon.** Un test qui passe « par chance » sur un pool de connexions est un faux positif.
-
-## Décision 1.3 — Afficher les correspondances automatiques comme « non vérifiées »
-
-**Contexte.** La conversion de suffixe (`.FR` → `.PA`) ne transforme que le suffixe,
-jamais la racine du symbole. `ERICB.SE` devient `ERICB.ST` alors que Yahoo attend
-`ERIC-B.ST` — le résultat est faux mais paraît valide.
-
-**Décision.** Une correspondance automatique s'affiche **« non vérifiée »** en gris, et non
-en vert comme une validation. Seule une correction manuelle donne « confirmée ». Un bouton
-« corriger » est disponible sur chaque ligne, y compris celles déjà résolues.
-
-**Raison.** Afficher en vert une hypothèse jamais confrontée à un fournisseur donne une
-assurance que rien ne justifie.
-
-**Suite prévue.** En phase 2, une correspondance ayant effectivement servi à récupérer des
-cours pourra passer en « vérifiée ».
-
-## Résultat de phase — 81 tests, import de bout en bout fonctionnel
-
-Vérifié dans le navigateur sur un fichier synthétique. **Réserve à ce stade** : le format
-réel n'avait pas encore été confronté. C'était le risque n°1 identifié, d'où la demande
-d'un export réel à l'utilisateur.
+**Consequence.** The "hidden gems" screener must be designed in two stages — local
+filtering over cached data, then network enrichment of the top N only.
 
 ---
 
-# Phase 1b — Confrontation aux fichiers réels (2026-08-12)
+# Phase 1 — Foundation, XTB import, Portfolio page (2026-08-11)
 
-Deux exports de production fournis par l'utilisateur : un compte titres et un PEA.
-**Retour initial : « 0 position, 0 opération, aucune table reconnue ».**
+## Step 1.1 — Skeleton and data model
 
-Cette confrontation a révélé **sept bugs** que le fichier synthétique ne pouvait pas
-exposer — la structure supposée était fausse sur presque tous les points.
+Delivered: backend/frontend tree, SQLAlchemy models, export parser, symbol mapping layer,
+Portfolio page, 81 tests.
 
-## Bug 1b.1 — Le classeur paraissait entièrement vide *(cause du symptôme signalé)*
+## Decision 1.1 — Keep the source row of every import
 
-**Symptôme.** Aucune table reconnue ; `max_row = 1` sur les trois feuilles.
+Every transaction and position stores its originating file row as JSON (the `raw` field).
 
-**Cause.** Les exports XTB déclarent une dimension `A1:A1` **erronée** dans leurs
-métadonnées. En mode `read_only`, openpyxl fait confiance à cette déclaration sans
-inspecter les données, et ne renvoie qu'une seule cellule.
+**Reason.** Allows recomputing or correcting later without asking the user for the file
+again. Storage cost is negligible at this scale.
 
-**Correctif.** Chargement du classeur en mode normal (`read_only=False`). Le surcoût
-mémoire est négligeable : quelques centaines de lignes par fichier.
+**Outcome.** Paid off in phase 1b: the FX-rate columns, initially unused, were already in
+the database.
 
-**Leçon.** `read_only=True` est une optimisation qui suppose des métadonnées correctes.
-Sur des fichiers produits par un tiers, cette hypothèse ne tient pas.
+## Decision 1.2 — Missing data is never zero
 
-## Bug 1b.2 — La raison sociale était prise pour un symbole boursier
+A position without a valuation is **excluded from the totals** and flagged, never counted
+as zero.
 
-**Symptôme.** Aucun symbole exploitable même une fois les données lues.
+**Reason.** A wrong total that looks correct is more dangerous than one that is explicitly
+partial. The same principle will apply to scoring: a pillar without data is dropped and the
+weights renormalised.
 
-**Cause.** Confusion de colonnes. Dans le format réel, **`Ticker` porte le symbole**
-(`CP.US`) et **`Instrument` la raison sociale** (`Canadian Pacific`). L'alias `instrument`
-était mappé sur `symbol`.
+## Bug 1.1 — `parse_number("1 234,56 EUR")` returned `None`
 
-**Correctif.** `ticker` → `symbol`, `instrument` → `name`, avec priorité explicite de
-`ticker`. La raison sociale est désormais exploitée et affichée sous le symbole.
+**Symptom.** A test failed on an amount followed by its currency code.
 
-## Bug 1b.3 — Les positions auraient été comptées deux fois
+**Cause.** The cleanup filtered character by character with `[^\d,.\-+eE]`, keeping `e`/`E`
+for scientific notation. The "E" of "EUR" survived, producing `"1234.56E"`, which is
+invalid.
 
-**Symptôme.** Détecté à l'analyse de structure, avant de produire un total faux.
+**Fix.** Extract the first number with a regular expression (`_NUMBER_TOKEN`) instead of
+filtering. Scientific notation was explicitly dropped: absent from broker exports, it made
+trailing-currency detection ambiguous.
 
-**Cause.** Les positions ouvertes sont sur **deux niveaux** :
+**Unplanned benefit.** Switching to extraction made accounting notation
+`(1 234,56)` → `-1234.56` free to support.
+
+## Bug 1.2 — FastAPI refused to start on the `DELETE` route
+
+**Symptom.** `AssertionError: Status code 204 must not have a response body` at module
+load.
+
+**Cause.** A `status_code=204` without an explicit `response_class`: FastAPI tries to
+serialise a response body, which a 204 forbids.
+
+**Fix.** `response_class=Response` and returning `Response(status_code=204)`.
+
+## Bug 1.3 — Missing tables in the API tests
+
+**Symptom.** `no such table: instruments`, even though `create_all` had run.
+
+**Cause.** `create_engine("sqlite://")` opens a **separate in-memory database per
+connection**. Tables created on one connection are invisible to the thread serving HTTP
+requests. The service tests passed by luck (same thread, same connection reused), which
+masked the problem.
+
+**Fix.** `poolclass=StaticPool` on the test engines.
+
+**Lesson.** A test that passes by luck on a connection pool is a false positive.
+
+## Decision 1.3 — Show automatic mappings as "unverified"
+
+**Context.** Suffix conversion (`.FR` → `.PA`) only rewrites the suffix, never the root of
+the symbol. `ERICB.SE` becomes `ERICB.ST` where Yahoo expects `ERIC-B.ST` — the result is
+wrong but looks valid.
+
+**Decision.** An automatic mapping is displayed **"unverified"** in grey, not in green as
+if validated. Only a manual correction earns "confirmed". A "fix" button is available on
+every row, including already-resolved ones.
+
+**Reason.** Showing a never-tested hypothesis in green implies a confidence nothing
+supports.
+
+**Follow-up.** In phase 2, a mapping that has actually served to fetch prices will be able
+to graduate to "verified".
+
+## Phase outcome — 81 tests, end-to-end import working
+
+Verified in the browser against a synthetic file. **Caveat at that point**: the real format
+had not yet been confronted. That was the number-one identified risk, hence the request to
+the user for a real export.
+
+---
+
+# Phase 1b — Meeting the real files (2026-08-12)
+
+Two production exports supplied by the user: a brokerage account and a tax-wrapper account.
+**Initial result: "0 positions, 0 operations, no table recognised".**
+
+This confrontation exposed **seven bugs** the synthetic file could never have surfaced —
+the assumed structure was wrong on nearly every point.
+
+## Bug 1b.1 — The workbook looked entirely empty *(cause of the reported symptom)*
+
+**Symptom.** No table recognised; `max_row = 1` on all three sheets.
+
+**Cause.** XTB exports declare a **wrong** `A1:A1` dimension in their metadata. In
+`read_only` mode openpyxl trusts that declaration without inspecting the data, and returns
+a single cell.
+
+**Fix.** Load the workbook in normal mode (`read_only=False`). The memory overhead is
+negligible: a few hundred rows per file.
+
+**Lesson.** `read_only=True` is an optimisation that assumes correct metadata. On files
+produced by a third party, that assumption does not hold.
+
+## Bug 1b.2 — The company name was taken for a ticker
+
+**Symptom.** No usable symbol even once the data was being read.
+
+**Cause.** Column confusion. In the real format, **`Ticker` holds the symbol** (`CP.US`)
+and **`Instrument` the company name** (`Canadian Pacific`). The `instrument` alias was
+mapped to `symbol`.
+
+**Fix.** `ticker` → `symbol`, `instrument` → `name`, with `ticker` explicitly winning. The
+company name is now used and displayed under the symbol.
+
+## Bug 1b.3 — Positions would have been counted twice
+
+**Symptom.** Caught during structural analysis, before it could produce a wrong total.
+
+**Cause.** Open positions come in **two levels**:
 
 ```
-My Trades | ASML       | ASML.NL | STOCK |     | 1.0 | ...   <- ligne agrégée
+My Trades | ASML       | ASML.NL | STOCK |     | 1.0 | ...   <- aggregate row
 My Trades | 1636247573 | ASML.NL |       | BUY | 1.0 | ...   <- lot
 ```
 
-Un titre = une ligne agrégée + N lignes de lots. Sur les fichiers réels, **38 positions
-occupent 153 lignes**. Les traiter uniformément aurait **doublé le portefeuille**.
+One holding = one aggregate row + N lot rows. On the real files, **38 positions occupy 153
+rows**. Treating them uniformly would have **doubled the portfolio**.
 
-**Règle de distinction retenue.** Ligne agrégée = `Type` vide et `Category` renseignée ;
-lot = l'inverse. Vérifiée sur l'intégralité des deux fichiers : 38 lignes agrégées et
-115 lots, **aucune ambiguïté**.
+**Distinguishing rule adopted.** Aggregate row = `Type` empty and `Category` set; lot = the
+opposite. Verified across both files in full: 38 aggregate rows and 115 lots, **no
+ambiguity**.
 
-**Correctif.** Seules les lignes agrégées deviennent des positions. Les lots servent à
-dater l'entrée (la plus ancienne), compter les tranches, déduire le sens et récupérer le
-cours. Un repli traite les lots comme des positions si aucun niveau agrégé n'existe — pour
-ne rien perdre sur une variante de format.
+**Fix.** Only aggregate rows become positions. Lots are used to date the entry (the
+earliest), count the tranches, infer the direction and recover the current price. A
+fallback treats lots as positions when no aggregate level exists — so nothing is lost on a
+format variant.
 
-## Bug 1b.4 — Violation de contrainte d'unicité à l'import
+## Bug 1b.4 — Unique-constraint violation on import
 
-**Symptôme.** `IntegrityError: UNIQUE constraint failed: transactions.external_id,
-transactions.type` sur le fichier du compte titres. Le premier import échouait
-silencieusement côté client (réponse vide).
+**Symptom.** `IntegrityError: UNIQUE constraint failed: transactions.external_id,
+transactions.type` on the brokerage file. The first import failed silently from the
+client's point of view (empty response).
 
-**Cause — double.**
+**Cause — twofold.**
 
-1. Ma première inspection tronquait l'affichage à 16 colonnes, d'où la conclusion erronée
-   que les positions fermées n'avaient pas d'identifiant. Elles en ont un : `Position ID`,
-   colonne 24 sur 25.
-2. Cet identifiant **n'est pas unique**. Une position soldée en plusieurs fois produit
-   plusieurs lignes portant le même `Position ID` : **223 lignes pour 220 identifiants**.
+1. My first inspection truncated the display at 16 columns, leading to the wrong conclusion
+   that closed positions had no identifier. They do: `Position ID`, column 24 of 25.
+2. That identifier **is not unique**. A holding closed in several parts produces several
+   rows sharing one `Position ID`: **223 rows for 220 identifiers**.
 
-**Correctif.** La clé de déduplication combine l'identifiant **et** les détails
-d'exécution (symbole, dates d'ouverture et de clôture, volume, prix), plus un compteur
-d'occurrences pour les lignes rigoureusement identiques. Stable d'un import à l'autre,
-unique par ligne.
+**Fix.** The deduplication key combines the identifier **and** the execution details
+(symbol, open and close timestamps, volume, price), plus an occurrence counter for
+byte-identical rows. Stable across imports, unique per row.
 
-**Leçon.** Ne jamais conclure sur la structure d'un fichier depuis un affichage tronqué.
-Le script d'inspection affiche désormais toutes les colonnes.
+**Lesson.** Never conclude anything about a file's structure from a truncated view. The
+inspection script now prints every column.
 
-## Bug 1b.5 — Doublons non détectés au sein d'un même import
+## Bug 1b.5 — Duplicates within a single import went undetected
 
-**Symptôme.** Découvert en corrigeant 1b.4 : la contrainte sautait malgré le contrôle
-d'existence.
+**Symptom.** Found while fixing 1b.4: the constraint still fired despite the existence
+check.
 
-**Cause.** Le contrôle faisait un `SELECT` en base, mais les objets ajoutés à la session
-et non encore *flushés* sont invisibles d'une requête. Deux lignes de clé identique dans
-le même fichier passaient donc toutes deux le contrôle, avant de faire échouer la
-contrainte au flush.
+**Cause.** The check ran a `SELECT` against the database, but objects added to the session
+and not yet flushed are invisible to a query. Two rows sharing a key in the same file both
+passed the check, then failed the constraint at flush time.
 
-**Correctif.** Un ensemble `seen` en mémoire complète le contrôle en base pour couvrir les
-doublons intra-import.
+**Fix.** An in-memory `seen` set complements the database check to cover intra-import
+duplicates.
 
-## Bug 1b.6 — Identifiants numériques rendus en flottants
+## Bug 1b.6 — Numeric identifiers rendered as floats
 
-**Symptôme.** `external_id` valant `"1677685567.0"` au lieu de `"1677685567"`.
+**Symptom.** `external_id` came out as `"1677685567.0"` instead of `"1677685567"`.
 
-**Cause.** openpyxl renvoie les entiers d'un classeur en `float`.
+**Cause.** openpyxl returns whole numbers from a workbook as `float`.
 
-**Correctif.** Helper `_clean_id` qui normalise les entiers flottants.
+**Fix.** A `_clean_id` helper that normalises integral floats.
 
-**Pourquoi ça comptait.** Un identifiant mal formaté reste fonctionnel pour la
-déduplication tant qu'il est *cohérent*, mais casse tout rapprochement futur avec une
-autre source, et fait mauvais effet en base.
+**Why it mattered.** A badly formatted identifier still works for deduplication as long as
+it is *consistent*, but it breaks any future reconciliation against another source, and
+looks wrong in the database.
 
-## Bug 1b.7 — Colonne « Cours » vide sur toutes les lignes
+## Bug 1b.7 — The "Price" column was empty on every row
 
-**Symptôme.** Constaté visuellement dans l'interface après un import réussi.
+**Symptom.** Spotted visually in the UI after a successful import.
 
-**Cause.** `Current price` n'est renseigné que sur les lignes de lots, pas sur la ligne
-agrégée.
+**Cause.** `Current price` is only populated on lot rows, not on the aggregate row.
 
-**Correctif.** Le cours est repris du premier lot disponible.
+**Fix.** The price is taken from the first available lot.
 
-**Piège évité.** Le déduire par `valeur de marché / quantité` aurait été tentant et
-**faux** : la valeur de marché est en devise du compte (EUR), le prix de revient en devise
-de l'instrument (USD). Le tableau aurait affiché côte à côte deux prix incomparables.
+**Trap avoided.** Deriving it as `market value / quantity` would have been tempting and
+**wrong**: market value is in the account currency (EUR), average cost in the instrument's
+currency (USD). The table would have shown two incomparable prices side by side.
 
-## Décision 1b.1 — La catégorie du courtier prime sur toute heuristique de nommage
+## Decision 1b.1 — The broker category outranks any naming heuristic
 
-**Contexte.** Mon heuristique classait `GOLD.US` en matière première à cause du mot
-« GOLD » dans le symbole. **`GOLD.US` est Barrick Gold**, une action minière cotée au NYSE,
-parfaitement analysable. Elle était exclue à tort de toute analyse future.
+**Context.** My heuristic classified `GOLD.US` as a commodity because of the word "GOLD" in
+the symbol. **`GOLD.US` is Barrick Gold**, a mining equity listed on the NYSE and perfectly
+analysable. It was being wrongly excluded from all future analysis.
 
-**Décision.** La colonne `Category` de l'export (`STOCK`, `ETF`, `CFD`) fait autorité.
-L'heuristique sur le symbole n'est plus qu'un repli pour les saisies manuelles, où aucune
-catégorie n'est disponible.
+**Decision.** The export's `Category` column (`STOCK`, `ETF`, `CFD`) is authoritative. The
+symbol heuristic is now only a fallback for manual entries, where no category exists.
 
-**Conséquence.** Les CFD ne sont plus signalés comme des anomalies : leur absence de
-correspondance est le comportement attendu, pas un problème à corriger. Les alertes ne
-listent plus que les vrais cas douteux.
+**Consequence.** CFDs are no longer reported as anomalies: having no mapping is the
+expected behaviour for them, not a problem to fix. Warnings now list only genuinely
+doubtful cases.
 
-**Résultat mesuré.** Symboles signalés : passés de 7 à 1 sur les fichiers réels. Le seul
-restant, `US592CVR0133`, est un CVR — un droit conditionnel sans cotation suivie, donc
-légitimement non résolu.
+**Measured result.** Flagged symbols dropped from 7 to 1 on the real files. The remaining
+one, `US592CVR0133`, is a CVR — a contingent value right with no tracked listing, so
+legitimately unresolved.
 
-## Décision 1b.2 — L'instantané de positions est remplacé compte par compte
+## Decision 1b.2 — The position snapshot is replaced account by account
 
-**Contexte.** Un export XTB ne couvre **qu'un seul compte**. L'utilisateur en a deux
-(compte titres « My Trades » et « PEA »), donc deux fichiers distincts.
+**Context.** An XTB export covers **a single account**. The user has two, so two separate
+files.
 
-**Problème identifié avant qu'il ne cause un dégât.** La logique initiale supprimait
-*toutes* les positions issues d'un import avant d'insérer les nouvelles. Importer le
-relevé PEA aurait donc **effacé les positions du compte titres**.
+**Problem caught before it caused damage.** The initial logic deleted *all* imported
+positions before inserting the new ones. Importing the tax-wrapper statement would
+therefore have **wiped the brokerage account's holdings**.
 
-**Décision.** La suppression est limitée aux comptes présents dans le fichier, identifiés
-par la colonne `Product`. Repli sur un remplacement global si le fichier ne porte aucune
-information de compte.
+**Decision.** Deletion is limited to the accounts present in the file, identified by the
+`Product` column. Falls back to a global replacement when the file carries no account
+information.
 
-**Vérification.** Test dédié : importer A, puis B, puis à nouveau A — les positions de B
-restent intactes.
+**Verification.** Dedicated test: import A, then B, then A again — B's positions stay
+intact.
 
-## Décision 1b.3 — La valeur d'achat est déduite, pas approximée
+## Decision 1b.3 — Purchase value is derived, not approximated
 
-**Contexte.** L'export ne fournit pas de colonne « valeur d'achat » pour les positions
-ouvertes (elle n'existe que sur les positions fermées).
+**Context.** The export provides no "purchase value" column for open positions (it exists
+only on closed ones).
 
-**Décision.** `valeur d'achat = valeur de marché − résultat latent`. Les deux grandeurs
-sont dans la devise du compte, la déduction est donc **exacte**, pas approchée.
+**Decision.** `purchase value = market value − unrealised P&L`. Both are in the account
+currency, so the derivation is **exact**, not an approximation.
 
-**Alternative écartée.** `quantité × prix de revient` : ces deux grandeurs sont en devise
-de l'instrument, ce qui aurait mélangé USD et EUR dans un même total.
+**Alternative rejected.** `quantity × average cost`: both of those are in the instrument's
+currency, which would have mixed USD and EUR in a single total.
 
-## Résultat de phase — validation au centime près
+## Phase outcome — reconciled to the cent
 
-> Montants ci-dessous **anonymisés** : ce sont des valeurs d'illustration, cohérentes
-> entre elles mais fictives. Les chiffres réels ne figurent pas dans le dépôt.
+> The figures below are **anonymised**: illustrative values, internally consistent but
+> fictional. The real numbers are not in this repository.
 
 ```
-TOTAL         38 positions | valeur 8 730,40 € | latent +2 420,40 € | +38,36 %
-  My Trades   27 positions | investi 4 210,00 € | valeur 6 315,40 € | +50,01 %
-  PEA         11 positions | investi 2 100,00 € | valeur 2 415,00 € | +15,00 %
+TOTAL           38 positions | value 8,730.40 € | unrealised +2,420.40 € | +38.36 %
+  My Trades     27 positions | invested 4,210.00 € | value 6,315.40 € | +50.01 %
+  PEA           11 positions | invested 2,100.00 € | value 2,415.00 € | +15.00 %
 ```
 
-**La méthode de validation, elle, est bien réelle** : chaque feuille « Open Positions »
-contient ses propres lignes de synthèse (`Product | Value` et `Product | Profit`),
-calculées par XTB indépendamment du détail des positions. Les totaux reconstruits par
-l'application correspondent **exactement**, au centime, à ces lignes — pour les deux
-comptes.
+**The validation method itself is real.** Each "Open Positions" sheet contains its own
+summary rows (`Product | Value` and `Product | Profit`), computed by XTB independently of
+the position detail. The totals rebuilt by the application match those rows **exactly, to
+the cent** — for both accounts.
 
-C'est la meilleure validation disponible : une source de vérité présente dans le fichier
-lui-même, qu'aucune erreur de parsing ne peut reproduire par hasard. Un doublement des
-positions (bug 1b.3) ou une mauvaise déduction de la valeur d'achat (décision 1b.3)
-auraient sauté immédiatement.
+That is the best validation available: a source of truth inside the file itself, which no
+parsing error could reproduce by chance. A doubling of positions (bug 1b.3) or a bad
+purchase-value derivation (decision 1b.3) would have shown up immediately.
 
-Autres vérifications : 1 395 transactions importées, 223 positions fermées, **0 position
-exclue** faute de données, réimport des deux fichiers → **0 insertion** (idempotence
-confirmée sur données réelles).
+Other checks: 1,395 transactions imported, 223 closed positions, **0 positions excluded**
+for lack of data, re-importing both files → **0 inserts** (idempotency confirmed on real
+data).
 
-**128 tests passent.** Les fixtures reproduisent désormais le format réel : 25 colonnes,
-structure à deux niveaux, clôtures partielles partageant un identifiant, lignes « Total »
-à écarter.
+**128 tests pass.** The fixtures now mirror the real format: 25 columns, two-level
+structure, partial closes sharing an identifier, "Total" rows to discard.
 
-## Note technique — pas de migrations de schéma
+## Technical note — no schema migrations
 
-Le schéma évolue par `create_all`, sans outil de migration. À chaque changement de modèle,
-la base de développement est **supprimée et reconstruite par réimport**. Acceptable tant
-que la source de vérité reste les fichiers d'export.
+The schema evolves through `create_all`, with no migration tool. On every model change the
+development database is **dropped and rebuilt by re-import**. Acceptable while the source
+of truth remains the export files.
 
-**À revoir si** des données non reconstructibles apparaissent (watchlist saisie à la main,
-historique de scores, notes personnelles) : il faudra alors introduire Alembic. La
-watchlist arrive en phase 4 — c'est le déclencheur à surveiller.
+**Revisit when** non-reconstructible data appears (a hand-maintained watchlist, score
+history, personal notes): Alembic will then be needed. The watchlist lands in phase 4 —
+that is the trigger to watch for.
 
 ---
 
-# Phase 1c — Mise sous contrôle de version (2026-08-12)
+# Phase 1c — Bringing it under version control (2026-08-12)
 
-## Bug 1c.1 — Numéros de compte réels codés en dur
+## Bug 1c.1 — Real account numbers hardcoded
 
-**Symptôme.** Détecté en préparant la mise sous git, avant toute publication.
+**Symptom.** Caught while preparing the git setup, before any publication.
 
-**Cause.** Les fixtures de test avaient été construites en recopiant la structure des
-fichiers réels, numéros de compte compris. Ils apparaissaient dans 5 fichiers et une
-quarantaine d'emplacements, dont une docstring du code source.
+**Cause.** Test fixtures had been built by copying the structure of the real files,
+account numbers included. They appeared in 5 files across roughly forty places, including
+a source-code docstring.
 
-**Correctif.** Remplacement par des numéros fictifs. Les 128 tests passent sans
-modification : aucune assertion ne dépendait de ces valeurs, ce qui confirme qu'elles
-n'avaient aucune raison d'être là.
+**Fix.** Replaced with fictional numbers. All 128 tests passed unchanged: no assertion
+depended on those values, which confirms they had no reason to be there.
 
-**Leçon.** Construire une fixture à partir d'un fichier réel fait entrer des données
-personnelles dans le code sans qu'on y pense. Reproduire la *structure*, jamais le
-*contenu*.
+**Lesson.** Building a fixture from a real file pulls personal data into the code without
+anyone thinking about it. Reproduce the *structure*, never the *content*.
 
-## Décision 1c.1 — Aucune donnée personnelle dans le dépôt
+## Decision 1c.1 — No personal data in the repository
 
-Numéros de compte fictifs dans les fixtures, montants d'illustration signalés comme tels
-dans ce journal, et `.gitignore` excluant `.env`, la base SQLite et les fichiers d'export.
-Les relevés bruts restent hors du projet.
+Fictional account numbers in fixtures, illustrative amounts flagged as such in this log,
+and a `.gitignore` excluding `.env`, the SQLite database and export files. Raw statements
+stay outside the project.
 
-## Décision 1c.2 — Historique découpé en commits logiques, aux dates réelles
+## Decision 1c.2 — History split into logical commits, with real dates
 
-**Décision.** Huit commits, un par unité fonctionnelle cohérente (outillage, socle,
-correspondance des symboles, parser, persistance, API, frontend, documentation), plutôt
-qu'un commit initial monolithique. Chaque commit portant des tests est vert
-indépendamment — vérifié par clonage et exécution de la suite à chaque révision.
+**Decision.** Nine commits, one per coherent unit of work (tooling, foundation, symbol
+mapping, parser, persistence, API, frontend, documentation), rather than one monolithic
+initial commit. Every commit carrying tests is independently green — verified by cloning
+and running the suite at each revision.
 
-**Ce qui a été écarté.** Antidater les commits pour simuler un développement étalé sur
-plusieurs semaines. L'historique reflète le déroulement réel du travail : sa lisibilité
-vient du découpage, pas d'une chronologie inventée.
+**What was rejected.** Backdating the commits to simulate development spread over several
+weeks. The history reflects how the work actually unfolded: its readability comes from the
+split, not from an invented chronology.
 
 ---
 
-# À suivre
+# Phase 1d — English codebase and internationalisation (2026-08-13)
 
-| Phase | Contenu | État |
+The repository is meant to be public, so the code, comments and documentation moved to
+English, and the UI gained English / French / Polish switching.
+
+## Decision 1d.1 — The API returns message codes, not sentences
+
+**Context.** The backend was returning import diagnostics as French prose
+("Colonnes non reconnues dans « Closed Positions »…"). No amount of frontend work can
+translate that: the meaning is fixed the moment the backend commits to a language.
+
+**Decision.** The API is **language-neutral**. Every human-readable message is a `code`
+plus its parameters:
+
+```json
+{ "code": "import.unresolvedSymbols", "params": { "count": 2, "symbols": ["FOO.XX"] } }
+```
+
+The same treatment applies to the sheet summaries (`{sheet, kind, count, source_rows}`)
+and to symbol-mapping reasons.
+
+**Reason.** Import diagnostics are the most valuable thing this backend produces — they
+say which rows were skipped and why. Locking them to one language would make them useless
+to every other reader.
+
+**Consequence.** Tests assert on codes rather than on sentences, which is more robust:
+rewording a message no longer breaks a test. A dedicated test enforces the contract — no
+warning may contain a space in its code.
+
+## Decision 1d.2 — Hand-rolled i18n layer on top of `Intl.PluralRules`
+
+**Decision.** A small typed translation layer (~110 lines) rather than a library.
+
+**Reason.** The need is modest — three languages, ~104 keys, one interpolation format —
+but the plural handling is not: **Polish has three plural categories** (`one`, `few` for
+2–4, `many` for 0 and 5+). The usual `count === 1 ? singular : plural` is wrong twice over
+in Polish. `Intl.PluralRules` is built into the platform and solves it correctly, with no
+dependency.
+
+**Safeguards.** A missing key falls back to English before falling back to the raw code, so
+a gap degrades to a readable sentence rather than an identifier. In development, a
+load-time check reports any key present in English and missing elsewhere.
+
+**Verification.** A script compares the three catalogues: 104 keys, no gaps, no extras.
+
+**Also covered.** Numbers and dates go through `Intl.NumberFormat` / `Intl.DateTimeFormat`
+bound to the active locale — so English shows `12,345.67` and `08/12/2026`, French
+`12 345,67` and `12/08/2026`, Polish `12 345,67` and `12.08.2026`. Language names in the
+switcher stay in their own language: someone looking for "Polski" should not need to know
+the word for it in the current interface language.
+
+---
+
+# Up next
+
+| Phase | Content | Status |
 |---|---|---|
-| 2 | Couche providers, cours de marché, graphiques | à faire |
-| 3 | Moteur de scoring (5 piliers, `scoring.yaml`) | à faire |
-| 4 | Watchlist et timing d'entrée | à faire |
-| 5 | Page Pépites (screener) | à faire |
-| 6 | Synthèse qualitative Perplexity | à faire |
+| 2 | Provider layer, market prices, charts | to do |
+| 3 | Scoring engine (5 pillars, `scoring.yaml`) | to do |
+| 4 | Watchlist and entry timing | to do |
+| 5 | Hidden gems page (screener) | to do |
+| 6 | Qualitative synthesis via Perplexity | to do |
 
-**Points ouverts à traiter en phase 2**
+**Open items for phase 2**
 
-- Faire passer les correspondances de « non vérifiée » à « vérifiée » une fois qu'un
-  fournisseur a effectivement servi des données pour ce symbole.
-- Les taux de change (`Open/Close Conversion Rate`) sont capturés mais pas encore
-  exploités — utiles pour ventiler la performance entre effet titre et effet devise.
-- `yfinance` cassera périodiquement (endpoints non officiels) : la chaîne de repli vers
-  Stooq doit être testée pour de bon, pas seulement écrite.
-- Introduire Alembic avant la phase 4 si la watchlist doit survivre aux changements de
-  schéma.
+- Promote mappings from "unverified" to "verified" once a provider has actually served
+  data for that symbol.
+- FX rates (`Open/Close Conversion Rate`) are captured but not yet used — useful for
+  splitting performance between instrument effect and currency effect.
+- `yfinance` will break periodically (unofficial endpoints): the fallback chain to Stooq
+  needs to be tested for real, not merely written.
+- Introduce Alembic before phase 4 if the watchlist is to survive schema changes.
