@@ -1,0 +1,280 @@
+"""Tests de la persistance d'un import en base."""
+
+from __future__ import annotations
+
+import pytest
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.db import Base
+from app.ingest.service import import_export_file
+from app.models import (
+    Instrument,
+    MappingStatus,
+    Position,
+    Source,
+    SymbolOverride,
+    Transaction,
+    TxType,
+)
+from tests.conftest import OPEN_HEADERS, build_xtb_workbook
+
+
+@pytest.fixture
+def db():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+class TestImport:
+    def test_positions_and_instruments_are_created(self, db, xtb_export):
+        batch = import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        assert batch.positions_found == 2
+        positions = db.execute(select(Position)).scalars().all()
+        assert {p.instrument.broker_symbol for p in positions} == {"ASML.NL", "NVDA.US"}
+
+    def test_company_name_and_category_are_stored(self, db, xtb_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        asml = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "ASML.NL")
+        ).scalar_one()
+        assert asml.name == "ASML"
+        assert asml.category == "STOCK"
+
+    def test_symbol_mapping_is_applied(self, db, xtb_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        asml = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "ASML.NL")
+        ).scalar_one()
+        assert asml.provider_symbol == "ASML.AS"
+        assert asml.mapping_status == MappingStatus.RESOLVED
+
+    def test_broker_values_are_preserved(self, db, xtb_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        nvidia = db.execute(
+            select(Position).join(Instrument).where(Instrument.broker_symbol == "NVDA.US")
+        ).scalar_one()
+        assert nvidia.broker_market_value == 1312.08
+        assert nvidia.broker_net_pl == 614.27
+        assert nvidia.lots_count == 2
+        assert nvidia.account == "My Trades"
+
+    def test_cash_operations_become_transactions(self, db, xtb_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        types = {t.type for t in db.execute(select(Transaction)).scalars()}
+        assert {TxType.DIVIDEND, TxType.TAX, TxType.DEPOSIT, TxType.CLOSED_TRADE} <= types
+
+    def test_file_hash_is_recorded(self, db, xtb_export):
+        batch = import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        assert len(batch.file_hash) == 64
+
+
+class TestIdempotency:
+    """Réimporter le même fichier ne doit rien dupliquer."""
+
+    def test_transactions_are_not_duplicated(self, db, xtb_export):
+        first = import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+        second = import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        assert first.transactions_inserted > 0
+        assert second.transactions_inserted == 0
+        assert len(db.execute(select(Transaction)).scalars().all()) == first.transactions_inserted
+
+    def test_partial_closes_sharing_a_position_id_survive_a_reimport(self, db, xtb_export):
+        """Deux clôtures partielles portent le même « Position ID ».
+
+        Elles doivent rester deux enregistrements distincts, sans faire échouer la
+        contrainte d'unicité ni se dupliquer au réimport.
+        """
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        closed = db.execute(
+            select(Transaction).where(Transaction.type == TxType.CLOSED_TRADE)
+        ).scalars().all()
+        assert len(closed) == 4
+
+    def test_open_positions_are_replaced_not_accumulated(self, db, xtb_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        assert len(db.execute(select(Position)).scalars().all()) == 2
+
+    def test_manual_positions_survive_a_new_import(self, db, xtb_export):
+        instrument = Instrument(broker_symbol="MC.FR", provider_symbol="MC.PA")
+        db.add(instrument)
+        db.flush()
+        db.add(
+            Position(
+                instrument_id=instrument.id, source=Source.MANUAL, quantity=3, avg_price=700.0
+            )
+        )
+        db.commit()
+
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        manual = db.execute(
+            select(Position).where(Position.source == Source.MANUAL)
+        ).scalars().all()
+        assert len(manual) == 1
+        assert manual[0].instrument.broker_symbol == "MC.FR"
+
+
+class TestMultipleAccounts:
+    """Un export ne couvre qu'un compte : importer le PEA ne doit pas vider le compte titres."""
+
+    def test_both_accounts_coexist(self, db, xtb_export, xtb_pea_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+        import_export_file(db, xtb_pea_export, "PEA_7654321.xlsx")
+
+        positions = db.execute(select(Position)).scalars().all()
+        by_account = {}
+        for position in positions:
+            by_account.setdefault(position.account, []).append(position)
+
+        assert set(by_account) == {"My Trades", "PEA"}
+        assert len(by_account["My Trades"]) == 2
+        assert len(by_account["PEA"]) == 1
+
+    def test_reimporting_one_account_leaves_the_other_intact(
+        self, db, xtb_export, xtb_pea_export
+    ):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+        import_export_file(db, xtb_pea_export, "PEA_7654321.xlsx")
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        positions = db.execute(select(Position)).scalars().all()
+        accounts = [p.account for p in positions]
+
+        assert accounts.count("PEA") == 1
+        assert accounts.count("My Trades") == 2
+
+
+class TestCategoryDrivenMapping:
+    def test_cfd_is_never_mapped(self, db):
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "US 500", "US500", "CFD", None, 1.0, 5000.0, None,
+                         5000.0, None, None, None, 0.0, 0.0, 0.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        import_export_file(db, content, "cfd.xlsx")
+
+        instrument = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "US500")
+        ).scalar_one()
+        assert instrument.provider_symbol is None
+        assert instrument.category == "CFD"
+
+    def test_stock_named_like_a_commodity_is_still_mapped(self, db):
+        """« GOLD.US » est Barrick Gold : la catégorie du courtier prime sur le nom."""
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "Barrick Gold", "GOLD.US", "STOCK", None, 10.0, 200.0,
+                         None, 18.0, None, None, None, 11.0, 20.0, 20.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        import_export_file(db, content, "gold.xlsx")
+
+        instrument = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "GOLD.US")
+        ).scalar_one()
+        assert instrument.provider_symbol == "GOLD"
+        assert instrument.mapping_status == MappingStatus.RESOLVED
+
+    def test_cfd_is_not_reported_as_a_problem(self, db):
+        """L'absence de correspondance d'un CFD est normale : ne pas la signaler comme anomalie."""
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "US 500", "US500", "CFD", None, 1.0, 5000.0, None,
+                         5000.0, None, None, None, 0.0, 0.0, 0.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        batch = import_export_file(db, content, "cfd.xlsx")
+
+        assert not any("sans correspondance" in w for w in batch.warnings)
+
+
+class TestOverrides:
+    def test_override_is_used_when_creating_an_instrument(self, db):
+        db.add(SymbolOverride(broker_symbol="ERICB.SE", provider_symbol="ERIC-B.ST"))
+        db.commit()
+
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "Ericsson", "ERICB.SE", "STOCK", None, 100.0, 6000.0,
+                         None, 60.0, None, None, None, 1.0, 60.0, 60.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        import_export_file(db, content, "report.xlsx")
+
+        instrument = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "ERICB.SE")
+        ).scalar_one()
+        assert instrument.provider_symbol == "ERIC-B.ST"
+        assert instrument.mapping_status == MappingStatus.MANUAL
+
+
+class TestWarnings:
+    def test_unmappable_stock_is_surfaced(self, db):
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        # Code CVR : ni un ticker classique, ni un dérivé.
+                        ["My Trades", "CVR", "US592CVR0133", "STOCK", None, 1.0, 0.0, None,
+                         0.0, None, None, None, 0.0, 0.0, 0.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        batch = import_export_file(db, content, "cvr.xlsx")
+
+        assert any("sans correspondance" in w for w in batch.warnings)
