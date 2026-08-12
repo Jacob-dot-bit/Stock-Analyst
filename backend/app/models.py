@@ -52,7 +52,8 @@ class TxType:
 
 
 class MappingStatus:
-    RESOLVED = "RESOLVED"  # provider symbol derived automatically
+    RESOLVED = "RESOLVED"  # provider symbol derived automatically, never yet tested
+    VERIFIED = "VERIFIED"  # a provider actually returned data for this symbol
     MANUAL = "MANUAL"  # corrected by hand by the user
     UNRESOLVED = "UNRESOLVED"  # needs fixing — surfaced in the UI, never ignored
 
@@ -89,6 +90,11 @@ class Instrument(Base):
     country: Mapped[str | None] = mapped_column(String(40))
     sector: Mapped[str | None] = mapped_column(String(80))
     industry: Mapped[str | None] = mapped_column(String(120))
+
+    # Set the first time a provider actually returns data for this symbol. Until
+    # then the mapping is only a plausible suffix conversion, and is shown as such.
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime)
+    verified_provider: Mapped[str | None] = mapped_column(String(30))
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
@@ -230,7 +236,12 @@ class SymbolOverride(Base):
 
 
 class PriceBar(Base):
-    """A daily candle cached locally (phase 2)."""
+    """A daily candle cached locally.
+
+    Cached so a refresh only asks providers for the days it does not already have —
+    the difference between a handful of requests and one per instrument per run,
+    which is what keeps us under free-tier rate limits.
+    """
 
     __tablename__ = "price_bars"
     __table_args__ = (UniqueConstraint("instrument_id", "bar_date", name="uq_bar"),)

@@ -43,6 +43,10 @@ class InstrumentOut(BaseModel):
     currency: str | None
     country: str | None
     sector: str | None
+    #: Set once a provider actually returned data for this symbol. Until then the
+    #: mapping is only a plausible conversion, and the UI says so.
+    verified_at: datetime | None = None
+    verified_provider: str | None = None
 
 
 class PositionOut(BaseModel):
@@ -158,3 +162,38 @@ class TransactionOut(BaseModel):
     currency: str | None
     comment: str | None
     instrument: InstrumentOut | None
+
+
+class RefreshReportOut(BaseModel):
+    """Outcome of a price refresh.
+
+    Partial success is the normal case: free providers throttle, so a run reports what
+    it achieved and how many instruments are still waiting.
+    """
+
+    outcomes: list[MessageOut]
+    updated: int
+    skipped: int
+    failed: int
+    remaining: int
+
+
+class PricePoint(BaseModel):
+    date: str
+    close: float | None
+
+
+class PriceHistoryOut(BaseModel):
+    instrument_id: int
+    broker_symbol: str
+    #: Which provider served the most recent bar — surfaced so a number on screen can
+    #: always be traced back to its source.
+    provider: str | None
+    points: list[PricePoint]
+
+
+class SparklineOut(BaseModel):
+    """Closes only, for drawing a small trend line next to a position."""
+
+    instrument_id: int
+    closes: list[float]

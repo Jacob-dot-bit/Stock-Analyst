@@ -1,0 +1,164 @@
+"""Pluggable market-data providers, with an ordered fallback chain.
+
+Free price sources are fragile by nature: they rate-limit aggressively, change
+undocumented endpoints, and occasionally disappear behind anti-bot walls. The whole
+application therefore talks to this interface and never to a specific provider, so a
+source can be swapped without touching the analysis code.
+
+Two rules the chain enforces:
+
+* **The provider that actually served the data is recorded**, and surfaced in the UI.
+  "Where did this number come from?" must always have an answer.
+* **A failure is described, not swallowed.** Each attempt returns a reason code —
+  rate-limited, symbol unknown, network error — so the user can tell "this instrument
+  does not exist at this provider" from "come back in ten minutes".
+"""
+
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Protocol, runtime_checkable
+
+
+@dataclass(frozen=True)
+class Bar:
+    """One daily candle, in the instrument's own currency."""
+
+    bar_date: date
+    open: float | None
+    high: float | None
+    low: float | None
+    close: float | None
+    volume: float | None
+
+
+class ProviderError(Exception):
+    """Base class for provider failures. Carries a machine-readable reason."""
+
+    reason = "failed"
+
+
+class SymbolNotFound(ProviderError):
+    """The provider does not know this symbol — retrying will not help."""
+
+    reason = "symbol_not_found"
+
+
+class RateLimited(ProviderError):
+    """The provider is throttling us. Retrying later may help; retrying now will not."""
+
+    reason = "rate_limited"
+
+
+class ProviderUnavailable(ProviderError):
+    """Network failure, or the provider is not configured."""
+
+    reason = "unavailable"
+
+
+@runtime_checkable
+class PriceProvider(Protocol):
+    """A source of daily price history."""
+
+    name: str
+
+    def is_enabled(self) -> bool:
+        """False when the provider lacks configuration (an API key, typically)."""
+        ...
+
+    def fetch_daily(self, symbol: str, start: date, end: date) -> list[Bar]:
+        """Return daily bars in ``[start, end]``, or raise a ``ProviderError``."""
+        ...
+
+
+@dataclass
+class Attempt:
+    provider: str
+    reason: str | None = None  # None means it succeeded
+
+
+@dataclass
+class FetchResult:
+    bars: list[Bar] = field(default_factory=list)
+    provider: str | None = None
+    attempts: list[Attempt] = field(default_factory=list)
+
+    @property
+    def succeeded(self) -> bool:
+        return self.provider is not None
+
+    @property
+    def rate_limited(self) -> bool:
+        """True when every provider that tried was throttling.
+
+        Distinguished from a plain failure because it means "try again later",
+        not "this instrument cannot be fetched".
+        """
+        return bool(self.attempts) and all(a.reason == RateLimited.reason for a in self.attempts)
+
+
+class Throttle:
+    """Minimum spacing between calls to one provider.
+
+    Deliberately process-wide and blocking: free endpoints ban bursts far more
+    readily than they ban steady traffic, and a refresh is not latency-sensitive.
+    """
+
+    def __init__(self, min_interval_seconds: float) -> None:
+        self.min_interval = min_interval_seconds
+        # None rather than 0.0: "never called" is a distinct state from "called at
+        # time zero". Relying on monotonic() being large enough would work in practice
+        # and be wrong in principle — and it would make the first call sleep for
+        # nothing under any clock that starts near zero.
+        self._last_call: float | None = None
+
+    def wait(self) -> None:
+        if self.min_interval <= 0:
+            return
+
+        now = time.monotonic()
+        if self._last_call is not None:
+            elapsed = now - self._last_call
+            if elapsed < self.min_interval:
+                time.sleep(self.min_interval - elapsed)
+                now = time.monotonic()
+
+        self._last_call = now
+
+
+class ProviderChain:
+    """Tries each provider in order and reports what happened at every step."""
+
+    def __init__(self, providers: list[PriceProvider]) -> None:
+        self.providers = providers
+
+    def enabled_providers(self) -> list[PriceProvider]:
+        return [p for p in self.providers if p.is_enabled()]
+
+    def fetch_daily(self, symbol: str, start: date, end: date) -> FetchResult:
+        result = FetchResult()
+
+        for provider in self.enabled_providers():
+            try:
+                bars = provider.fetch_daily(symbol, start, end)
+            except ProviderError as exc:
+                result.attempts.append(Attempt(provider.name, exc.reason))
+                continue
+            except Exception:  # noqa: BLE001 - an unexpected bug must not kill a refresh
+                result.attempts.append(Attempt(provider.name, ProviderError.reason))
+                continue
+
+            if not bars:
+                # An empty answer is not an error, but it is not usable either:
+                # move on rather than declaring success with nothing to show.
+                result.attempts.append(Attempt(provider.name, SymbolNotFound.reason))
+                continue
+
+            result.attempts.append(Attempt(provider.name))
+            result.bars = bars
+            result.provider = provider.name
+            return result
+
+        return result

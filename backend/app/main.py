@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import init_db
-from app.routers import imports, portfolio
+from app.routers import imports, portfolio, prices
 
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.add_middleware(
 
 app.include_router(portfolio.router)
 app.include_router(imports.router)
+app.include_router(prices.router)
 
 
 @app.get("/api/health", tags=["system"])
@@ -54,6 +55,7 @@ def health() -> dict:
         "base_currency": settings.base_currency,
         "integrations": {
             "finnhub": settings.finnhub_enabled,
+            "twelvedata": bool(settings.twelvedata_api_key),
             "edgar": settings.edgar_enabled,
             "perplexity": settings.perplexity_enabled,
         },

@@ -39,6 +39,24 @@ class MessageCode:
     UNRESOLVED_SYMBOLS = "import.unresolvedSymbols"  # {count, symbols}
 
 
+class PriceOutcome:
+    """Result of trying to refresh one instrument's price history.
+
+    Refreshing is best-effort by nature: free providers rate-limit, symbols can be
+    wrong, and networks fail. Each instrument therefore reports its own outcome
+    rather than the whole refresh succeeding or failing as one.
+    """
+
+    UPDATED = "prices.updated"  # {symbol, bars, provider}
+    ALREADY_FRESH = "prices.alreadyFresh"  # {symbol}
+    NOT_MAPPED = "prices.notMapped"  # {symbol}
+    SYMBOL_NOT_FOUND = "prices.symbolNotFound"  # {symbol, provider}
+    RATE_LIMITED = "prices.rateLimited"  # {symbol, provider}
+    NO_PROVIDER = "prices.noProvider"  # {symbol}
+    FAILED = "prices.failed"  # {symbol, provider, error}
+    BUDGET_REACHED = "prices.budgetReached"  # {remaining}
+
+
 class SymbolReason:
     """Why a broker symbol could or could not be mapped to a data provider."""
 

@@ -33,6 +33,16 @@ class Settings(BaseSettings):
     finnhub_api_key: str | None = None
     perplexity_api_key: str | None = None
 
+    # Keyed fallback for price history, used when Yahoo throttles.
+    twelvedata_api_key: str | None = None
+
+    # --- Price fetching guardrails ---
+    # Yahoo rate-limits hard: four rapid requests were enough to earn a 429 that
+    # outlasted a minute. Spacing calls out is what keeps a full refresh working.
+    yahoo_min_interval_seconds: float = 2.0
+    # How long a single refresh request may spend before reporting what is left.
+    refresh_budget_seconds: float = 60.0
+
     # SEC EDGAR requires a named User-Agent with a contact address. Without it
     # requests are rejected, so the EDGAR provider stays disabled.
     sec_user_agent: str | None = None

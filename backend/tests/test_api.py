@@ -45,8 +45,10 @@ class TestHealth:
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "ok"
-        # The application must start with no API key configured at all.
-        assert set(body["integrations"]) == {"finnhub", "edgar", "perplexity"}
+        # The invariant is that the app starts with no key configured at all — not the
+        # exact list of integrations, which grows as providers are added.
+        assert body["integrations"]
+        assert all(enabled is False for enabled in body["integrations"].values())
 
 
 class TestEmptyPortfolio:
