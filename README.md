@@ -205,7 +205,7 @@ reported as anomalies, since that is the expected outcome.
 | 1b | Real-file hardening (7 bugs) | ✅ done |
 | 1c | Version control, data scrubbing | ✅ done |
 | 1d | English codebase, i18n (en/fr/pl) | ✅ done |
-| 2 | Provider layer, market prices, charts | to do |
+| 2 | Provider layer, market prices, charts | ✅ done |
 | 3 | Scoring engine (5 pillars, `scoring.yaml`) | to do |
 | 4 | Watchlist and entry timing | to do |
 | 5 | Hidden gems page (screener) | to do |
@@ -215,8 +215,8 @@ reported as anomalies, since that is the expected outcome.
 
 | Source | Role | Coverage | Note |
 |---|---|---|---|
-| yfinance | Prices + basic fundamentals | worldwide | The backbone — the only genuinely worldwide free source. Unofficial: **it will break periodically** |
-| Stooq | Fallback prices (EOD) | US + Europe | No key, very stable |
+| Yahoo chart endpoint | Daily prices | worldwide | The backbone. Unofficial and **rate-limits hard** — four rapid requests earned a 429 that outlasted 30 minutes |
+| Twelve Data | Fallback prices | worldwide | Free tier, email signup. Key-gated; **not yet exercised against the live API** |
 | SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |
 | Finnhub | News, profiles | worldwide | 60 calls/min on the free tier |
 | Perplexity | Qualitative synthesis | worldwide | **Paid** — on demand, one instrument at a time, cached |
@@ -231,4 +231,9 @@ actually served the data.
   not intraday trading.
 - **Price targets and analyst ratings** are now largely paywalled; the sentiment pillar
   will rest mostly on the news flow.
-- No scraping of Finviz, TradingView or Yahoo (beyond yfinance): against their terms.
+- **Refreshing prices is deliberately slow.** Free providers throttle, so a refresh is
+  serialised, spaced out, and bounded by a time budget; it reports what is left and you
+  click again. That is a constraint of the sources, not a bug.
+- Stooq was dropped as a source: it now serves a JavaScript proof-of-work anti-bot
+  challenge instead of CSV, and defeating that is out of scope for this project.
+- No scraping of Finviz or TradingView: against their terms.

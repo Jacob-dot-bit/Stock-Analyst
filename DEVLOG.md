@@ -457,11 +457,117 @@ the word for it in the current interface language.
 
 ---
 
+# Phase 2 — Provider layer and market prices (2026-08-13)
+
+Two findings during implementation invalidated part of the approved plan. Both were
+measured, not assumed.
+
+## Decision 2.1 — ~~Stooq as the fallback price source~~ → dropped
+
+**What changed.** Stooq no longer serves CSV. Every URL form now returns an HTML page
+carrying a JavaScript proof-of-work challenge:
+
+```
+This site requires JavaScript to verify your browser.
+(async()=>{const c="AAAA…",d=4,…crypto.subtle.digest("SHA-256",…)
+```
+
+**Decision.** Stooq is removed as a data source. Solving that challenge programmatically
+would mean defeating a bot-detection mechanism, which is not something this project will
+do — regardless of how easy the hashcash itself is.
+
+**Replaced by** Twelve Data (decision 2.3).
+
+## Bug 2.1 — Yahoo rate-limits far harder than assumed
+
+**Symptom.** Four requests in quick succession were enough to earn `HTTP 429`. The block
+then persisted for **over thirty minutes**, across both `query1` and `query2` hosts, from
+the same IP.
+
+**Verification that it was not a local problem.** SEC EDGAR answered `200` from the same
+machine throughout, so outbound networking was healthy — the block is Yahoo-side and
+IP-scoped.
+
+**Consequence for the design.** With 38 holdings, a naive "refresh everything now" would
+fail most of the way through and leave the user unable to tell what had updated. The
+refresh was therefore built around the limit rather than in spite of it:
+
+* **cache first** — stored bars are never re-fetched; a refresh asks only for missing
+  days, which after the initial load is a handful;
+* **skip what is fresh** — an instrument updated today is left alone;
+* **serialised with a minimum gap** between calls, since bursts are what get an address
+  blocked, not steady traffic;
+* **a time budget** — the run stops cleanly and reports how many instruments remain,
+  instead of hanging or half-failing;
+* **per-instrument outcomes** — partial success is the normal case, not an error.
+
+**Observed behaviour under the real failure**, with the IP already blocked: 8 instruments
+reported `prices.rateLimited`, the budget cut the run at 64 seconds, 29 were reported as
+remaining, and nothing crashed. That is the intended behaviour — the design was validated
+by the failure, even though no data came back.
+
+## Decision 2.2 — "Rate-limited" is a distinct outcome from "failed"
+
+A throttled provider means *come back later*; an unknown symbol means *this will never
+work*. Collapsing the two would leave the user retrying something that cannot succeed, or
+giving up on something that would.
+
+`FetchResult.rate_limited` is deliberately true only when **every** attempt was throttled:
+if one provider throttled and another said the symbol does not exist, the actionable
+answer is the second one.
+
+## Decision 2.3 — Twelve Data as the keyed fallback
+
+Chosen to replace Stooq: a free tier with an email signup (no card), a documented 800
+requests/day and 8/minute, and coverage of non-US venues — which matters, since this
+portfolio spans several European markets.
+
+**Honest caveat.** The provider is written against the documented response shape and
+covered by unit tests, but has **not** been exercised against the live API: no key was
+available while writing it. The first real call is the one to watch. It is key-gated, so
+its absence changes nothing until someone configures it.
+
+## Decision 2.4 — A mapping becomes "verified" only when data actually arrives
+
+Phase 1 introduced the "unverified" label for automatic suffix conversions (decision 1.3).
+It now graduates: the first time a provider returns real bars for a symbol,
+`verified_at` and `verified_provider` are recorded and the badge turns green.
+
+Verification and provenance are kept as **separate facts**: a manually corrected mapping
+stays `MANUAL` and gains `verified_at`. Overwriting one with the other would lose the
+information that a human chose that symbol.
+
+## Decision 2.5 — Yahoo through its chart endpoint, not through yfinance
+
+The plan named `yfinance`. The direct chart endpoint is what that library calls for price
+history anyway, so calling it directly removes a large dependency that breaks several
+times a year without losing anything we use. Fewer layers between us and the data means
+fewer ways to break — and the endpoint sits behind `PriceProvider` precisely because it
+is unofficial and can change.
+
+## Phase outcome
+
+**174 tests pass.** The provider layer is covered with mocked transports: parsing,
+null-padding, 429 handling, retry-then-give-up, chain fallback, and the distinction
+between throttling and a bad symbol. The refresh service is covered for caching,
+freshness, budget exhaustion and mapping verification. Nine end-to-end tests drive the
+real API with an injected provider.
+
+**Not verified live:** the actual HTTP call to Yahoo, because this machine's IP is
+currently blocked. That path is covered by a `@pytest.mark.network` test, excluded by
+default so the suite never fails because a third party is throttling. It should be run
+once from a normal network.
+
+The UI was inspected against seeded bars — 37 sparklines rendering, coloured by
+direction, with verified badges — and the seed was then **deleted**, so no fabricated
+prices remain in the database.
+
+---
+
 # Up next
 
 | Phase | Content | Status |
 |---|---|---|
-| 2 | Provider layer, market prices, charts | to do |
 | 3 | Scoring engine (5 pillars, `scoring.yaml`) | to do |
 | 4 | Watchlist and entry timing | to do |
 | 5 | Hidden gems page (screener) | to do |
