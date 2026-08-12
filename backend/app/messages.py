@@ -55,6 +55,10 @@ class PriceOutcome:
     NO_PROVIDER = "prices.noProvider"  # {symbol}
     FAILED = "prices.failed"  # {symbol, provider, error}
     BUDGET_REACHED = "prices.budgetReached"  # {remaining}
+    #: Every provider throttled and no keyed fallback is configured. Emitted once per
+    #: run, because "rate limited" repeated 38 times tells the user nothing they can act
+    #: on, whereas "configure a fallback" does.
+    NO_FALLBACK_CONFIGURED = "prices.noFallbackConfigured"
 
 
 class SymbolReason:

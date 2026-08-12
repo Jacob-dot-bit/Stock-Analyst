@@ -86,6 +86,7 @@ cleanly rather than failing startup.
 | Variable | Purpose | Cost |
 |---|---|---|
 | `BASE_CURRENCY` | Currency used for portfolio totals | — |
+| `TWELVEDATA_API_KEY` | **Recommended.** Fallback price provider for when Yahoo throttles — see below | free |
 | `FINNHUB_API_KEY` | News, company profiles (60 calls/min on the free tier) | free |
 | `SEC_USER_AGENT` | Official US fundamentals via SEC EDGAR. Format `First Last email@example.com` — the SEC rejects anonymous requests | free |
 | `PERPLEXITY_API_KEY` | Qualitative synthesis | **paid** |
@@ -96,7 +97,14 @@ cleanly rather than failing startup.
 cd backend && .venv/bin/python -m pytest
 ```
 
-Network tests are marked `@pytest.mark.network` and excluded by default.
+Network tests are marked `@pytest.mark.network` and excluded by default. They *skip*
+rather than fail when a provider is throttling: being rate-limited says nothing about
+whether our code is correct.
+
+> **If price refreshes return nothing but "rate limited":** Yahoo blocks by IP, and a
+> block can persist for a long time once tripped. Add a free `TWELVEDATA_API_KEY` to
+> `.env` — signup takes an email and no card — and the fallback takes over. The app tells
+> you this in the refresh report rather than leaving you to guess.
 
 ---
 

@@ -174,6 +174,8 @@ export const en: Catalogue = {
   'prices.noProvider': '{symbol}: no data provider is available.',
   'prices.failed': '{symbol}: retrieval failed via {provider}.',
   'prices.budgetReached': 'Time budget reached, {remaining} instrument(s) left.',
+  'prices.noFallbackConfigured':
+    'Yahoo is rate-limiting and no fallback provider is configured. Add a free TWELVEDATA_API_KEY to .env (email signup, no card) so refreshes keep working when Yahoo throttles.',
   'table.trend': 'Trend (90d)',
   'mapping.verified': 'verified',
   'mapping.verifiedTooltip': 'A provider returned data for this symbol on {date} ({provider}).',

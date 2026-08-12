@@ -554,9 +554,57 @@ freshness, budget exhaustion and mapping verification. Nine end-to-end tests dri
 real API with an injected provider.
 
 **Not verified live:** the actual HTTP call to Yahoo, because this machine's IP is
-currently blocked. That path is covered by a `@pytest.mark.network` test, excluded by
-default so the suite never fails because a third party is throttling. It should be run
-once from a normal network.
+blocked. That path is covered by a `@pytest.mark.network` test, excluded by default.
+
+## Bug 2.2 — The network test failed instead of skipping, and the diagnosis was wrong twice
+
+**Symptom.** Running `pytest -m network` produced a red failure: `RateLimited: yahoo is
+throttling requests`.
+
+**First wrong assumption (mine).** I had described the 429 as a cooldown to wait out. It
+was still in place more than an hour later, so "try again in a few minutes" was too
+optimistic.
+
+**Second wrong assumption (also mine), and how it was disproved.** An *immediate* 429 on
+the very first request of a fresh process looks less like volume throttling than like a
+missing session — Yahoo's API is known to want cookies. So that was tested rather than
+assumed:
+
+| Attempt | Result |
+|---|---|
+| Plain request, no cookies | 429 |
+| After seeding cookies from `fc.yahoo.com` and `finance.yahoo.com` | 429 |
+| `/v1/test/getcrumb` (to obtain the crumb token) | **429** — the token endpoint itself is blocked |
+| `finance.yahoo.com/quote/AAPL` (the HTML site) | 200, 1.5 MB |
+
+The HTML site answers normally while every path on `query1.finance.yahoo.com` returns
+429, including the endpoint that would hand out the session token. So it is an IP-level
+block on the API host — not a session problem. The cookie hypothesis was wrong, and
+testing it cost three requests rather than an afternoon of building the wrong fix.
+
+**Fix, part 1.** The network test now **skips** rather than fails when throttled. Being
+rate-limited says nothing about whether our parsing is correct; a red test for a third
+party's behaviour only trains people to ignore red tests.
+
+**Fix, part 2.** The refresh report gained an actionable message. Repeating "rate
+limited" 38 times tells the user nothing they can act on, so when every instrument was
+throttled *and* no keyed fallback is configured, the report says so once and names the
+remedy.
+
+## Decision 2.6 — Twelve Data is recommended, not merely optional
+
+Reachability was checked from the blocked machine: Twelve Data answered `401 — apikey
+parameter is incorrect or not specified`, which is the correct response to a keyless
+request and proves the host is reachable. Alpha Vantage also answered with real data.
+
+So the practical situation is: **Yahoo may simply not work from a given network**, while
+the fallback does. `TWELVEDATA_API_KEY` is therefore documented as recommended rather
+than optional, and the app points the user at it when throttling leaves it with nothing.
+
+**On the difference from Stooq.** Accepting cookies and reading a public JSON endpoint is
+ordinary HTTP client behaviour. Stooq's proof-of-work page is an explicit challenge whose
+only purpose is to establish that a browser is running it. Working around the second is
+evasion; the first is not — which is why one source was dropped and the other kept.
 
 The UI was inspected against seeded bars — 37 sparklines rendering, coloured by
 direction, with verified badges — and the seed was then **deleted**, so no fabricated

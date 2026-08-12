@@ -205,4 +205,24 @@ def refresh_many(
         # discard the work already done.
         db.commit()
 
+    _add_fallback_hint(report, chain)
     return report
+
+
+def _add_fallback_hint(report: RefreshReport, chain: ProviderChain) -> None:
+    """Turn a wall of "rate limited" into something the user can act on.
+
+    When every instrument was throttled and no keyed provider is configured, repeating
+    "rate limited" 38 times says nothing useful. What the user needs to know is that a
+    free fallback key would unblock them.
+    """
+    throttled = [o for o in report.outcomes if o.code == PriceOutcome.RATE_LIMITED]
+    if not throttled or report.updated:
+        return
+
+    # A keyed provider is one that is disabled without configuration.
+    has_keyed_fallback = any(
+        provider.is_enabled() for provider in chain.providers if provider.name != "yahoo"
+    )
+    if not has_keyed_fallback:
+        report.outcomes.append(Message(PriceOutcome.NO_FALLBACK_CONFIGURED))

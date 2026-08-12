@@ -315,7 +315,15 @@ class TestLiveProviders:
     """
 
     def test_yahoo_returns_history(self):
-        bars = YahooProvider().fetch_daily("AAPL", date.today().replace(month=1, day=1), date.today())
+        try:
+            bars = YahooProvider().fetch_daily(
+                "AAPL", date.today().replace(month=1, day=1), date.today()
+            )
+        except RateLimited:
+            # Being throttled says nothing about whether our parsing is right, so this
+            # is inconclusive rather than a failure. Yahoo blocks by IP and the block
+            # can outlast an hour; a red test here would only train people to ignore it.
+            pytest.skip("Yahoo is rate-limiting this IP — run again from another network")
 
         assert len(bars) > 100
         assert all(bar.close is not None for bar in bars)

@@ -168,6 +168,8 @@ export const fr: Catalogue = {
   'prices.noProvider': "{symbol} : aucun fournisseur de données n'est disponible.",
   'prices.failed': '{symbol} : échec de la récupération via {provider}.',
   'prices.budgetReached': 'Budget de temps atteint, {remaining} instrument(s) restant(s).',
+  'prices.noFallbackConfigured':
+    "Yahoo limite les requêtes et aucun fournisseur de repli n'est configuré. Ajoutez une clé gratuite TWELVEDATA_API_KEY dans .env (inscription par e-mail, sans carte) pour que le rafraîchissement continue de fonctionner.",
   'table.trend': 'Tendance (90j)',
   'mapping.verified': 'vérifiée',
   'mapping.verifiedTooltip': 'Un fournisseur a renvoyé des données pour ce symbole le {date} ({provider}).',

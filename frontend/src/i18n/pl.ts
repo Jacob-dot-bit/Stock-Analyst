@@ -178,6 +178,8 @@ export const pl: Catalogue = {
   'prices.noProvider': '{symbol}: brak dostępnego dostawcy danych.',
   'prices.failed': '{symbol}: pobieranie przez {provider} nie powiodło się.',
   'prices.budgetReached': 'Budżet czasu wyczerpany, pozostało instrumentów: {remaining}.',
+  'prices.noFallbackConfigured':
+    'Yahoo ogranicza zapytania, a żaden dostawca zapasowy nie jest skonfigurowany. Dodaj darmowy klucz TWELVEDATA_API_KEY do .env (rejestracja e-mailem, bez karty), aby odświeżanie działało dalej.',
   'table.trend': 'Trend (90 dni)',
   'mapping.verified': 'zweryfikowane',
   'mapping.verifiedTooltip': 'Dostawca zwrócił dane dla tego symbolu {date} ({provider}).',

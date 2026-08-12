@@ -106,10 +106,38 @@ class TestRefreshEndpoint:
 
         assert report["updated"] == 0
         assert report["failed"] == 2
-        codes = {outcome["code"] for outcome in report["outcomes"]}
-        assert codes == {"prices.rateLimited"}
+        codes = [outcome["code"] for outcome in report["outcomes"]]
+        assert codes.count("prices.rateLimited") == 2
         # Language-neutral, like every other message the API returns.
         assert all(" " not in outcome["code"] for outcome in report["outcomes"])
+
+    def test_throttled_with_no_fallback_says_what_to_do(self, client, monkeypatch, xtb_export):
+        """A wall of "rate limited" is not actionable; "configure a fallback" is."""
+        import_statement(client, xtb_export)
+        use_provider(monkeypatch, FakeProvider("yahoo", error=RateLimited("slow down")))
+
+        report = client.post("/api/prices/refresh").json()
+
+        codes = [outcome["code"] for outcome in report["outcomes"]]
+        assert codes.count("prices.noFallbackConfigured") == 1  # once, not per instrument
+
+    def test_no_hint_when_a_fallback_is_configured(self, client, monkeypatch, xtb_export):
+        """Nothing to suggest if the user already did the thing we would suggest."""
+        import_statement(client, xtb_export)
+        monkeypatch.setattr(
+            "app.routers.prices.get_provider_chain",
+            lambda: ProviderChain(
+                [
+                    FakeProvider("yahoo", error=RateLimited("slow down")),
+                    FakeProvider("twelvedata", error=RateLimited("slow down")),
+                ]
+            ),
+        )
+
+        report = client.post("/api/prices/refresh").json()
+
+        codes = [outcome["code"] for outcome in report["outcomes"]]
+        assert "prices.noFallbackConfigured" not in codes
 
     def test_unmapped_instruments_are_not_fetched(self, client, monkeypatch):
         """CFDs and unmappable codes must not consume the rate-limit budget."""
