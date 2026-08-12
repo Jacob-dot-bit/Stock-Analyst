@@ -14,6 +14,7 @@ import pytest
 
 from app.providers.base import (
     Bar,
+    InstrumentRef,
     PriceProvider,
     ProviderChain,
     ProviderUnavailable,
@@ -21,6 +22,7 @@ from app.providers.base import (
     SymbolNotFound,
     Throttle,
 )
+from app.providers.frankfurt import FrankfurtProvider, looks_like_isin
 from app.providers.twelvedata import TwelveDataProvider
 from app.providers.yahoo import YahooProvider
 
@@ -63,7 +65,7 @@ class TestYahooProvider:
             client=client_returning(lambda r: httpx.Response(200, json=yahoo_payload([10.0, 11.0, 12.0]))),
         )
 
-        bars = provider.fetch_daily("AAPL", date(2023, 11, 1), date(2023, 11, 30))
+        bars = provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2023, 11, 1), date(2023, 11, 30))
 
         assert len(bars) == 3
         assert [b.close for b in bars] == [10.0, 11.0, 12.0]
@@ -78,7 +80,7 @@ class TestYahooProvider:
             ),
         )
 
-        bars = provider.fetch_daily("AAPL", date(2023, 11, 1), date(2023, 11, 30))
+        bars = provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2023, 11, 1), date(2023, 11, 30))
 
         assert [b.close for b in bars] == [10.0, 12.0]
 
@@ -91,7 +93,7 @@ class TestYahooProvider:
         )
 
         with pytest.raises(RateLimited):
-            provider.fetch_daily("AAPL", date(2023, 11, 1), date(2023, 11, 30))
+            provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2023, 11, 1), date(2023, 11, 30))
 
     def test_unknown_symbol(self):
         provider = YahooProvider(
@@ -100,7 +102,7 @@ class TestYahooProvider:
         )
 
         with pytest.raises(SymbolNotFound):
-            provider.fetch_daily("NOPE", date(2023, 11, 1), date(2023, 11, 30))
+            provider.fetch_daily(InstrumentRef(provider_symbol="NOPE"), date(2023, 11, 1), date(2023, 11, 30))
 
     def test_error_inside_a_200_response(self):
         payload = {"chart": {"error": {"code": "Not Found"}, "result": None}}
@@ -110,7 +112,7 @@ class TestYahooProvider:
         )
 
         with pytest.raises(SymbolNotFound):
-            provider.fetch_daily("NOPE", date(2023, 11, 1), date(2023, 11, 30))
+            provider.fetch_daily(InstrumentRef(provider_symbol="NOPE"), date(2023, 11, 1), date(2023, 11, 30))
 
     def test_network_failure_is_wrapped(self):
         def explode(request):
@@ -119,7 +121,7 @@ class TestYahooProvider:
         provider = YahooProvider(min_interval_seconds=0, client=client_returning(explode))
 
         with pytest.raises(ProviderUnavailable):
-            provider.fetch_daily("AAPL", date(2023, 11, 1), date(2023, 11, 30))
+            provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2023, 11, 1), date(2023, 11, 30))
 
     def test_retries_then_gives_up_on_repeated_429(self, monkeypatch):
         monkeypatch.setattr("app.providers.yahoo.time.sleep", lambda _: None)
@@ -132,7 +134,7 @@ class TestYahooProvider:
         provider = YahooProvider(min_interval_seconds=0, max_retries=2, client=client_returning(handler))
 
         with pytest.raises(RateLimited):
-            provider.fetch_daily("AAPL", date(2023, 11, 1), date(2023, 11, 30))
+            provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2023, 11, 1), date(2023, 11, 30))
         assert calls["n"] == 3  # initial attempt + 2 retries
 
 
@@ -157,7 +159,7 @@ class TestTwelveDataProvider:
             client=client_returning(lambda r: httpx.Response(200, json=payload)),
         )
 
-        bars = provider.fetch_daily("AAPL", date(2024, 1, 1), date(2024, 1, 3))
+        bars = provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2024, 1, 1), date(2024, 1, 3))
 
         assert [b.bar_date.day for b in bars] == [1, 2, 3]
         assert [b.close for b in bars] == [1.0, 2.0, 3.0]
@@ -172,7 +174,7 @@ class TestTwelveDataProvider:
         )
 
         with pytest.raises(RateLimited):
-            provider.fetch_daily("AAPL", date(2024, 1, 1), date(2024, 1, 3))
+            provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2024, 1, 1), date(2024, 1, 3))
 
     def test_unknown_symbol_in_body(self):
         payload = {"status": "error", "code": 404, "message": "symbol not found"}
@@ -183,7 +185,7 @@ class TestTwelveDataProvider:
         )
 
         with pytest.raises(SymbolNotFound):
-            provider.fetch_daily("NOPE", date(2024, 1, 1), date(2024, 1, 3))
+            provider.fetch_daily(InstrumentRef(provider_symbol="NOPE"), date(2024, 1, 1), date(2024, 1, 3))
 
 
 # --- Test doubles for the chain ---------------------------------------------
@@ -201,8 +203,9 @@ class FakeProvider(PriceProvider):
     def is_enabled(self) -> bool:
         return self._enabled
 
-    def fetch_daily(self, symbol, start, end):
+    def fetch_daily(self, ref, start, end):
         self.calls += 1
+        self.last_ref = ref
         if self._error:
             raise self._error
         return self._bars
@@ -217,7 +220,7 @@ class TestProviderChain:
         first = FakeProvider("first", bars=[a_bar()])
         second = FakeProvider("second", bars=[a_bar()])
 
-        result = ProviderChain([first, second]).fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        result = ProviderChain([first, second]).fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
 
         assert result.provider == "first"
         assert second.calls == 0  # the fallback is not called needlessly
@@ -226,7 +229,7 @@ class TestProviderChain:
         first = FakeProvider("first", error=RateLimited("slow down"))
         second = FakeProvider("second", bars=[a_bar()])
 
-        result = ProviderChain([first, second]).fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        result = ProviderChain([first, second]).fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
 
         assert result.provider == "second"
         assert result.succeeded
@@ -237,7 +240,7 @@ class TestProviderChain:
         disabled = FakeProvider("disabled", bars=[a_bar()], enabled=False)
         working = FakeProvider("working", bars=[a_bar()])
 
-        result = ProviderChain([disabled, working]).fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        result = ProviderChain([disabled, working]).fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
 
         assert result.provider == "working"
         assert disabled.calls == 0
@@ -247,7 +250,7 @@ class TestProviderChain:
         empty = FakeProvider("empty", bars=[])
         working = FakeProvider("working", bars=[a_bar()])
 
-        result = ProviderChain([empty, working]).fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        result = ProviderChain([empty, working]).fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
 
         assert result.provider == "working"
 
@@ -256,7 +259,7 @@ class TestProviderChain:
             [FakeProvider("a", error=SymbolNotFound("x")), FakeProvider("b", error=ProviderUnavailable("x"))]
         )
 
-        result = chain.fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        result = chain.fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
 
         assert not result.succeeded
         assert [a.reason for a in result.attempts] == ["symbol_not_found", "unavailable"]
@@ -265,10 +268,10 @@ class TestProviderChain:
         """"Try again later" must not be reported when the symbol is simply wrong."""
         throttled = ProviderChain(
             [FakeProvider("a", error=RateLimited("x")), FakeProvider("b", error=RateLimited("x"))]
-        ).fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        ).fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
         mixed = ProviderChain(
             [FakeProvider("a", error=RateLimited("x")), FakeProvider("b", error=SymbolNotFound("x"))]
-        ).fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        ).fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
 
         assert throttled.rate_limited is True
         assert mixed.rate_limited is False
@@ -278,7 +281,7 @@ class TestProviderChain:
         broken = FakeProvider("broken", error=ValueError("boom"))
         working = FakeProvider("working", bars=[a_bar()])
 
-        result = ProviderChain([broken, working]).fetch_daily("A", date(2024, 1, 1), date(2024, 1, 2))
+        result = ProviderChain([broken, working]).fetch_daily(InstrumentRef(provider_symbol="A"), date(2024, 1, 1), date(2024, 1, 2))
 
         assert result.provider == "working"
         assert result.attempts[0].reason == "failed"
@@ -317,7 +320,7 @@ class TestLiveProviders:
     def test_yahoo_returns_history(self):
         try:
             bars = YahooProvider().fetch_daily(
-                "AAPL", date.today().replace(month=1, day=1), date.today()
+                InstrumentRef(provider_symbol="AAPL"), date.today().replace(month=1, day=1), date.today()
             )
         except RateLimited:
             # Being throttled says nothing about whether our parsing is right, so this
@@ -327,3 +330,88 @@ class TestLiveProviders:
 
         assert len(bars) > 100
         assert all(bar.close is not None for bar in bars)
+
+
+class TestFrankfurtProvider:
+    """The only free source found that covers European venues.
+
+    Keyed on ISIN and nothing else: tickers, slugs and company names were all tested
+    against the live endpoint and rejected.
+    """
+
+    def test_parses_a_udf_payload(self):
+        payload = {
+            "s": "ok",
+            "t": [1_751_328_000, 1_751_414_400],
+            "o": [70.0, 71.0],
+            "h": [72.0, 73.0],
+            "l": [69.0, 70.0],
+            "c": [71.5, 72.5],
+            "v": [1000.0, 1100.0],
+        }
+        provider = FrankfurtProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json=payload)),
+        )
+
+        bars = provider.fetch_daily(InstrumentRef(isin="FR0000120271"), date(2025, 7, 1), date(2025, 7, 2))
+
+        assert [b.close for b in bars] == [71.5, 72.5]
+        assert [b.volume for b in bars] == [1000.0, 1100.0]
+        assert bars[0].bar_date < bars[1].bar_date
+
+    def test_without_an_isin_it_steps_aside(self):
+        """Most instruments have no ISIN recorded; the chain should just move on."""
+        provider = FrankfurtProvider(min_interval_seconds=0, client=client_returning(lambda r: httpx.Response(200)))
+
+        with pytest.raises(SymbolNotFound):
+            provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2025, 7, 1), date(2025, 7, 2))
+
+    def test_a_ticker_in_the_isin_field_is_rejected_before_any_request(self):
+        """A malformed ISIN must never reach the network as if it were valid."""
+        calls = {"n": 0}
+
+        def handler(request):
+            calls["n"] += 1
+            return httpx.Response(200, json={"s": "ok"})
+
+        provider = FrankfurtProvider(min_interval_seconds=0, client=client_returning(handler))
+
+        with pytest.raises(SymbolNotFound):
+            provider.fetch_daily(InstrumentRef(isin="TTE.FR"), date(2025, 7, 1), date(2025, 7, 2))
+        assert calls["n"] == 0
+
+    def test_empty_body_means_the_isin_is_not_listed_here(self):
+        """The live endpoint answers 200 with {} for an ISIN Frankfurt does not list."""
+        provider = FrankfurtProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json={})),
+        )
+
+        with pytest.raises(SymbolNotFound):
+            provider.fetch_daily(InstrumentRef(isin="FR0000120271"), date(2025, 7, 1), date(2025, 7, 2))
+
+    def test_no_data_status(self):
+        provider = FrankfurtProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json={"s": "no_data"})),
+        )
+
+        with pytest.raises(SymbolNotFound):
+            provider.fetch_daily(InstrumentRef(isin="FR0000120271"), date(2025, 7, 1), date(2025, 7, 2))
+
+    @pytest.mark.parametrize(
+        ("value", "valid"),
+        [
+            ("FR0000120271", True),
+            ("NL0010273215", True),
+            ("fr0000120271", True),  # case is normalised
+            ("TTE.FR", False),
+            ("FR000012027", False),  # too short
+            ("FR00001202712", False),  # too long
+            ("", False),
+            (None, False),
+        ],
+    )
+    def test_isin_shape(self, value, valid):
+        assert looks_like_isin(value) is valid

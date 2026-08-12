@@ -12,8 +12,10 @@ from app.config import get_settings
 from app.db import get_db
 from app.ingest.service import get_or_create_instrument
 from app.models import ImportBatch, Instrument, MappingStatus, Position, Source, SymbolOverride
+from app.providers.frankfurt import looks_like_isin
 from app.schemas import (
     AccountTotals,
+    IsinIn,
     InstrumentOut,
     ManualPositionIn,
     PortfolioOut,
@@ -201,6 +203,39 @@ def set_symbol_override(payload: SymbolOverrideIn, db: Session = Depends(get_db)
 
     instrument.provider_symbol = provider_symbol
     instrument.mapping_status = MappingStatus.MANUAL
+
+    db.commit()
+    db.refresh(instrument)
+    return InstrumentOut.model_validate(instrument)
+
+
+@router.put("/isin", response_model=InstrumentOut)
+def set_isin(payload: IsinIn, db: Session = Depends(get_db)) -> InstrumentOut:
+    """Record an instrument's ISIN, which unlocks the European price source.
+
+    Supplied by hand rather than looked up: no free service tested could map a broker
+    ticker to an ISIN reliably, and a wrong ISIN would silently return **another
+    company's** prices. A gap is recoverable; wrong data presented as right is not.
+    """
+    broker_symbol = payload.broker_symbol.strip().upper()
+    isin = payload.isin.strip().upper()
+
+    if not looks_like_isin(isin):
+        raise HTTPException(
+            status_code=422,
+            detail="An ISIN is 12 characters: two letters, nine alphanumerics, one digit.",
+        )
+
+    instrument = db.execute(
+        select(Instrument).where(Instrument.broker_symbol == broker_symbol)
+    ).scalar_one_or_none()
+    if instrument is None:
+        raise HTTPException(status_code=404, detail=f"No known instrument for '{broker_symbol}'.")
+
+    instrument.isin = isin
+    # The ISIN opens a new source, so let the next refresh try it rather than waiting
+    # for tomorrow's freshness window.
+    instrument.prices_checked_at = None
 
     db.commit()
     db.refresh(instrument)

@@ -281,3 +281,48 @@ class TestWarnings:
         warning = next(w for w in batch.warnings if w["code"] == MessageCode.UNRESOLVED_SYMBOLS)
         assert warning["params"]["count"] == 1
         assert warning["params"]["symbols"] == ["US592CVR0133"]
+
+
+class TestIsinShapedSymbols:
+    def test_a_broker_symbol_that_is_an_isin_is_recorded_as_one(self, db):
+        """Not an inference: the ticker field literally contains an ISIN."""
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "CVR", "US592CVR0133", "STOCK", None, 1.0, 0.0, None,
+                         0.0, None, None, None, 0.0, 0.0, 0.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        import_export_file(db, content, "cvr.xlsx")
+
+        instrument = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "US592CVR0133")
+        ).scalar_one()
+        assert instrument.isin == "US592CVR0133"
+
+    def test_an_ordinary_ticker_gets_no_isin(self, db):
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "Apple", "AAPL.US", "STOCK", None, 1.0, 200.0, None,
+                         180.0, None, None, None, 11.0, 20.0, 20.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        import_export_file(db, content, "aapl.xlsx")
+
+        instrument = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "AAPL.US")
+        ).scalar_one()
+        assert instrument.isin is None

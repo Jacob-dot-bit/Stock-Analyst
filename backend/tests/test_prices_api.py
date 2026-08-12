@@ -198,3 +198,59 @@ class TestHistory:
 
     def test_unknown_instrument(self, client):
         assert client.get("/api/prices/9999/history").status_code == 404
+
+
+class TestIsinEntry:
+    """An ISIN unlocks the European source, so it is entered rather than guessed.
+
+    No free service tested could map a broker ticker to an ISIN reliably, and a wrong
+    ISIN would silently return another company's prices. A gap is recoverable; wrong
+    data presented as right is not.
+    """
+
+    def test_setting_an_isin(self, client, xtb_export):
+        import_statement(client, xtb_export)
+
+        response = client.put(
+            "/api/portfolio/isin", json={"broker_symbol": "ASML.NL", "isin": "NL0010273215"}
+        )
+
+        assert response.status_code == 200
+        assert response.json()["isin"] == "NL0010273215"
+
+    def test_a_ticker_is_refused(self, client, xtb_export):
+        import_statement(client, xtb_export)
+
+        response = client.put(
+            "/api/portfolio/isin", json={"broker_symbol": "ASML.NL", "isin": "ASML.NLXXXX"}
+        )
+
+        assert response.status_code == 422
+
+    def test_lowercase_is_normalised(self, client, xtb_export):
+        import_statement(client, xtb_export)
+
+        response = client.put(
+            "/api/portfolio/isin", json={"broker_symbol": "ASML.NL", "isin": "nl0010273215"}
+        )
+
+        assert response.json()["isin"] == "NL0010273215"
+
+    def test_unknown_instrument(self, client):
+        response = client.put(
+            "/api/portfolio/isin", json={"broker_symbol": "NOPE.XX", "isin": "NL0010273215"}
+        )
+
+        assert response.status_code == 404
+
+    def test_setting_an_isin_reopens_the_freshness_window(self, client, monkeypatch, xtb_export):
+        """A new source deserves an immediate try, not a wait until tomorrow."""
+        import_statement(client, xtb_export)
+        use_provider(monkeypatch, FakeProvider("yahoo", error=RateLimited("x")))
+        client.post("/api/prices/refresh")
+
+        client.put("/api/portfolio/isin", json={"broker_symbol": "ASML.NL", "isin": "NL0010273215"})
+        use_provider(monkeypatch, FakeProvider("frankfurt", bars=daily_bars()))
+        report = client.post("/api/prices/refresh").json()
+
+        assert report["updated"] >= 1

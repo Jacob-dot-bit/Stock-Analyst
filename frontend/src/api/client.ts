@@ -61,6 +61,13 @@ export const api = {
 
   getSparklines: () => request<Sparkline[]>('/api/prices/sparklines'),
 
+  setIsin: (payload: { broker_symbol: string; isin: string }) =>
+    request<Instrument>('/api/portfolio/isin', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
   setSymbolOverride: (payload: { broker_symbol: string; provider_symbol: string; note?: string }) =>
     request<Instrument>('/api/portfolio/symbol-overrides', {
       method: 'PUT',

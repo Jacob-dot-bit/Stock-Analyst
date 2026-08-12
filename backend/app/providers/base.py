@@ -23,6 +23,23 @@ from typing import Protocol, runtime_checkable
 
 
 @dataclass(frozen=True)
+class InstrumentRef:
+    """Every identifier a provider might need to find an instrument.
+
+    Providers do not share a namespace: Yahoo wants a ticker with a venue suffix,
+    Twelve Data a bare ticker, Boerse Frankfurt an ISIN and nothing else. Passing a
+    single "symbol" string forced every provider to pretend they agreed, so each one
+    now takes the whole reference and picks what it needs — raising SymbolNotFound
+    when its identifier is missing.
+    """
+
+    provider_symbol: str | None = None
+    isin: str | None = None
+    #: Only for diagnostics and logs; never used to look anything up.
+    broker_symbol: str | None = None
+
+
+@dataclass(frozen=True)
 class Bar:
     """One daily candle, in the instrument's own currency."""
 
@@ -79,7 +96,7 @@ class PriceProvider(Protocol):
         """False when the provider lacks configuration (an API key, typically)."""
         ...
 
-    def fetch_daily(self, symbol: str, start: date, end: date) -> list[Bar]:
+    def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> list[Bar]:
         """Return daily bars in ``[start, end]``, or raise a ``ProviderError``."""
         ...
 
@@ -148,12 +165,12 @@ class ProviderChain:
     def enabled_providers(self) -> list[PriceProvider]:
         return [p for p in self.providers if p.is_enabled()]
 
-    def fetch_daily(self, symbol: str, start: date, end: date) -> FetchResult:
+    def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> FetchResult:
         result = FetchResult()
 
         for provider in self.enabled_providers():
             try:
-                bars = provider.fetch_daily(symbol, start, end)
+                bars = provider.fetch_daily(ref, start, end)
             except ProviderError as exc:
                 result.attempts.append(Attempt(provider.name, exc.reason))
                 continue

@@ -710,6 +710,98 @@ autouse fixture now clears credentials for every test.
 
 ---
 
+# Phase 2c — A free European price source (2026-08-13)
+
+Twelve Data's free tier being US-only left 14 European holdings with no data at all.
+This phase closes that gap.
+
+## Decision 2c.1 — Bot-detection challenges stay out of scope, even when asked twice
+
+The request came up again to work around anti-bot protections and document the
+workaround. The answer is unchanged: Stooq's proof-of-work page exists precisely to
+establish that a browser is executing it, so defeating it means stepping past an access
+control the operator put there deliberately — and this repository is public.
+
+That is a narrow line, not a blanket refusal. Accepting cookies, sending a normal
+User-Agent and reading a public JSON endpoint are ordinary HTTP client behaviour, and
+Yahoo and Frankfurt are both used on exactly that basis. The distinction is whether the
+site has erected a challenge whose only purpose is to exclude non-browsers.
+
+The gap was closed without crossing it.
+
+## Decision 2c.2 — Boerse Frankfurt as the European source
+
+Probed several candidates before landing:
+
+| Source | Result |
+|---|---|
+| Yahoo | Still 429 from this IP, hours later |
+| Euronext `live.euronext.com` | Returns an **AES-encrypted** payload its frontend decrypts — same category as a challenge |
+| Boursorama | 503 on the history endpoint |
+| Boerse Frankfurt `quote_box` | 200 with real data |
+| Boerse Frankfurt `tradingview/history` | **200, full OHLCV daily history** |
+
+Frankfurt exposes a TradingView UDF endpoint needing no key, no session and no
+challenge. Verified live: 284 daily bars for ASML and for TotalEnergies.
+
+**Caveat that matters when reading the numbers:** these are the *Frankfurt* listing's
+prices, not the home market's. For a Paris- or Amsterdam-listed share the two track
+closely — the cross-check below shows 0.0–2.7% — but they are different venues and
+Frankfurt volume on a foreign listing is much thinner.
+
+## Bug 2c.1 — One "symbol" string assumed every provider shared a namespace
+
+**Symptom.** Frankfurt accepts an ISIN and nothing else. Tickers, slugs and company
+names were all tested against the live endpoint and rejected.
+
+**Cause.** `ProviderChain.fetch_daily(symbol, ...)` forced every provider to pretend
+they used the same identifier. Yahoo wants a venue-suffixed ticker, Twelve Data a bare
+one, Frankfurt an ISIN.
+
+**Fix.** An `InstrumentRef` carrying every identifier. Each provider takes the whole
+reference and picks what it needs, raising `SymbolNotFound` when its own identifier is
+missing — so the chain simply moves on.
+
+## Decision 2c.3 — ISINs are entered and corroborated, never guessed
+
+Frankfurt's search endpoint **ignores its search term**: asked for "TotalEnergies" it
+returns the highest-turnover German stocks. OpenFIGI resolves tickers correctly but
+returns FIGIs, not ISINs. A Wikidata query returned nothing usable.
+
+So ISINs cannot be resolved automatically from a ticker. And a wrong ISIN is the worst
+possible failure here: it would silently return **another company's prices**, which is
+far more damaging than showing no data.
+
+The ISIN is therefore user-supplied, with one exception that is not an inference: when
+the broker's ticker field *literally contains* an ISIN — seen on a CVR line
+(`US592CVR0133`) — it is recorded as one.
+
+**How the seeded ISINs were verified.** Rather than trusting them, each was cross-checked
+against the market price XTB itself had already reported for that holding. A wrong ISIN
+would show a wildly different price:
+
+| Symbol | XTB price | Frankfurt | Gap |
+|---|---|---|---|
+| AF.FR | 12.29 | 12.30 | 0.1% |
+| MT.NL | 64.36 | 64.34 | 0.0% |
+| SAN.FR | 75.41 | 75.19 | 0.3% |
+| ASML.NL | 1558.00 | 1576.20 | 1.2% |
+| MC.FR | 478.75 | 466.05 | 2.7% |
+
+Nine of nine corroborated. The residual spread is the venue difference, not an error.
+
+## Phase outcome
+
+**213 tests pass.** Coverage went from 23 of 38 holdings priced to **32 of 38**: 23 via
+Twelve Data, 9 via Frankfurt.
+
+The six still without prices are honest gaps, not silent ones: five ETFs whose ISIN
+nobody has entered yet, and one CFD, which has no fundamentals by nature. Each can be
+fixed in the UI by typing an ISIN, and the interface explains why it is not filled in
+automatically.
+
+---
+
 # Up next
 
 | Phase | Content | Status |

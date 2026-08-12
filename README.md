@@ -236,6 +236,7 @@ reported as anomalies, since that is the expected outcome.
 | Source | Role | Coverage | Note |
 |---|---|---|---|
 | Yahoo chart endpoint | Daily prices | worldwide | The backbone. Unofficial and **rate-limits hard** — four rapid requests earned a 429 that outlasted 30 minutes |
+| Boerse Frankfurt | Daily prices | **Europe** | No key, no session. Keyed on **ISIN only**. Prices are the Frankfurt listing, not the home market |
 | Twelve Data | Fallback prices | **US only on the free tier** | Verified live. European venues need a paid plan — their API says so explicitly |
 | SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |
 | Finnhub | News, profiles | worldwide | 60 calls/min on the free tier |
@@ -251,10 +252,13 @@ actually served the data.
   not intraday trading.
 - **Price targets and analyst ratings** are now largely paywalled; the sentiment pillar
   will rest mostly on the news flow.
-- **European holdings may have no free price source.** Twelve Data's free tier is
-  US-only, and Yahoo — the one free source covering European venues — rate-limits by IP
-  and can stay blocked for a long time. Instruments with no data show no trend line and
-  stay marked *unverified*, rather than being dressed up as up to date.
+- **European holdings need an ISIN.** Boerse Frankfurt covers them for free, but is
+  keyed on ISIN and nothing else — its search endpoint ignores its search term, and no
+  free service tested maps a ticker to an ISIN reliably. Type the ISIN on the position
+  row (it is on your broker's instrument page). It is never guessed: a wrong ISIN would
+  silently return **another company's** prices.
+- **Frankfurt prices are the Frankfurt listing.** For a Paris- or Amsterdam-listed share
+  the two track closely (0–3% in practice) but they are different venues.
 - **Refreshing prices is deliberately slow.** Free providers throttle, so a refresh is
   serialised, spaced out, and bounded by a time budget; it reports what is left and you
   click again. That is a constraint of the sources, not a bug.

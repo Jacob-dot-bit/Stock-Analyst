@@ -31,6 +31,7 @@ from app.models import (
     Transaction,
     TxType,
 )
+from app.providers.frankfurt import looks_like_isin
 from app.symbols import mapping
 
 
@@ -72,10 +73,15 @@ def get_or_create_instrument(
         broker_symbol, overrides if overrides is not None else {}, category=category
     )
 
+    # Some brokers put a raw ISIN in the ticker field (seen on a CVR line). That is
+    # not a guess — the symbol *is* the ISIN — and it unlocks the European source.
+    isin = broker_symbol if looks_like_isin(broker_symbol) else None
+
     instrument = Instrument(
         broker_symbol=broker_symbol,
         provider_symbol=resolution.provider_symbol,
         mapping_status=resolution.status,
+        isin=isin,
         name=name,
         category=category.upper() if category else None,
         currency=currency or resolution.currency_hint,

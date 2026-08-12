@@ -100,6 +100,9 @@ export const fr: Catalogue = {
   'mapping.fix': 'corriger',
   'mapping.unverifiedTooltip':
     "Conversion automatique du suffixe de place. La racine du symbole n'a pas été vérifiée auprès d'un fournisseur.",
+  'mapping.isinPlaceholder': 'ISIN (ex. FR0000120271)',
+  'mapping.isinHelp':
+    "L'ISIN débloque la source de cours européenne. Vous le trouverez sur la fiche du titre chez votre courtier. Il n'est jamais deviné : un ISIN erroné renverrait les cours d'une autre société.",
   'mapping.placeholder': 'ex. ERIC-B.ST',
 
   'symbol.manualOverride': 'Correspondance définie manuellement.',

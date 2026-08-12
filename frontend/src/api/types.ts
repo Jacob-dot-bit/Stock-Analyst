@@ -37,6 +37,8 @@ export interface Instrument {
   currency: string | null
   country: string | null
   sector: string | null
+  /** Unlocks the European price source; entered by hand, never guessed. */
+  isin: string | null
   /** Set once a provider actually returned data for this symbol. */
   verified_at: string | null
   verified_provider: string | null

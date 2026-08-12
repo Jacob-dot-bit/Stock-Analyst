@@ -23,6 +23,7 @@ import httpx
 
 from app.providers.base import (
     Bar,
+    InstrumentRef,
     PriceProvider,
     ProviderUnavailable,
     RateLimited,
@@ -97,7 +98,11 @@ class YahooProvider(PriceProvider):
             if owns_client:
                 client.close()
 
-    def fetch_daily(self, symbol: str, start: date, end: date) -> list[Bar]:
+    def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> list[Bar]:
+        symbol = ref.provider_symbol
+        if not symbol:
+            raise SymbolNotFound(f"{self.name} needs a provider symbol")
+
         payload = self._get(
             symbol,
             {

@@ -107,6 +107,9 @@ export const en: Catalogue = {
   'mapping.fix': 'fix',
   'mapping.unverifiedTooltip':
     'Automatic conversion of the listing suffix. The root of the symbol has not been checked against a provider.',
+  'mapping.isinPlaceholder': 'ISIN (e.g. FR0000120271)',
+  'mapping.isinHelp':
+    'An ISIN unlocks the European price source. Find it on your broker page. It is never guessed: a wrong ISIN would return another company\u2019s prices.',
   'mapping.placeholder': 'e.g. ERIC-B.ST',
 
   'symbol.manualOverride': 'Mapping set manually.',

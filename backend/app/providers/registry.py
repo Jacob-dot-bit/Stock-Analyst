@@ -6,7 +6,9 @@ for when Yahoo throttles.
 
 Stooq was the original fallback and has been removed: it now answers with a JavaScript
 proof-of-work challenge instead of CSV. Getting past that would mean defeating a
-bot-detection mechanism, so the source was dropped rather than worked around.
+bot-detection mechanism, so the source was dropped rather than worked around. Boerse
+Frankfurt took its place — it needs no key and no session, and it is the only free
+source found that covers European venues.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from functools import lru_cache
 
 from app.config import get_settings
 from app.providers.base import ProviderChain
+from app.providers.frankfurt import FrankfurtProvider
 from app.providers.twelvedata import TwelveDataProvider
 from app.providers.yahoo import YahooProvider
 
@@ -31,6 +34,9 @@ def get_provider_chain() -> ProviderChain:
     return ProviderChain(
         [
             YahooProvider(min_interval_seconds=settings.yahoo_min_interval_seconds),
+            # Before Twelve Data: needs no key and covers European venues, which the
+            # Twelve Data free tier does not. Only serves instruments that have an ISIN.
+            FrankfurtProvider(),
             TwelveDataProvider(api_key=settings.twelvedata_api_key),
         ]
     )

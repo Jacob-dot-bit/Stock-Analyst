@@ -20,18 +20,25 @@ export function MappingCell({ instrument, onUpdated }: Props) {
   const { t, formatDate } = useI18n()
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(instrument.provider_symbol ?? '')
+  const [isin, setIsin] = useState(instrument.isin ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function save() {
-    if (!value.trim()) return
     setBusy(true)
     setError(null)
     try {
-      await api.setSymbolOverride({
-        broker_symbol: instrument.broker_symbol,
-        provider_symbol: value.trim(),
-      })
+      // Two independent identifiers: the provider symbol drives Yahoo and Twelve
+      // Data, the ISIN drives the European source. Either may be set alone.
+      if (value.trim() && value.trim() !== instrument.provider_symbol) {
+        await api.setSymbolOverride({
+          broker_symbol: instrument.broker_symbol,
+          provider_symbol: value.trim(),
+        })
+      }
+      if (isin.trim() && isin.trim().toUpperCase() !== instrument.isin) {
+        await api.setIsin({ broker_symbol: instrument.broker_symbol, isin: isin.trim() })
+      }
       setEditing(false)
       onUpdated()
     } catch (err) {
@@ -43,19 +50,30 @@ export function MappingCell({ instrument, onUpdated }: Props) {
 
   if (editing) {
     return (
-      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           autoFocus
           value={value}
           placeholder={t('mapping.placeholder')}
-          style={{ width: 130 }}
+          style={{ width: 120 }}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void save()
             if (e.key === 'Escape') setEditing(false)
           }}
         />
-        <button disabled={busy || !value.trim()} onClick={() => void save()}>
+        <input
+          value={isin}
+          placeholder={t('mapping.isinPlaceholder')}
+          title={t('mapping.isinHelp')}
+          style={{ width: 130 }}
+          onChange={(e) => setIsin(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void save()
+            if (e.key === 'Escape') setEditing(false)
+          }}
+        />
+        <button disabled={busy || (!value.trim() && !isin.trim())} onClick={() => void save()}>
           {busy ? '…' : t('common.ok')}
         </button>
         <button className="link" onClick={() => setEditing(false)}>

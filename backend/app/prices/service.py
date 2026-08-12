@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from app.messages import Message, PriceOutcome
 from app.models import Instrument, MappingStatus, PriceBar
-from app.providers.base import FetchResult, ProviderChain
+from app.providers.base import FetchResult, InstrumentRef, ProviderChain
 
 #: Serialises refreshes across the whole process. Two runs at once double the quota
 #: spent and gain nothing — which happened for real when a click in the browser and a
@@ -116,7 +116,11 @@ def refresh_instrument(
     """Bring one instrument's history up to date. Returns what happened."""
     symbol = instrument.broker_symbol
 
-    if not instrument.provider_symbol or instrument.mapping_status == MappingStatus.UNRESOLVED:
+    # An ISIN alone is enough for Frankfurt, so an instrument with one is worth trying
+    # even when no provider symbol could be derived.
+    if instrument.mapping_status == MappingStatus.UNRESOLVED and not instrument.isin:
+        return Message(PriceOutcome.NOT_MAPPED, {"symbol": symbol})
+    if not instrument.provider_symbol and not instrument.isin:
         return Message(PriceOutcome.NOT_MAPPED, {"symbol": symbol})
 
     if not chain.enabled_providers():
@@ -141,7 +145,15 @@ def refresh_instrument(
     # that a bar never changes once written.
     start = today - timedelta(days=INITIAL_HISTORY_DAYS) if last is None else last - timedelta(days=5)
 
-    result = chain.fetch_daily(instrument.provider_symbol, start, today)
+    result = chain.fetch_daily(
+        InstrumentRef(
+            provider_symbol=instrument.provider_symbol,
+            isin=instrument.isin,
+            broker_symbol=instrument.broker_symbol,
+        ),
+        start,
+        today,
+    )
 
     if not result.succeeded:
         provider = result.attempts[-1].provider if result.attempts else None

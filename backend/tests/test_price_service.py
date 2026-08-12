@@ -277,9 +277,9 @@ class TestRefreshMany:
         second = make_instrument(db, "MSFT.US", "MSFT")
 
         class Flaky(FakeProvider):
-            def fetch_daily(self, symbol, start, end):
+            def fetch_daily(self, ref, start, end):
                 self.calls += 1
-                if symbol == "MSFT":
+                if ref.provider_symbol == "MSFT":
                     raise RateLimited("slow down")
                 return bars_ending(date.today())
 

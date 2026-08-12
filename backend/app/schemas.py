@@ -43,6 +43,7 @@ class InstrumentOut(BaseModel):
     currency: str | None
     country: str | None
     sector: str | None
+    isin: str | None = None
     #: Set once a provider actually returned data for this symbol. Until then the
     #: mapping is only a plausible conversion, and the UI says so.
     verified_at: datetime | None = None
@@ -141,6 +142,11 @@ class ManualPositionIn(BaseModel):
     account: str | None = None
     opened_at: datetime | None = None
     comment: str | None = None
+
+
+class IsinIn(BaseModel):
+    broker_symbol: str = Field(min_length=1, max_length=40)
+    isin: str = Field(min_length=12, max_length=12)
 
 
 class SymbolOverrideIn(BaseModel):

@@ -108,6 +108,9 @@ export const pl: Catalogue = {
   'mapping.fix': 'popraw',
   'mapping.unverifiedTooltip':
     'Automatyczna konwersja przyrostka giełdy. Rdzeń symbolu nie został sprawdzony u dostawcy danych.',
+  'mapping.isinPlaceholder': 'ISIN (np. FR0000120271)',
+  'mapping.isinHelp':
+    'ISIN odblokowuje europejskie źródło notowań. Znajdziesz go na stronie instrumentu u brokera. Nigdy nie jest zgadywany: błędny ISIN zwróciłby notowania innej spółki.',
   'mapping.placeholder': 'np. ERIC-B.ST',
 
   'symbol.manualOverride': 'Przypisanie ustawione ręcznie.',

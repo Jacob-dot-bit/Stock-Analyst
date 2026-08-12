@@ -23,6 +23,7 @@ import httpx
 
 from app.providers.base import (
     Bar,
+    InstrumentRef,
     PlanLimited,
     PriceProvider,
     ProviderUnavailable,
@@ -54,7 +55,11 @@ class TwelveDataProvider(PriceProvider):
     def is_enabled(self) -> bool:
         return bool(self._api_key)
 
-    def fetch_daily(self, symbol: str, start: date, end: date) -> list[Bar]:
+    def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> list[Bar]:
+        symbol = ref.provider_symbol
+        if not symbol:
+            raise SymbolNotFound(f"{self.name} needs a provider symbol")
+
         if not self._api_key:
             raise ProviderUnavailable("no API key configured")
 
