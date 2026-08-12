@@ -18,6 +18,7 @@ So the rules here are:
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 
@@ -27,6 +28,11 @@ from sqlalchemy.orm import Session
 from app.messages import Message, PriceOutcome
 from app.models import Instrument, MappingStatus, PriceBar
 from app.providers.base import FetchResult, ProviderChain
+
+#: Serialises refreshes across the whole process. Two runs at once double the quota
+#: spent and gain nothing — which happened for real when a click in the browser and a
+#: call from a terminal overlapped, re-fetching six instruments that had just landed.
+_refresh_lock = threading.Lock()
 
 #: How much history to load the first time. 400 calendar days leaves enough trading
 #: days for a 200-day moving average plus a margin, which phase 3 will need.
@@ -119,7 +125,16 @@ def refresh_instrument(
     today = _today()
     last = latest_bar_date(db, instrument.id)
 
-    if not force and last is not None and last >= _last_expected_trading_day(today):
+    # Freshness is "did we already ask today", not "is the newest bar from today".
+    # Free providers lag: Twelve Data's most recent bar was two days old, so a
+    # bar-date test marks every instrument stale forever and re-fetches the whole
+    # portfolio on every run — exactly what the cache exists to prevent.
+    if not force and _asked_today(instrument, today):
+        # "Fresh" must mean "we have current data", not merely "we asked". An
+        # instrument no provider covers has nothing stored, and calling that up to
+        # date would hide the gap behind a reassuring label.
+        if last is None:
+            return Message(PriceOutcome.STILL_UNAVAILABLE, {"symbol": symbol})
         return Message(PriceOutcome.ALREADY_FRESH, {"symbol": symbol})
 
     # Re-fetch a short overlap so revised closes are picked up, instead of trusting
@@ -131,13 +146,22 @@ def refresh_instrument(
     if not result.succeeded:
         provider = result.attempts[-1].provider if result.attempts else None
         if result.rate_limited:
+            # Deliberately not marked as checked: throttling is temporary, and this
+            # instrument must be retried on the next run rather than skipped for a day.
             return Message(PriceOutcome.RATE_LIMITED, {"symbol": symbol, "provider": provider})
+
+        # A wrong symbol or an excluded market will not change before tomorrow, so
+        # record the attempt and stop asking for the rest of the day.
+        instrument.prices_checked_at = datetime.now(UTC)
         reason = result.attempts[-1].reason if result.attempts else None
+        if reason == "plan_limited":
+            return Message(PriceOutcome.PLAN_LIMITED, {"symbol": symbol, "provider": provider})
         if reason == "symbol_not_found":
             return Message(PriceOutcome.SYMBOL_NOT_FOUND, {"symbol": symbol, "provider": provider})
         return Message(PriceOutcome.FAILED, {"symbol": symbol, "provider": provider})
 
     inserted = _store_bars(db, instrument, result)
+    instrument.prices_checked_at = datetime.now(UTC)
 
     # A provider answering with real data is the only honest proof that the symbol
     # mapping is right. Until this point it was only a plausible conversion.
@@ -152,17 +176,15 @@ def refresh_instrument(
     )
 
 
-def _last_expected_trading_day(today: date) -> date:
-    """The most recent weekday, used to decide whether stored data is current.
+def _asked_today(instrument: Instrument, today: date) -> bool:
+    """Whether a provider has already been queried about this instrument today.
 
-    Ignores public holidays on purpose: treating a holiday as stale costs one
-    request that returns nothing new, whereas treating a real gap as fresh would
-    silently serve outdated prices.
+    One question per instrument per day is the rule that keeps a portfolio of this
+    size inside free-tier quotas. Asking again the same day cannot yield anything
+    new: daily bars are published once.
     """
-    day = today
-    while day.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
-        day -= timedelta(days=1)
-    return day
+    checked = instrument.prices_checked_at
+    return checked is not None and checked.date() >= today
 
 
 def refresh_many(
@@ -179,6 +201,26 @@ def refresh_many(
     caller gets what was achieved plus a count of what is left, and can simply ask
     again.
     """
+    # Non-blocking on purpose: making the second caller wait would hide the problem
+    # behind a slow response. Saying "one is already running" is more useful.
+    if not _refresh_lock.acquire(blocking=False):
+        report = RefreshReport(remaining=len(instruments))
+        report.outcomes.append(Message(PriceOutcome.ALREADY_RUNNING))
+        return report
+
+    try:
+        return _refresh_many_locked(db, instruments, chain, budget_seconds, force)
+    finally:
+        _refresh_lock.release()
+
+
+def _refresh_many_locked(
+    db: Session,
+    instruments: list[Instrument],
+    chain: ProviderChain,
+    budget_seconds: float,
+    force: bool,
+) -> RefreshReport:
     report = RefreshReport()
     started = datetime.now(UTC)
 
@@ -199,6 +241,7 @@ def refresh_many(
         elif outcome.code == PriceOutcome.ALREADY_FRESH:
             report.skipped += 1
         else:
+            # STILL_UNAVAILABLE counts here: no data is a shortfall, not a skip.
             report.failed += 1
 
         # Committing per instrument means a rate limit halfway through does not

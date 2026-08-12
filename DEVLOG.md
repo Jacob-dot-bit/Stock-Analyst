@@ -612,6 +612,104 @@ prices remain in the database.
 
 ---
 
+# Phase 2b — First live provider calls (2026-08-13)
+
+A real Twelve Data key arrived, so the provider written blind (decision 2.3) met the
+live API for the first time. It worked — and immediately exposed three problems that no
+amount of mocked testing could have surfaced.
+
+## Bug 2b.1 — The freshness test defeated the entire cache
+
+**Symptom.** Chasing an odd "0 bars" line in a refresh report led to comparing
+`fetched_at` timestamps, which showed most instruments had been fetched **twice**.
+
+**Cause.** Freshness was "is the newest stored bar from the last trading day". Free feeds
+lag: Twelve Data's most recent bar was **2026-08-11** while the last expected trading day
+was **2026-08-13**. That comparison is therefore *permanently* false, so every instrument
+looked stale on every run and the whole portfolio was re-fetched each time — precisely
+what the cache existed to prevent, and a direct waste of a limited daily quota.
+
+**Fix.** Freshness is now "have we already asked today", tracked in
+`Instrument.prices_checked_at`. Daily bars are published once, so a second question the
+same day cannot return anything new.
+
+Throttled instruments are deliberately **not** marked as asked: rate limiting is
+temporary and they must be retried on the next run, unlike a wrong symbol, which will
+not fix itself before tomorrow.
+
+**Verification on real data**, across consecutive runs — each pass now advances instead
+of redoing the previous one:
+
+| Pass | Updated | Already fresh | Remaining |
+|---|---|---|---|
+| 1 | 7 | 0 | 29 |
+| 2 | 7 | 8 | 21 |
+| 3 | 7 | 16 | 13 |
+| 4 | 2 | 24 | 5 |
+| 5 | 0 | 32 | 0 |
+
+## Bug 2b.2 — Two refreshes ran at once
+
+**Symptom.** The same double-fetch investigation. The server log showed two requests:
+`POST /api/prices/refresh?force=false` from the browser, and `POST /api/prices/refresh`
+from a terminal, overlapping.
+
+**Cause.** Nothing prevented concurrent runs. Data stayed correct — the upsert and the
+unique constraint held — but the quota spent was doubled for no benefit.
+
+**Fix.** A process-wide lock, acquired **non-blocking**: making the second caller wait
+would hide the problem behind a slow response, whereas "a refresh is already running" is
+something the user can act on.
+
+## Bug 2b.3 — "Already fresh" was claimed for instruments with no data at all
+
+**Symptom.** After every instrument had been asked once, a refresh reported *37 already
+fresh* — while only 23 had any price data.
+
+**Cause.** The freshness fix keyed purely on "asked today", which is also true of an
+instrument that was asked and got nothing.
+
+**Fix.** A separate outcome, `prices.stillUnavailable`, when an instrument has been asked
+but nothing is stored, and it counts as a shortfall rather than a skip. "Fresh" must mean
+*we have current data*, not merely *we asked*: a reassuring label over an empty series is
+worse than an honest gap.
+
+## Decision 2b.1 — Twelve Data's free tier is US-only
+
+**Measured, not assumed.** Their own error message settles it:
+
+> `This symbol is available starting with the Grow or Venture plan`
+
+Symbol format was ruled out first — `ASML.AS`, `ASML` + `exchange=AMS`, `ASML` +
+`exchange=XAMS` all returned 404 before the `country=Netherlands` variant produced the
+message above.
+
+**Consequence on this portfolio:** 23 of 37 instruments now carry real prices, and the
+14 without are *every single European holding* (`.FR`, `.NL`). The split is exactly the
+provider's plan boundary.
+
+A 404 is now distinguished from a plan restriction: `PlanLimited` says the symbol is
+correct and there is nothing to fix locally, where `SymbolNotFound` would send the user
+chasing a mapping problem that does not exist.
+
+**Still open.** Yahoo remains the only free source covering European venues, and it is
+IP-blocked here. Nothing in the architecture needs to change — the chain is built for
+exactly this — but the practical gap is real and is not papered over in the UI: those 14
+rows show no trend line and stay marked *unverified*.
+
+## Phase outcome
+
+**193 tests pass.** All three bugs above have regression tests. Verified end to end on
+real data: 38 positions, 23 with live prices and a green *verified* badge, 14 European
+holdings honestly showing no data.
+
+Test isolation was also fixed along the way: the suite read whatever was in the
+developer's `.env`, so a test asserting "no integration is enabled" passed or failed
+depending on who ran it — and a failure message could have printed a real API key. An
+autouse fixture now clears credentials for every test.
+
+---
+
 # Up next
 
 | Phase | Content | Status |

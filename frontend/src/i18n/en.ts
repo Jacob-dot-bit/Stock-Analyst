@@ -171,6 +171,12 @@ export const en: Catalogue = {
   'prices.notMapped': '{symbol}: no provider mapping, so nothing to fetch.',
   'prices.symbolNotFound': '{symbol}: unknown to {provider}. Check the provider symbol.',
   'prices.rateLimited': '{symbol}: {provider} is rate-limiting. Try again in a few minutes.',
+  'prices.planLimited':
+    '{symbol}: covered by {provider} only on a paid plan. The symbol is correct — nothing to fix here.',
+  'prices.alreadyRunning':
+    'A refresh is already running. Two at once double the quota spent for no benefit — wait for the first to finish.',
+  'prices.stillUnavailable':
+    '{symbol}: still no price data. Already asked today — no configured provider covers this market on its free plan.',
   'prices.noProvider': '{symbol}: no data provider is available.',
   'prices.failed': '{symbol}: retrieval failed via {provider}.',
   'prices.budgetReached': 'Time budget reached, {remaining} instrument(s) left.',

@@ -175,6 +175,12 @@ export const pl: Catalogue = {
   'prices.notMapped': '{symbol}: brak przypisania do dostawcy, nie ma czego pobrać.',
   'prices.symbolNotFound': '{symbol}: nieznany dla {provider}. Sprawdź symbol dostawcy.',
   'prices.rateLimited': '{symbol}: {provider} ogranicza zapytania. Spróbuj za kilka minut.',
+  'prices.planLimited':
+    '{symbol}: dostępny u {provider} tylko w planie płatnym. Symbol jest poprawny — nie ma tu nic do poprawienia.',
+  'prices.alreadyRunning':
+    'Odświeżanie już trwa. Dwa naraz zużywają podwójny limit bez żadnej korzyści — poczekaj na zakończenie pierwszego.',
+  'prices.stillUnavailable':
+    '{symbol}: nadal brak notowań. Już pytaliśmy dzisiaj — żaden skonfigurowany dostawca nie obejmuje tego rynku w darmowym planie.',
   'prices.noProvider': '{symbol}: brak dostępnego dostawcy danych.',
   'prices.failed': '{symbol}: pobieranie przez {provider} nie powiodło się.',
   'prices.budgetReached': 'Budżet czasu wyczerpany, pozostało instrumentów: {remaining}.',

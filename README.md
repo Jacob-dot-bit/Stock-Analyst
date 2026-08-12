@@ -236,7 +236,7 @@ reported as anomalies, since that is the expected outcome.
 | Source | Role | Coverage | Note |
 |---|---|---|---|
 | Yahoo chart endpoint | Daily prices | worldwide | The backbone. Unofficial and **rate-limits hard** — four rapid requests earned a 429 that outlasted 30 minutes |
-| Twelve Data | Fallback prices | worldwide | Free tier, email signup. Key-gated; **not yet exercised against the live API** |
+| Twelve Data | Fallback prices | **US only on the free tier** | Verified live. European venues need a paid plan — their API says so explicitly |
 | SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |
 | Finnhub | News, profiles | worldwide | 60 calls/min on the free tier |
 | Perplexity | Qualitative synthesis | worldwide | **Paid** — on demand, one instrument at a time, cached |
@@ -251,6 +251,10 @@ actually served the data.
   not intraday trading.
 - **Price targets and analyst ratings** are now largely paywalled; the sentiment pillar
   will rest mostly on the news flow.
+- **European holdings may have no free price source.** Twelve Data's free tier is
+  US-only, and Yahoo — the one free source covering European venues — rate-limits by IP
+  and can stay blocked for a long time. Instruments with no data show no trend line and
+  stay marked *unverified*, rather than being dressed up as up to date.
 - **Refreshing prices is deliberately slow.** Free providers throttle, so a refresh is
   serialised, spaced out, and bounded by a time budget; it reports what is left and you
   click again. That is a constraint of the sources, not a bug.

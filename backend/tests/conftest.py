@@ -26,6 +26,33 @@ from openpyxl import Workbook
 
 os.environ.setdefault("BASE_CURRENCY", "EUR")
 
+#: Credentials a developer may legitimately have in their own .env.
+CREDENTIAL_VARS = (
+    "TWELVEDATA_API_KEY",
+    "FINNHUB_API_KEY",
+    "PERPLEXITY_API_KEY",
+    "SEC_USER_AGENT",
+)
+
+
+@pytest.fixture(autouse=True)
+def isolate_credentials(monkeypatch):
+    """Run every test as if no API key were configured.
+
+    Without this, the suite reads whatever is in the developer's .env: a test asserting
+    "no integration is enabled" then passes or fails depending on who runs it, and a
+    failure message could print a real key. Tests that need a key set one explicitly.
+    """
+    for name in CREDENTIAL_VARS:
+        monkeypatch.delenv(name, raising=False)
+
+    # get_settings() is cached, so a value read before this fixture ran would survive.
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
 
 def build_xtb_workbook(sheets: list[tuple[str, list[list], list[str], list[list]]]) -> bytes:
     """Build a workbook from (sheet name, preamble, headers, rows) tuples."""

@@ -23,6 +23,7 @@ import httpx
 
 from app.providers.base import (
     Bar,
+    PlanLimited,
     PriceProvider,
     ProviderUnavailable,
     RateLimited,
@@ -79,7 +80,11 @@ class TwelveDataProvider(PriceProvider):
 
             if response.status_code == 429:
                 raise RateLimited(f"{self.name} is throttling requests")
-            if response.status_code >= 400:
+
+            # A 404 carries a JSON body explaining *why* — an unknown symbol and a
+            # symbol excluded from the current plan look identical at the status code,
+            # so the body has to be read before deciding.
+            if response.status_code >= 400 and response.status_code != 404:
                 raise ProviderUnavailable(f"HTTP {response.status_code}")
 
             try:
@@ -95,13 +100,19 @@ class TwelveDataProvider(PriceProvider):
 
 
 def _parse_payload(payload: dict, symbol: str, provider_name: str) -> list[Bar]:
-    """Twelve Data signals errors inside a 200 response, via a "status" field."""
+    """Twelve Data reports errors in the body, sometimes even under a 200 status."""
     if payload.get("status") == "error":
         code = payload.get("code")
         message = str(payload.get("message", ""))
-        if code == 429 or "limit" in message.lower():
+        lowered = message.lower()
+
+        # Checked before the rate-limit rule: the plan message also contains "plan",
+        # and mis-reading it as throttling would have the user retry forever.
+        if "plan" in lowered or "upgrad" in lowered:
+            raise PlanLimited(message)
+        if code == 429 or "api credits" in lowered or "limit reached" in lowered:
             raise RateLimited(message or "rate limit reached")
-        if code == 404 or "not found" in message.lower():
+        if code == 404 or "not found" in lowered or "invalid" in lowered:
             raise SymbolNotFound(symbol)
         raise ProviderUnavailable(message or f"{provider_name} error")
 

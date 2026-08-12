@@ -165,6 +165,12 @@ export const fr: Catalogue = {
   'prices.notMapped': '{symbol} : pas de correspondance fournisseur, rien à récupérer.',
   'prices.symbolNotFound': '{symbol} : inconnu de {provider}. Vérifiez le symbole fournisseur.',
   'prices.rateLimited': '{symbol} : {provider} limite les requêtes. Réessayez dans quelques minutes.',
+  'prices.planLimited':
+    "{symbol} : couvert par {provider} uniquement sur une offre payante. Le symbole est correct — rien à corriger ici.",
+  'prices.alreadyRunning':
+    "Un rafraîchissement est déjà en cours. Deux en parallèle consomment le double de quota sans rien apporter — attendez la fin du premier.",
+  'prices.stillUnavailable':
+    "{symbol} : toujours aucun cours. Déjà demandé aujourd'hui — aucun fournisseur configuré ne couvre ce marché dans son offre gratuite.",
   'prices.noProvider': "{symbol} : aucun fournisseur de données n'est disponible.",
   'prices.failed': '{symbol} : échec de la récupération via {provider}.',
   'prices.budgetReached': 'Budget de temps atteint, {remaining} instrument(s) restant(s).',

@@ -52,6 +52,17 @@ class RateLimited(ProviderError):
     reason = "rate_limited"
 
 
+class PlanLimited(ProviderError):
+    """The provider knows this symbol but the current plan does not include it.
+
+    Distinct from SymbolNotFound: the symbol is correct and there is nothing to fix
+    locally. Telling the user to check their mapping would send them chasing a
+    problem that does not exist.
+    """
+
+    reason = "plan_limited"
+
+
 class ProviderUnavailable(ProviderError):
     """Network failure, or the provider is not configured."""
 

@@ -45,10 +45,13 @@ class TestHealth:
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "ok"
-        # The invariant is that the app starts with no key configured at all — not the
-        # exact list of integrations, which grows as providers are added.
+        # Shape only: which integrations exist grows over time, and whether each is
+        # enabled is config loading, covered properly in test_config.py.
         assert body["integrations"]
-        assert all(enabled is False for enabled in body["integrations"].values())
+        assert all(isinstance(enabled, bool) for enabled in body["integrations"].values())
+        # The .env locations searched are reported, so "why is my key not read" has a
+        # one-request answer.
+        assert body["env_files"]
 
 
 class TestEmptyPortfolio:

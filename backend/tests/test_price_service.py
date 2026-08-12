@@ -125,6 +125,69 @@ class TestRefreshInstrument:
         assert refresh_instrument(db, instrument, chain).code == PriceOutcome.NO_PROVIDER
 
 
+class TestFreshness:
+    """Regression tests for a bug that silently defeated the whole cache.
+
+    Freshness used to be "is the newest bar from the last trading day". Free feeds lag —
+    Twelve Data's newest bar was two days old — so every instrument looked stale forever
+    and every run re-fetched the entire portfolio, burning the daily quota.
+    """
+
+    def test_provider_lagging_behind_today_is_still_fresh(self, db):
+        instrument = make_instrument(db)
+        # Bars stop two days ago, as a real free provider's do.
+        stale_looking = bars_ending(date.today() - timedelta(days=2))
+        provider = FakeProvider("yahoo", bars=stale_looking)
+        chain = ProviderChain([provider])
+
+        refresh_instrument(db, instrument, chain)
+        db.commit()
+        second = refresh_instrument(db, instrument, chain)
+
+        assert second.code == PriceOutcome.ALREADY_FRESH
+        assert provider.calls == 1  # the whole point: no second request
+
+    def test_asking_is_recorded_even_when_the_symbol_is_wrong(self, db):
+        """A bad symbol will not fix itself today; stop asking until tomorrow.
+
+        But it must not be reported as "fresh" either: nothing was ever stored, and a
+        reassuring label over an empty series is worse than an honest gap.
+        """
+        instrument = make_instrument(db)
+        provider = FakeProvider("yahoo", error=SymbolNotFound("X"))
+        chain = ProviderChain([provider])
+
+        refresh_instrument(db, instrument, chain)
+        db.commit()
+        second = refresh_instrument(db, instrument, chain)
+
+        assert second.code == PriceOutcome.STILL_UNAVAILABLE
+        assert provider.calls == 1
+
+    def test_throttling_does_not_count_as_asked(self, db):
+        """Rate limiting is temporary, so the instrument must be retried next run."""
+        instrument = make_instrument(db)
+        provider = FakeProvider("yahoo", error=RateLimited("slow down"))
+        chain = ProviderChain([provider])
+
+        refresh_instrument(db, instrument, chain)
+        db.commit()
+        second = refresh_instrument(db, instrument, chain)
+
+        assert second.code == PriceOutcome.RATE_LIMITED
+        assert provider.calls == 2
+
+    def test_yesterdays_check_does_not_count(self, db):
+        instrument = make_instrument(db)
+        instrument.prices_checked_at = datetime.now(UTC) - timedelta(days=1)
+        db.commit()
+        provider = FakeProvider("yahoo", bars=bars_ending(date.today()))
+
+        outcome = refresh_instrument(db, instrument, ProviderChain([provider]))
+
+        assert outcome.code == PriceOutcome.UPDATED
+
+
 class TestCaching:
     def test_fresh_instrument_is_skipped(self, db):
         """The cache is what keeps a refresh inside free-tier rate limits."""
@@ -235,3 +298,38 @@ class _FrozenClock:
 
     def now(self, tz=None):
         return next(self._ticks)
+
+
+class TestConcurrency:
+    """Two refreshes at once double the quota spent and gain nothing.
+
+    Observed for real: a click in the browser and a call from a terminal overlapped,
+    re-fetching six instruments whose bars had just been stored seconds earlier.
+    """
+
+    def test_second_concurrent_run_is_refused(self, db):
+        from app.prices import service
+
+        instrument = make_instrument(db)
+        chain = ProviderChain([FakeProvider("yahoo", bars=bars_ending(date.today()))])
+
+        service._refresh_lock.acquire()
+        try:
+            report = refresh_many(db, [instrument], chain)
+        finally:
+            service._refresh_lock.release()
+
+        assert report.outcomes[0].code == PriceOutcome.ALREADY_RUNNING
+        assert report.remaining == 1
+
+    def test_the_lock_is_released_afterwards(self, db):
+        """A refused run must not leave the lock held and block every later refresh."""
+        from app.prices import service
+
+        instrument = make_instrument(db)
+        chain = ProviderChain([FakeProvider("yahoo", bars=bars_ending(date.today()))])
+
+        refresh_many(db, [instrument], chain)
+
+        assert service._refresh_lock.acquire(blocking=False)
+        service._refresh_lock.release()

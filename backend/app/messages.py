@@ -53,6 +53,14 @@ class PriceOutcome:
     SYMBOL_NOT_FOUND = "prices.symbolNotFound"  # {symbol, provider}
     RATE_LIMITED = "prices.rateLimited"  # {symbol, provider}
     NO_PROVIDER = "prices.noProvider"  # {symbol}
+    #: The symbol is fine; the provider's plan simply does not include this market.
+    PLAN_LIMITED = "prices.planLimited"  # {symbol, provider}
+    #: A refresh was already running. Two concurrent runs double the quota spent for
+    #: no benefit — observed for real when a browser click and a terminal call overlapped.
+    ALREADY_RUNNING = "prices.alreadyRunning"
+    #: Asked today, but still nothing stored. Reporting these as "already fresh" would
+    #: dress an instrument with no data at all as one that is up to date.
+    STILL_UNAVAILABLE = "prices.stillUnavailable"  # {symbol}
     FAILED = "prices.failed"  # {symbol, provider, error}
     BUDGET_REACHED = "prices.budgetReached"  # {remaining}
     #: Every provider throttled and no keyed fallback is configured. Emitted once per

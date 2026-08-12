@@ -96,6 +96,12 @@ class Instrument(Base):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime)
     verified_provider: Mapped[str | None] = mapped_column(String(30))
 
+    # When a provider was last *asked* about this instrument — which is not the same
+    # as the date of the newest bar. Free feeds lag by a day or more, so "newest bar
+    # is older than today" is permanently true and cannot be used to decide freshness:
+    # doing so re-fetches everything on every run and burns the daily quota.
+    prices_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
 
