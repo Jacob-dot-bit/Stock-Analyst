@@ -158,6 +158,30 @@ export const pl: Catalogue = {
   'sort.performance': 'Stopa zwrotu %',
   'sort.symbol': 'Symbol',
 
+  // --- Prices ---------------------------------------------------------------
+  'prices.title': 'Ceny rynkowe',
+  'prices.subtitle':
+    'Darmowi dostawcy mocno ograniczają liczbę zapytań, więc odświeżanie przetwarza listę w ramach budżetu czasu i pokazuje, ile zostało. Dane już zapisane nie są pobierane ponownie.',
+  'prices.refresh': 'Odśwież ceny',
+  'prices.refreshing': 'Odświeżanie…',
+  'prices.summary': 'Zaktualizowano: {updated}, już aktualne: {skipped}, nie pobrano: {failed}.',
+  'prices.remaining': {
+    one: 'Pozostał {count} instrument — kliknij ponownie, aby kontynuować.',
+    few: 'Pozostały {count} instrumenty — kliknij ponownie, aby kontynuować.',
+    many: 'Pozostało {count} instrumentów — kliknij ponownie, aby kontynuować.',
+  },
+  'prices.updated': '{symbol}: nowe świece: {bars}, źródło: {provider}.',
+  'prices.alreadyFresh': '{symbol}: już aktualne.',
+  'prices.notMapped': '{symbol}: brak przypisania do dostawcy, nie ma czego pobrać.',
+  'prices.symbolNotFound': '{symbol}: nieznany dla {provider}. Sprawdź symbol dostawcy.',
+  'prices.rateLimited': '{symbol}: {provider} ogranicza zapytania. Spróbuj za kilka minut.',
+  'prices.noProvider': '{symbol}: brak dostępnego dostawcy danych.',
+  'prices.failed': '{symbol}: pobieranie przez {provider} nie powiodło się.',
+  'prices.budgetReached': 'Budżet czasu wyczerpany, pozostało instrumentów: {remaining}.',
+  'table.trend': 'Trend (90 dni)',
+  'mapping.verified': 'zweryfikowane',
+  'mapping.verifiedTooltip': 'Dostawca zwrócił dane dla tego symbolu {date} ({provider}).',
+
   // --- Placeholder pages ---------------------------------------------------
   'watchlist.title': 'Obserwowane',
   'watchlist.description': 'Instrumenty obserwowane, ale nieposiadane, oraz moment wejścia.',

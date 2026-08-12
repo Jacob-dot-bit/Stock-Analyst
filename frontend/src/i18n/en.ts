@@ -155,6 +155,29 @@ export const en: Catalogue = {
   'sort.performance': 'Performance %',
   'sort.symbol': 'Symbol',
 
+  // --- Prices ---------------------------------------------------------------
+  'prices.title': 'Market prices',
+  'prices.subtitle':
+    'Free providers throttle heavily, so a refresh works through the list within a time budget and reports what is left. Data already stored is never re-fetched.',
+  'prices.refresh': 'Refresh prices',
+  'prices.refreshing': 'Refreshing…',
+  'prices.summary': '{updated} updated, {skipped} already up to date, {failed} not retrieved.',
+  'prices.remaining': {
+    one: '{count} instrument still to go — click again to continue.',
+    other: '{count} instruments still to go — click again to continue.',
+  },
+  'prices.updated': '{symbol}: {bars} new bar(s) from {provider}.',
+  'prices.alreadyFresh': '{symbol}: already up to date.',
+  'prices.notMapped': '{symbol}: no provider mapping, so nothing to fetch.',
+  'prices.symbolNotFound': '{symbol}: unknown to {provider}. Check the provider symbol.',
+  'prices.rateLimited': '{symbol}: {provider} is rate-limiting. Try again in a few minutes.',
+  'prices.noProvider': '{symbol}: no data provider is available.',
+  'prices.failed': '{symbol}: retrieval failed via {provider}.',
+  'prices.budgetReached': 'Time budget reached, {remaining} instrument(s) left.',
+  'table.trend': 'Trend (90d)',
+  'mapping.verified': 'verified',
+  'mapping.verifiedTooltip': 'A provider returned data for this symbol on {date} ({provider}).',
+
   // --- Placeholder pages ---------------------------------------------------
   'watchlist.title': 'Watchlist',
   'watchlist.description': 'Instruments you follow without holding them, and entry timing.',

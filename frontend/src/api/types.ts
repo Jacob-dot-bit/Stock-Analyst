@@ -1,4 +1,4 @@
-export type MappingStatus = 'RESOLVED' | 'MANUAL' | 'UNRESOLVED'
+export type MappingStatus = 'RESOLVED' | 'VERIFIED' | 'MANUAL' | 'UNRESOLVED'
 
 /**
  * A translatable message from the API.
@@ -37,6 +37,9 @@ export interface Instrument {
   currency: string | null
   country: string | null
   sector: string | null
+  /** Set once a provider actually returned data for this symbol. */
+  verified_at: string | null
+  verified_provider: string | null
 }
 
 export interface Position {
@@ -106,4 +109,19 @@ export interface Health {
   status: string
   base_currency: string
   integrations: Record<string, boolean>
+}
+
+
+export interface RefreshReport {
+  outcomes: ApiMessage[]
+  updated: number
+  skipped: number
+  failed: number
+  /** Instruments left when the time budget ran out. Ask again to continue. */
+  remaining: number
+}
+
+export interface Sparkline {
+  instrument_id: number
+  closes: number[]
 }

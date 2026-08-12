@@ -1,4 +1,12 @@
-import type { Health, ImportBatch, Instrument, Portfolio, Position } from './types'
+import type {
+  Health,
+  ImportBatch,
+  Instrument,
+  Portfolio,
+  Position,
+  RefreshReport,
+  Sparkline,
+} from './types'
 
 /** Surface the backend's error message rather than an opaque "500". */
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -47,6 +55,11 @@ export const api = {
 
   deletePosition: (id: number) =>
     request<void>(`/api/portfolio/positions/${id}`, { method: 'DELETE' }),
+
+  refreshPrices: (force = false) =>
+    request<RefreshReport>(`/api/prices/refresh?force=${force}`, { method: 'POST' }),
+
+  getSparklines: () => request<Sparkline[]>('/api/prices/sparklines'),
 
   setSymbolOverride: (payload: { broker_symbol: string; provider_symbol: string; note?: string }) =>
     request<Instrument>('/api/portfolio/symbol-overrides', {

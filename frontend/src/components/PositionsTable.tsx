@@ -3,17 +3,20 @@ import type { Position } from '../api/types'
 import { signClass } from '../format'
 import { useI18n } from '../i18n'
 import { MappingCell } from './MappingCell'
+import { Sparkline } from './Sparkline'
 
 interface Props {
   positions: Position[]
   baseCurrency: string
+  /** Cached closes per instrument, keyed by id. Empty until prices are refreshed. */
+  sparklines: Record<number, number[]>
   onDelete: (id: number) => void
   onUpdated: () => void
 }
 
 type SortKey = 'symbol' | 'value' | 'unrealized' | 'performance'
 
-export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }: Props) {
+export function PositionsTable({ positions, baseCurrency, sparklines, onDelete, onUpdated }: Props) {
   const { t, formatNumber, formatSignedPercent, formatDate } = useI18n()
   const [sortKey, setSortKey] = useState<SortKey>('value')
   const [account, setAccount] = useState<string>('all')
@@ -76,6 +79,7 @@ export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }:
               <th className="num">{t('table.quantity')}</th>
               <th className="num">{t('table.avgPrice')}</th>
               <th className="num">{t('table.price')}</th>
+              <th>{t('table.trend')}</th>
               <th className="num">{t('table.value', { currency: baseCurrency })}</th>
               <th className="num">{t('table.unrealized', { currency: baseCurrency })}</th>
               <th className="num">{t('table.performance')}</th>
@@ -111,6 +115,9 @@ export function PositionsTable({ positions, baseCurrency, onDelete, onUpdated }:
                   {position.currency ? ` ${position.currency}` : ''}
                 </td>
                 <td className="num">{formatNumber(position.market_price)}</td>
+                <td>
+                  <Sparkline closes={sparklines[position.instrument.id] ?? []} />
+                </td>
                 <td className="num">{formatNumber(position.broker_market_value)}</td>
                 <td className={`num ${signClass(position.broker_net_pl)}`}>
                   {formatNumber(position.broker_net_pl)}

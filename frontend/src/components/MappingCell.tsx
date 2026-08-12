@@ -17,7 +17,7 @@ interface Props {
  * green would imply a confidence nothing supports.
  */
 export function MappingCell({ instrument, onUpdated }: Props) {
-  const { t } = useI18n()
+  const { t, formatDate } = useI18n()
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(instrument.provider_symbol ?? '')
   const [busy, setBusy] = useState(false)
@@ -74,7 +74,21 @@ export function MappingCell({ instrument, onUpdated }: Props) {
 
       {mapping_status === 'MANUAL' && <span className="tag manual">{t('mapping.confirmed')}</span>}
 
-      {mapping_status === 'RESOLVED' && (
+      {/* Verified means a provider actually returned data for this symbol — the only
+          real proof the mapping is right, as opposed to merely plausible. */}
+      {instrument.verified_at && (
+        <span
+          className="tag resolved"
+          title={t('mapping.verifiedTooltip', {
+            date: formatDate(instrument.verified_at),
+            provider: instrument.verified_provider ?? '?',
+          })}
+        >
+          {t('mapping.verified')}
+        </span>
+      )}
+
+      {mapping_status === 'RESOLVED' && !instrument.verified_at && (
         <span className="tag neutral" title={t('mapping.unverifiedTooltip')}>
           {t('mapping.unverified')}
         </span>

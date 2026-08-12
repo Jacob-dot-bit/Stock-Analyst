@@ -4,6 +4,7 @@ import type { Portfolio as PortfolioData } from '../api/types'
 import { ImportPanel } from '../components/ImportPanel'
 import { ManualPositionForm } from '../components/ManualPositionForm'
 import { PositionsTable } from '../components/PositionsTable'
+import { RefreshPanel } from '../components/RefreshPanel'
 import { UnresolvedPanel } from '../components/UnresolvedPanel'
 import { signClass } from '../format'
 import { useI18n } from '../i18n'
@@ -11,13 +12,16 @@ import { useI18n } from '../i18n'
 export function Portfolio() {
   const { t, formatDate } = useI18n()
   const [data, setData] = useState<PortfolioData | null>(null)
+  const [sparklines, setSparklines] = useState<Record<number, number[]>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setError(null)
     try {
-      setData(await api.getPortfolio())
+      const [portfolio, series] = await Promise.all([api.getPortfolio(), api.getSparklines()])
+      setData(portfolio)
+      setSparklines(Object.fromEntries(series.map((s) => [s.instrument_id, s.closes])))
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -55,6 +59,8 @@ export function Portfolio() {
 
       <ImportPanel onImported={() => void load()} />
 
+      <RefreshPanel onRefreshed={() => void load()} />
+
       {data && <UnresolvedPanel instruments={data.unresolved_symbols} onUpdated={() => void load()} />}
 
       <ManualPositionForm onCreated={() => void load()} />
@@ -68,6 +74,7 @@ export function Portfolio() {
             <PositionsTable
               positions={data.positions}
               baseCurrency={data.totals.base_currency}
+              sparklines={sparklines}
               onDelete={(id) => void handleDelete(id)}
               onUpdated={() => void load()}
             />

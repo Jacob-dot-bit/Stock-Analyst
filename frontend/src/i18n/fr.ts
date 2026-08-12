@@ -149,6 +149,29 @@ export const fr: Catalogue = {
   'sort.performance': 'Performance %',
   'sort.symbol': 'Symbole',
 
+  // --- Prices ---------------------------------------------------------------
+  'prices.title': 'Cours de marché',
+  'prices.subtitle':
+    "Les fournisseurs gratuits limitent fortement les requêtes : un rafraîchissement traite la liste dans un budget de temps et indique ce qu'il reste. Les données déjà en cache ne sont jamais redemandées.",
+  'prices.refresh': 'Rafraîchir les cours',
+  'prices.refreshing': 'Rafraîchissement…',
+  'prices.summary': '{updated} mis à jour, {skipped} déjà à jour, {failed} non récupérés.',
+  'prices.remaining': {
+    one: '{count} instrument restant — cliquez à nouveau pour continuer.',
+    other: '{count} instruments restants — cliquez à nouveau pour continuer.',
+  },
+  'prices.updated': '{symbol} : {bars} nouvelle(s) barre(s) via {provider}.',
+  'prices.alreadyFresh': '{symbol} : déjà à jour.',
+  'prices.notMapped': '{symbol} : pas de correspondance fournisseur, rien à récupérer.',
+  'prices.symbolNotFound': '{symbol} : inconnu de {provider}. Vérifiez le symbole fournisseur.',
+  'prices.rateLimited': '{symbol} : {provider} limite les requêtes. Réessayez dans quelques minutes.',
+  'prices.noProvider': "{symbol} : aucun fournisseur de données n'est disponible.",
+  'prices.failed': '{symbol} : échec de la récupération via {provider}.',
+  'prices.budgetReached': 'Budget de temps atteint, {remaining} instrument(s) restant(s).',
+  'table.trend': 'Tendance (90j)',
+  'mapping.verified': 'vérifiée',
+  'mapping.verifiedTooltip': 'Un fournisseur a renvoyé des données pour ce symbole le {date} ({provider}).',
+
   // --- Placeholder pages ---------------------------------------------------
   'watchlist.title': 'Watchlist',
   'watchlist.description': "Titres suivis mais non détenus, et analyse du moment d'entrée.",
