@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Secrets — ne jamais committer
+.env
+.env.*
+!.env.example
+
+# Données locales (base SQLite, cache HTTP, exports broker)
+data/*.db
+data/*.sqlite
+data/cache/
+data/imports/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# Éditeurs / OS
+.vscode/
+.idea/
+.DS_Store
