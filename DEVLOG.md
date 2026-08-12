@@ -377,6 +377,43 @@ watchlist arrive en phase 4 — c'est le déclencheur à surveiller.
 
 ---
 
+# Phase 1c — Mise sous contrôle de version (2026-08-12)
+
+## Bug 1c.1 — Numéros de compte réels codés en dur
+
+**Symptôme.** Détecté en préparant la mise sous git, avant toute publication.
+
+**Cause.** Les fixtures de test avaient été construites en recopiant la structure des
+fichiers réels, numéros de compte compris. Ils apparaissaient dans 5 fichiers et une
+quarantaine d'emplacements, dont une docstring du code source.
+
+**Correctif.** Remplacement par des numéros fictifs. Les 128 tests passent sans
+modification : aucune assertion ne dépendait de ces valeurs, ce qui confirme qu'elles
+n'avaient aucune raison d'être là.
+
+**Leçon.** Construire une fixture à partir d'un fichier réel fait entrer des données
+personnelles dans le code sans qu'on y pense. Reproduire la *structure*, jamais le
+*contenu*.
+
+## Décision 1c.1 — Aucune donnée personnelle dans le dépôt
+
+Numéros de compte fictifs dans les fixtures, montants d'illustration signalés comme tels
+dans ce journal, et `.gitignore` excluant `.env`, la base SQLite et les fichiers d'export.
+Les relevés bruts restent hors du projet.
+
+## Décision 1c.2 — Historique découpé en commits logiques, aux dates réelles
+
+**Décision.** Huit commits, un par unité fonctionnelle cohérente (outillage, socle,
+correspondance des symboles, parser, persistance, API, frontend, documentation), plutôt
+qu'un commit initial monolithique. Chaque commit portant des tests est vert
+indépendamment — vérifié par clonage et exécution de la suite à chaque révision.
+
+**Ce qui a été écarté.** Antidater les commits pour simuler un développement étalé sur
+plusieurs semaines. L'historique reflète le déroulement réel du travail : sa lisibilité
+vient du découpage, pas d'une chronologie inventée.
+
+---
+
 # À suivre
 
 | Phase | Contenu | État |
