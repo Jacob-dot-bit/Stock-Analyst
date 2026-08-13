@@ -1088,6 +1088,37 @@ whole panel — including the day it lists something they really could correct.
 The CVR still appears in the positions table with its value. It is not hidden — it is
 simply no longer presented as a defect.
 
+## Decision 3a.1 — Look the filer up by name when the ticker belongs to someone else
+
+`ORA.FR` is Orange; `ORA` in the US is Ormat Technologies. The name check (bug 3a.3)
+correctly refused that match, but refusing left the holding with no fundamentals at all
+when Orange does file with the SEC — under an ADR ticker nobody could guess.
+
+So when a ticker is absent or belongs to a different company, the index is searched **by
+name** instead. That direction cannot collide: the name is what is being matched on.
+
+**The search rule is deliberately stricter than the verification rule.** `names_match`
+accepts a single shared token, which is right once a ticker has narrowed the field to one
+candidate, and useless across 10,000 registrants — "Air Liquide" collects Air Products,
+Air Brake Technologies and Madison Air Solutions on the word "Air" alone. Searching
+therefore demands every significant word, prefers an exact name, and **refuses
+ambiguity outright**. Several tickers sharing one CIK (ordinary shares plus an ADR) are
+not ambiguity.
+
+Returning nothing costs one data point. Guessing attaches another company's accounts to
+a holding, which is the failure this whole layer is built to avoid.
+
+**Result:** Orange recovered (44.1bn EUR). Air Liquide and Sanofi are found in the index
+but file nothing usable in XBRL. Dassault Systèmes, LVMH and Air France are not SEC
+filers at all, and are now refused with that reason rather than silently mismatched.
+
+**One caveat the scoring will have to respect:** Orange's latest filed year is FY2023,
+because its ADR registration lapsed. The figures are real but two years stale. Every
+figure carries its fiscal year and period end precisely so staleness can be surfaced
+rather than assumed away.
+
+**Coverage: 26 of 38 holdings with verified fundamentals.**
+
 ---
 
 # Up next

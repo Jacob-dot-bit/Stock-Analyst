@@ -214,18 +214,28 @@ class EdgarProvider:
         by construction, and demanding a name match there rejects valid results:
         the broker writes "AMD" where the registrant is "Advanced Micro Devices Inc".
         """
-        entry = self._load_index().get(ticker.strip().upper())
-        if entry is None:
-            raise SymbolNotFound(f"{ticker} is not in the SEC ticker index")
+        index = self._load_index()
+        entry = index.get(ticker.strip().upper())
 
-        registrant = str(entry.get("title") or "")
-        if expected_name and not names_match(expected_name, registrant):
+        if entry is not None:
+            registrant = str(entry.get("title") or "")
+            if not expected_name or names_match(expected_name, registrant):
+                return str(entry["cik_str"]).zfill(10), registrant
+
+        # The ticker is absent or belongs to someone else. A European company may still
+        # file with the SEC under an ADR ticker we cannot guess, so look it up by name —
+        # which cannot collide, since the name is what we are matching on.
+        if expected_name:
+            found = find_by_name(index, expected_name)
+            if found:
+                return found
+
+        if entry is not None:
             raise SymbolNotFound(
-                f"{ticker} resolves to '{registrant}', which does not match "
+                f"{ticker} resolves to '{entry.get('title')}', which does not match "
                 f"'{expected_name}' — refusing to use another company's filings"
             )
-
-        return str(entry["cik_str"]).zfill(10), registrant
+        raise SymbolNotFound(f"{ticker} is not in the SEC ticker index")
 
     def fetch(self, ticker: str, expected_name: str | None = None) -> Fundamentals:
         """Fetch and normalise one company's annual figures."""
@@ -268,6 +278,44 @@ def names_match(expected: str, registrant: str) -> bool:
     return "".join(sorted(left)) == "".join(sorted(right)) or (
         "".join(left) in "".join(right) or "".join(right) in "".join(left)
     )
+
+
+def find_by_name(index: dict[str, dict[str, Any]], expected: str) -> tuple[str, str] | None:
+    """Find a registrant by company name, or nothing when the answer is not certain.
+
+    Searching 10,000 names needs a far stricter rule than verifying one candidate.
+    ``names_match`` accepts a single shared token, which is right when the ticker has
+    already narrowed the field to one company — and useless here, where "Air Liquide"
+    would collect Air Products, Air Brake Technologies and Madison Air Solutions.
+
+    So: an exact name match wins; failing that, a single registrant containing every
+    significant word of the expected name is accepted; anything ambiguous is refused.
+    Returning nothing costs one missing data point, whereas guessing attaches another
+    company's accounts to a holding.
+    """
+    wanted = _name_tokens(expected)
+    if not wanted:
+        return None
+
+    exact, contains = [], []
+    for entry in index.values():
+        title = str(entry.get("title") or "")
+        tokens = _name_tokens(title)
+        if not tokens:
+            continue
+        if tokens == wanted:
+            exact.append(entry)
+        elif wanted <= tokens:
+            contains.append(entry)
+
+    for candidates in (exact, contains):
+        ciks = {str(c["cik_str"]).zfill(10) for c in candidates}
+        # Several tickers for one company (ordinary shares plus ADR) is not ambiguity.
+        if len(ciks) == 1:
+            best = candidates[0]
+            return str(best["cik_str"]).zfill(10), str(best.get("title") or "")
+
+    return None
 
 
 def _normalise(payload: dict, cik: str) -> Fundamentals:

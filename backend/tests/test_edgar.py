@@ -199,3 +199,81 @@ class TestConfiguration:
 
         with pytest.raises(ProviderUnavailable, match="SEC_USER_AGENT"):
             provider.resolve("AAPL")
+
+
+class TestNameLookup:
+    """Searching 10,000 names needs a stricter rule than verifying one candidate.
+
+    `names_match` accepts a single shared token, which is right once a ticker has
+    narrowed the field to one company and useless across the whole index: "Air Liquide"
+    would collect Air Products, Air Brake Technologies and Madison Air Solutions.
+    """
+
+    INDEX = {
+        "0": {"cik_str": 2969, "ticker": "APD", "title": "Air Products & Chemicals, Inc."},
+        "1": {"cik_str": 943452, "ticker": "WAB", "title": "WESTINGHOUSE AIR BRAKE TECHNOLOGIES CO"},
+        "2": {"cik_str": 1161167, "ticker": "AIQUY", "title": "L AIR LIQUIDE SA /FI"},
+        "3": {"cik_str": 1121404, "ticker": "SNY", "title": "Sanofi"},
+        "4": {"cik_str": 1121404, "ticker": "SNYNF", "title": "Sanofi"},
+        "5": {"cik_str": 1038143, "ticker": "FNCTF", "title": "ORANGE"},
+        "6": {"cik_str": 1754226, "ticker": "OBT", "title": "Orange County Bancorp, Inc. /DE/"},
+    }
+
+    def test_every_significant_word_must_be_present(self):
+        from app.providers.edgar import find_by_name
+
+        found = find_by_name(self.INDEX, "Air Liquide")
+
+        # Not Air Products, whose only overlap is the word "Air".
+        assert found is not None
+        assert found[0] == "0001161167"
+
+    def test_an_exact_name_beats_a_longer_one_containing_it(self):
+        """"Orange" must not become Orange County Bancorp."""
+        from app.providers.edgar import find_by_name
+
+        found = find_by_name(self.INDEX, "Orange")
+
+        assert found == ("0001038143", "ORANGE")
+
+    def test_several_tickers_for_one_company_are_not_ambiguity(self):
+        """Ordinary shares and an ADR share a CIK; that is one company, not two."""
+        from app.providers.edgar import find_by_name
+
+        assert find_by_name(self.INDEX, "Sanofi")[0] == "0001121404"
+
+    def test_an_unknown_company_returns_nothing(self):
+        from app.providers.edgar import find_by_name
+
+        assert find_by_name(self.INDEX, "LVMH") is None
+
+    def test_ambiguity_is_refused_rather_than_guessed(self):
+        """Two different companies matching equally well is not an answer.
+
+        Returning nothing costs one data point; guessing attaches another company's
+        accounts to a holding.
+        """
+        from app.providers.edgar import find_by_name
+
+        index = {
+            "0": {"cik_str": 1, "ticker": "AAA", "title": "Acme Corp"},
+            "1": {"cik_str": 2, "ticker": "BBB", "title": "Acme Corp"},
+        }
+
+        assert find_by_name(index, "Acme") is None
+
+    def test_name_lookup_rescues_a_ticker_that_belongs_to_someone_else(self):
+        """ORA.FR is Orange; ORA in the US is Ormat. The name still finds the filer."""
+        provider = EdgarProvider(
+            user_agent="test contact@example.com",
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json={
+                **self.INDEX,
+                "9": {"cik_str": 1296445, "ticker": "ORA", "title": "ORMAT TECHNOLOGIES, INC."},
+            })),
+        )
+
+        cik, registrant = provider.resolve("ORA", expected_name="Orange")
+
+        assert cik == "0001038143"
+        assert registrant == "ORANGE"
