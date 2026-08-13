@@ -473,3 +473,24 @@ class TestFmpProvider:
 
         with pytest.raises(SymbolNotFound):
             provider.fetch_daily(InstrumentRef(provider_symbol="X.PA"), date(2026, 8, 1), date(2026, 8, 12))
+
+    def test_402_is_a_coverage_boundary_not_a_bad_symbol(self):
+        """How the free tier refuses non-US symbols. Verified live on TTE.PA."""
+        provider = FmpProvider(
+            api_key="k", min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(402, text="not available under your current subscription")),
+        )
+
+        with pytest.raises(PlanLimited):
+            provider.fetch_daily(InstrumentRef(provider_symbol="TTE.PA"), date(2026, 8, 1), date(2026, 8, 12))
+
+    def test_a_retired_endpoint_is_not_a_plan_boundary(self):
+        """Nothing the user buys fixes a dead endpoint; do not send them to a pricing page."""
+        payload = {"Error Message": "Legacy Endpoint : Due to Legacy endpoints being no longer supported"}
+        provider = FmpProvider(
+            api_key="k", min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json=payload)),
+        )
+
+        with pytest.raises(ProviderUnavailable):
+            provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2026, 8, 1), date(2026, 8, 12))

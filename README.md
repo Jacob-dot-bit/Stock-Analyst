@@ -87,7 +87,7 @@ cleanly rather than failing startup.
 |---|---|---|
 | `BASE_CURRENCY` | Currency used for portfolio totals | — |
 | `TWELVEDATA_API_KEY` | **Recommended.** Fallback price provider for when Yahoo throttles — see below | free |
-| `FMP_API_KEY` | **Recommended for European holdings.** The only configured candidate covering Euronext | free |
+| `FMP_API_KEY` | Optional third US price source (250 req/day). Does **not** cover Euronext on the free tier | free |
 | `FINNHUB_API_KEY` | News, company profiles (60 calls/min on the free tier) | free |
 | `SEC_USER_AGENT` | Official US fundamentals via SEC EDGAR. Format `First Last email@example.com` — the SEC rejects anonymous requests | free |
 | `PERPLEXITY_API_KEY` | Qualitative synthesis | **paid** |
@@ -237,7 +237,7 @@ reported as anomalies, since that is the expected outcome.
 | Source | Role | Coverage | Note |
 |---|---|---|---|
 | Yahoo chart endpoint | Daily prices | worldwide | The backbone. Unofficial and **rate-limits hard** — four rapid requests earned a 429 that outlasted 30 minutes |
-| FMP | Daily prices | Euronext + worldwide | Free tier, 250 req/day. Key-gated; **free-tier coverage unverified** |
+| FMP | Daily prices | **US only on the free tier** | Verified live: non-US symbols answer HTTP 402. Kept as a third US source |
 | Boerse Frankfurt | Daily prices | **Europe** | No key, no session. Keyed on **ISIN only**. Prices are the Frankfurt listing, not the home market |
 | Twelve Data | Fallback prices | **US only on the free tier** | Verified live. European venues need a paid plan — their API says so explicitly |
 | SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |
@@ -254,6 +254,11 @@ actually served the data.
   not intraday trading.
 - **Price targets and analyst ratings** are now largely paywalled; the sentiment pillar
   will rest mostly on the news flow.
+- **Four French PEA ETFs have no free source.** Every candidate was tested: Frankfurt
+  does not list them, Tradegate publishes charts as images, Euronext encrypts its
+  payload, and the free tiers of both Twelve Data and FMP stop at the US border. Yahoo
+  covers them and needs no key — it is simply IP-blocked from some networks. Running the
+  app from another connection fills them in at the next refresh.
 - **European holdings need an ISIN.** Boerse Frankfurt covers them for free, but is
   keyed on ISIN and nothing else — its search endpoint ignores its search term, and no
   free service tested maps a ticker to an ISIN reliably. Type the ISIN on the position

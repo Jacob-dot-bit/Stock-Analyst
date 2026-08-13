@@ -4,15 +4,17 @@ Why another provider: the four French PEA ETFs in this portfolio have no source 
 today. Frankfurt does not list them (`s=no_data` on every candidate ISIN), Twelve Data's
 free tier is US-only, and Yahoo — which does cover them — blocks by IP.
 
-FMP advertises a free tier of 250 requests/day spanning Euronext among other venues, and
-uses the same venue-suffixed symbols this application already derives (``DCAM.PA``), so
-no new identifier is needed.
+**Verified live, and the answer is no for Europe.** The free tier serves US symbols and
+rejects everything else with HTTP 402 — ``TTE.PA`` and ``DCAM.PA`` both return *"This value
+set for 'symbol' is not available under your current subscription"*. It is kept as a
+third US source, not as the European answer we were looking for.
 
-**Unverified until a key exists.** The response shape below follows their documented
-format and is covered by unit tests, but free-tier *coverage* cannot be checked without a
-key — and that is precisely what went wrong with Twelve Data, whose implementation was
-correct while its free plan turned out to exclude Europe. Treat the first live call as
-the real test, and read ``prices.planLimited`` in the refresh report as the answer.
+That makes two commercial free tiers checked and two that stop at the US border, Twelve
+Data being the first. Excluding non-US venues appears to be how these plans are
+monetised, so a third signup is unlikely to end differently.
+
+Note on the endpoint: the ``/api/v3/`` path is retired — it answers *"Legacy Endpoint:
+no longer supported"* — so this uses the ``/stable/`` API.
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ from app.providers.base import (
     Throttle,
 )
 
-HISTORY_URL = "https://financialmodelingprep.com/api/v3/historical-price-full/{symbol}"
+HISTORY_URL = "https://financialmodelingprep.com/stable/historical-price-eod/full"
 
 
 class FmpProvider(PriceProvider):
@@ -70,8 +72,9 @@ class FmpProvider(PriceProvider):
             self._throttle.wait()
             try:
                 response = client.get(
-                    HISTORY_URL.format(symbol=symbol),
+                    HISTORY_URL,
                     params={
+                        "symbol": symbol,
                         "from": start.isoformat(),
                         "to": end.isoformat(),
                         "apikey": self._api_key,
@@ -82,15 +85,20 @@ class FmpProvider(PriceProvider):
 
             if response.status_code == 429:
                 raise RateLimited(f"{self.name} is throttling requests")
-            # 401/403 carry a body explaining whether the key is wrong or the plan does
-            # not include this data, which are very different things for the user.
+
+            # 402 is how the free tier refuses a symbol outside its coverage. Saying so
+            # plainly matters: the symbol is right and there is nothing to fix locally.
+            if response.status_code == 402:
+                raise PlanLimited(response.text[:200])
+
             if response.status_code >= 400 and response.status_code not in {401, 403}:
                 raise ProviderUnavailable(f"HTTP {response.status_code}")
 
             try:
                 payload = response.json()
             except ValueError as exc:
-                raise ProviderUnavailable("malformed JSON response") from exc
+                # A retired endpoint answers with prose, not JSON.
+                raise ProviderUnavailable(response.text[:200]) from exc
         finally:
             if owns_client:
                 client.close()
@@ -102,7 +110,10 @@ def _parse_payload(payload: object, symbol: str) -> list[Bar]:
     if isinstance(payload, dict) and payload.get("Error Message"):
         message = str(payload["Error Message"])
         lowered = message.lower()
-        # "Exclusive endpoint", "upgrade your plan", "not available under your plan"...
+        # A retired endpoint is not a plan boundary: nothing the user buys fixes it,
+        # and calling it "plan limited" would send them to a pricing page for a bug.
+        if "legacy" in lowered or "no longer supported" in lowered:
+            raise ProviderUnavailable(message)
         if any(word in lowered for word in ("plan", "upgrad", "exclusive", "subscription")):
             raise PlanLimited(message)
         if "limit" in lowered:

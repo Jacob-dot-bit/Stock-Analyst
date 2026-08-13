@@ -881,6 +881,71 @@ honest state.
 
 ---
 
+# Phase 2d — Exhausting the free European sources (2026-08-13)
+
+Four French PEA ETFs still had no data. This phase closed the search — with a negative
+result worth recording, so nobody repeats it.
+
+## What was tested, and what it proved
+
+| Source | Outcome |
+|---|---|
+| Yahoo | 429, still, hours later. Covers everything — when reachable |
+| Boerse Frankfurt | `s=no_data` on the **history** endpoint for every candidate ISIN. Note: the first check used the *quote* endpoint, which was a testing error on my part |
+| Tradegate | Answers, and the price is right (6.276 vs XTB's 6.246). But its charts are served as **PNG images** — there is no history to read |
+| Euronext | Returns an **AES-encrypted** payload its own frontend decrypts |
+| Amundi, justETF, Boursorama | 404 / 400 / 410 on public paths |
+| Twelve Data (free) | US only — its own message names the paid plan |
+| FMP (free) | **US only.** `TTE.PA` and `DCAM.PA` both answer HTTP 402: *"not available under your current subscription"* |
+
+## Decision 2d.1 — Stop looking for a free Euronext ETF source
+
+Two commercial free tiers were checked and both stop at the US border. Excluding non-US
+venues is evidently how these plans are monetised, so a third signup is unlikely to end
+differently. Continuing would have meant guessing endpoint URLs on retail brokers' sites,
+which is not evidence — and the one time I started doing that, it produced nothing.
+
+**The gap is narrower than "Europe".** Frankfurt covers European *shares* perfectly well:
+10 of this portfolio's holdings, including TotalEnergies, LVMH and ASML, are priced
+through it. What is missing is four French PEA ETFs, which are niche instruments listed
+only in Paris.
+
+**The honest options**, in order of cost:
+
+1. Run the app from a network where Yahoo is reachable — free, covers everything, needs
+   no key and no ISIN.
+2. A paid data plan.
+3. Accept the gap: 4 instruments out of 38, shown as an explicit blank rather than a
+   fabricated number.
+
+## Bug 2d.1 — FMP's v3 endpoint is retired, and I called it anyway
+
+**Symptom.** Every FMP symbol, including `AAPL`, came back as *plan limited*.
+
+**Cause.** Two mistakes at once. The `/api/v3/` path is retired — it answers *"Legacy
+Endpoint: no longer supported"* — and my error classifier matched that message on the
+word "supported" and filed it as a subscription boundary.
+
+**Why the misclassification mattered more than the wrong URL.** It would have sent the
+user to a pricing page to pay for something no amount of money fixes. A dead endpoint and
+a plan boundary need different words.
+
+**Fix.** The `/stable/` API, and a retired endpoint now raises `ProviderUnavailable`.
+Verified: `AAPL` and `NVDA` return real bars, `TTE.PA` returns a clean plan boundary.
+
+FMP is kept as a third US source rather than removed — it works, just not for what it was
+added for.
+
+## Note — an API key was exposed in the session
+
+While diagnosing a malformed `.env` (the key had been pasted without its
+`FMP_API_KEY=` prefix), a formatting command printed the key value in clear text. It was
+flagged immediately and rotation recommended. The lesson is in the tooling, not the
+carelessness: inspection commands that touch `.env` must print names and lengths only,
+never values.
+
+---
+
 # Up next
 
 | Phase | Content | Status |
