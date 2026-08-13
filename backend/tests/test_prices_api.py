@@ -254,3 +254,36 @@ class TestIsinEntry:
         report = client.post("/api/prices/refresh").json()
 
         assert report["updated"] >= 1
+
+
+class TestUnresolvedPanelOnlyAsksAnswerableQuestions:
+    """The panel tells the user to correct things, so it must only list correctable ones.
+
+    A CVR whose broker symbol *is* its ISIN has no ticker to supply. Listing it sends
+    the user hunting for something that does not exist.
+    """
+
+    def test_an_instrument_carrying_an_isin_is_not_listed(self, client):
+        client.post(
+            "/api/portfolio/positions",
+            json={"broker_symbol": "US592CVR0133", "quantity": 1, "avg_price": 10},
+        )
+        client.put(
+            "/api/portfolio/isin",
+            json={"broker_symbol": "US592CVR0133", "isin": "US592CVR0133"},
+        )
+
+        unresolved = client.get("/api/portfolio").json()["unresolved_symbols"]
+
+        assert [i["broker_symbol"] for i in unresolved] == []
+
+    def test_a_genuinely_unidentified_symbol_is_still_listed(self, client):
+        """The panel must keep working for cases the user really can fix."""
+        client.post(
+            "/api/portfolio/positions",
+            json={"broker_symbol": "WEIRD.ZZ", "quantity": 1, "avg_price": 10},
+        )
+
+        unresolved = client.get("/api/portfolio").json()["unresolved_symbols"]
+
+        assert [i["broker_symbol"] for i in unresolved] == ["WEIRD.ZZ"]

@@ -326,3 +326,29 @@ class TestIsinShapedSymbols:
             select(Instrument).where(Instrument.broker_symbol == "AAPL.US")
         ).scalar_one()
         assert instrument.isin is None
+
+
+class TestIsinBackfill:
+    def test_reimport_repairs_an_instrument_created_before_isin_detection(self, db):
+        """Otherwise the row shows "needs fixing" forever with nothing to fix."""
+        legacy = Instrument(broker_symbol="US592CVR0133", mapping_status=MappingStatus.UNRESOLVED)
+        db.add(legacy)
+        db.commit()
+        assert legacy.isin is None
+
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "CVR", "US592CVR0133", "STOCK", None, 1.0, 0.0, None,
+                         0.0, None, None, None, 0.0, 0.0, 0.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        import_export_file(db, content, "cvr.xlsx")
+
+        assert legacy.isin == "US592CVR0133"

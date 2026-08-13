@@ -112,13 +112,19 @@ def get_portfolio(db: Session = Depends(get_db)) -> PortfolioOut:
         ).scalars()
     )
 
-    # CFDs are deliberately excluded: they have no fundamentals, so having no mapping
-    # is expected and listing them would just be noise.
+    # This panel asks the user for something, so it must only contain rows where an
+    # answer exists. Excluded:
+    #   - CFDs, which have no fundamentals by nature;
+    #   - anything that already carries an ISIN, since the identifier is known and the
+    #     gap is provider coverage, not missing information.
+    # A CVR whose broker symbol *is* its ISIN falls in the second case: there is no
+    # ticker to supply, and asking for one would send the user hunting for nothing.
     unresolved = list(
         db.execute(
             select(Instrument).where(
                 Instrument.mapping_status == MappingStatus.UNRESOLVED,
                 Instrument.category.is_distinct_from("CFD"),
+                Instrument.isin.is_(None),
             )
         ).scalars()
     )

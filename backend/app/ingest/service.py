@@ -58,6 +58,11 @@ def get_or_create_instrument(
 
     if instrument is not None:
         # An export enriches a known instrument without overwriting what is set.
+        # Backfills too: instruments created before ISIN detection existed still have
+        # an empty field, and re-importing should repair them rather than leave the
+        # user staring at a "needs fixing" row with nothing to fix.
+        if not instrument.isin and looks_like_isin(broker_symbol):
+            instrument.isin = broker_symbol
         if currency and not instrument.currency:
             instrument.currency = currency
         if name and not instrument.name:

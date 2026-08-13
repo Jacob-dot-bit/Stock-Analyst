@@ -1062,6 +1062,32 @@ have no fundamentals by nature; 1 is a BDC reporting no conventional revenue lin
 **250 tests pass.** All three bugs above have regression tests naming the actual
 companies involved, because the abstraction is not what made them dangerous.
 
+## Bug 3a.4 — The panel demanded a correction that does not exist
+
+**Symptom.** `US592CVR0133` sat permanently under *"symbols without a mapping — until
+corrected, they will not be analysed"*, with an empty field waiting for a provider
+symbol.
+
+**Cause — two layers.** The instrument is a CVR: a contingent value right from a
+corporate action, not a listed security. It has no ticker, no quote and no accounts, and
+its broker symbol *is* its ISIN. ISIN auto-detection was added after that row was
+created, so the field stayed empty; and even once filled, the panel keyed on
+`mapping_status` alone and would have kept showing it.
+
+**Why it mattered.** A panel that asks the user to fix something has to contain only
+fixable things. Otherwise the one row that never clears teaches the user to ignore the
+whole panel — including the day it lists something they really could correct.
+
+**Fix, in two parts.**
+
+* Re-importing now **backfills** the ISIN on instruments created before detection
+  existed, rather than leaving them permanently broken.
+* The panel excludes anything already carrying an ISIN. Having an identifier and no data
+  is a coverage gap, not missing information, and the two call for different words.
+
+The CVR still appears in the positions table with its value. It is not hidden — it is
+simply no longer presented as a defect.
+
 ---
 
 # Up next
