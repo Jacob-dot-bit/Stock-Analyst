@@ -32,6 +32,27 @@ from app.models import (
     TxType,
 )
 from app.providers.frankfurt import looks_like_isin
+
+#: Name fragments that denote a corporate-action artefact rather than a tradable
+#: security. Combined with an ISIN-shaped ticker, they identify instruments that have
+#: no market at all — a contingent value right, a rights entitlement, a when-issued
+#: placeholder. Each is a right or a bookkeeping entry, not something with a quote.
+NON_TRADABLE_NAME_HINTS = ("CVR", "CONTRA", "RIGHTS", "RIGHT ", "WHEN ISSUED", "ENTITLEMENT")
+
+
+def detect_not_priceable(broker_symbol: str, name: str | None) -> str | None:
+    """Why this instrument can never have a price, or None if it can.
+
+    Deliberately narrow: it requires *both* a name that names a corporate-action
+    artefact *and* a symbol that is an ISIN rather than a ticker. A real company whose
+    name happens to contain one of these words still has a ticker, so it is untouched.
+    """
+    if not name or not looks_like_isin(broker_symbol):
+        return None
+    upper = name.upper()
+    if any(hint in upper for hint in NON_TRADABLE_NAME_HINTS):
+        return "corporate_action"
+    return None
 from app.symbols import mapping
 
 
@@ -57,6 +78,8 @@ def get_or_create_instrument(
     ).scalar_one_or_none()
 
     if instrument is not None:
+        if not instrument.not_priceable_reason:
+            instrument.not_priceable_reason = detect_not_priceable(broker_symbol, name or instrument.name)
         # An export enriches a known instrument without overwriting what is set.
         # Backfills too: instruments created before ISIN detection existed still have
         # an empty field, and re-importing should repair them rather than leave the
@@ -84,6 +107,7 @@ def get_or_create_instrument(
 
     instrument = Instrument(
         broker_symbol=broker_symbol,
+        not_priceable_reason=detect_not_priceable(broker_symbol, name),
         provider_symbol=resolution.provider_symbol,
         mapping_status=resolution.status,
         isin=isin,

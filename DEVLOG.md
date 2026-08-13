@@ -1192,6 +1192,38 @@ The one remaining holding without prices is the CVR, which has no quotation at a
 
 **266 tests pass.**
 
+## Decision 2e.3 — Some instruments have no price, and that is not a failure
+
+The last holding without a price was `US592CVR0133`, "CONTRA METSERA INC CVR". Rather
+than hunt for a sixth provider, the question was what the instrument actually is.
+
+Pfizer acquired Metsera for $65.60 per share **plus** a contingent value right worth up
+to $20.65 more, tied to three clinical and regulatory milestones. That CVR is
+**non-transferable**: no ticker, no listing, no market. It cannot be bought or sold, so
+no source anywhere quotes it. XTB itself reports a price of 0.00 against a placeholder
+nominal placeholder value.
+
+This is not a coverage gap. It is a property of the instrument, and no provider could
+ever close it.
+
+**Implementation.** `not_priceable_reason` marks such instruments. Detection is
+deliberately narrow — it requires **both** a corporate-action name (CVR, CONTRA, RIGHTS,
+WHEN ISSUED) **and** an ISIN-shaped symbol rather than a ticker. CVR Energy, a real
+listed company, is untouched.
+
+They are skipped before any provider is called, counted **separately from failures**, and
+explained once. A permanent "failed" line teaches people to ignore the report.
+
+## Note — the migration debt came due earlier than predicted
+
+Adding that column broke the running database: `create_all` creates missing tables, never
+missing columns. The DEVLOG had flagged this and guessed phase 4's watchlist would be the
+trigger. It was price history instead — 10,193 bars that cost several rate-limited
+refresh cycles to collect, and that a rebuild would have thrown away.
+
+Handled with an `ALTER TABLE`, preserving the data. But the point stands and is now
+concrete: **Alembic is needed before the next schema change**, not before phase 4.
+
 ---
 
 # Up next
@@ -1211,4 +1243,4 @@ The one remaining holding without prices is the CVR, which has no quotation at a
   splitting performance between instrument effect and currency effect.
 - `yfinance` will break periodically (unofficial endpoints): the fallback chain to Stooq
   needs to be tested for real, not merely written.
-- Introduce Alembic before phase 4 if the watchlist is to survive schema changes.
+- **Introduce Alembic before the next schema change.** No longer hypothetical: adding a column already required a hand-written ALTER TABLE to avoid discarding 10,193 collected price bars.

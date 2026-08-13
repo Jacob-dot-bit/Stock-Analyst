@@ -45,6 +45,9 @@ class RefreshReport:
     updated: int = 0
     skipped: int = 0
     failed: int = 0
+    #: Instruments that cannot have a price at all. Counted apart from failures: a
+    #: non-transferable right is not something that went wrong.
+    not_priceable: int = 0
     remaining: int = 0
 
     def as_dict(self) -> dict:
@@ -53,6 +56,7 @@ class RefreshReport:
             "updated": self.updated,
             "skipped": self.skipped,
             "failed": self.failed,
+            "not_priceable": self.not_priceable,
             "remaining": self.remaining,
         }
 
@@ -118,6 +122,11 @@ def refresh_instrument(
 
     # An ISIN alone is enough for Frankfurt, so an instrument with one is worth trying
     # even when no provider symbol could be derived.
+    # Asking providers about something that has no market wastes requests and reports
+    # a failure that can never be fixed.
+    if instrument.not_priceable_reason:
+        return Message(PriceOutcome.NOT_PRICEABLE, {"symbol": symbol})
+
     if instrument.mapping_status == MappingStatus.UNRESOLVED and not instrument.isin:
         return Message(PriceOutcome.NOT_MAPPED, {"symbol": symbol})
     if not instrument.provider_symbol and not instrument.isin:
@@ -196,6 +205,9 @@ def _record(report: RefreshReport, outcome: Message) -> None:
         report.updated += 1
     elif outcome.code == PriceOutcome.ALREADY_FRESH:
         report.skipped += 1
+    elif outcome.code == PriceOutcome.NOT_PRICEABLE:
+        # Not a shortfall: there is nothing to retrieve and never will be.
+        report.not_priceable += 1
     else:
         # STILL_UNAVAILABLE and NEEDS_ISIN count here: no data is a shortfall, not a skip.
         report.failed += 1
@@ -206,6 +218,8 @@ def _needs_network(instrument: Instrument, today: date, force: bool) -> bool:
 
     Used to keep the time budget for work that actually costs something.
     """
+    if instrument.not_priceable_reason:
+        return False
     if not instrument.provider_symbol and not instrument.isin:
         return False
     return force or not _asked_today(instrument, today)

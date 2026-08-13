@@ -176,6 +176,8 @@ export const fr: Catalogue = {
     "{symbol} : toujours aucun cours. Déjà demandé aujourd'hui — aucun fournisseur configuré ne couvre ce marché dans son offre gratuite.",
   'prices.needsIsin':
     "{symbol} : aucune source n'a même pu essayer — aucune ne dispose d'un identifiant pour ce titre. Saisissez son ISIN sur la ligne (il figure sur la fiche du titre chez votre courtier) et il sera tenté au prochain rafraîchissement.",
+  'prices.notPriceable':
+    "{symbol} : aucun cours de marché n'existe pour cet instrument. Un droit non transférable issu d'une opération sur titres ne peut être ni acheté ni vendu — aucune source au monde ne le cote.",
   'prices.noProvider': "{symbol} : aucun fournisseur de données n'est disponible.",
   'prices.failed': '{symbol} : échec de la récupération via {provider}.',
   'prices.budgetReached': 'Budget de temps atteint, {remaining} instrument(s) restant(s).',

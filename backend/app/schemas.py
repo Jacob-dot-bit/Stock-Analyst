@@ -181,6 +181,8 @@ class RefreshReportOut(BaseModel):
     updated: int
     skipped: int
     failed: int
+    #: Instruments with no possible market price, counted apart from failures.
+    not_priceable: int = 0
     remaining: int
 
 

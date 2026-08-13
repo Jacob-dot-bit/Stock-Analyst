@@ -352,3 +352,66 @@ class TestIsinBackfill:
         import_export_file(db, content, "cvr.xlsx")
 
         assert legacy.isin == "US592CVR0133"
+
+
+class TestNonTradableInstruments:
+    """A non-transferable CVR has no ticker, no listing and no market.
+
+    Reporting it as a retrieval failure would be permanently misleading: there is
+    nothing to retrieve, and no provider anywhere could change that.
+    """
+
+    def test_a_cvr_is_marked_as_having_no_price(self, db):
+        from app.ingest.service import detect_not_priceable
+
+        assert detect_not_priceable("US592CVR0133", "CONTRA METSERA INC CVR") == "corporate_action"
+
+    @pytest.mark.parametrize(
+        ("symbol", "name"),
+        [
+            ("US592CVR0133", "CONTRA METSERA INC CVR"),
+            ("FR0000000001", "ACME RIGHTS"),
+            ("US0000000002", "SOMETHING WHEN ISSUED"),
+        ],
+    )
+    def test_corporate_action_artefacts_are_recognised(self, symbol, name):
+        from app.ingest.service import detect_not_priceable
+
+        assert detect_not_priceable(symbol, name) is not None
+
+    @pytest.mark.parametrize(
+        ("symbol", "name"),
+        [
+            # A real company with a ticker, whatever its name contains.
+            ("CVR.US", "CVR Energy Inc"),
+            ("RIGHT.US", "Rights Corp"),
+            ("AAPL.US", "Apple"),
+            # An ISIN-shaped symbol alone is not enough: it may be a normal holding.
+            ("US592CVR0133", "Some Ordinary Company"),
+        ],
+    )
+    def test_tradable_instruments_are_left_alone(self, symbol, name):
+        from app.ingest.service import detect_not_priceable
+
+        assert detect_not_priceable(symbol, name) is None
+
+    def test_import_flags_it(self, db):
+        content = build_xtb_workbook(
+            [
+                (
+                    "Open Positions",
+                    [["Account number", 1]],
+                    OPEN_HEADERS,
+                    [
+                        ["My Trades", "CONTRA METSERA INC CVR", "US592CVR0133", "STOCK", None,
+                         1.0, 0.01, None, 0.01, None, None, None, 0.0, 0.0, 0.0, None, None, None],
+                    ],
+                )
+            ]
+        )
+        import_export_file(db, content, "cvr.xlsx")
+
+        instrument = db.execute(
+            select(Instrument).where(Instrument.broker_symbol == "US592CVR0133")
+        ).scalar_one()
+        assert instrument.not_priceable_reason == "corporate_action"

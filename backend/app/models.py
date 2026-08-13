@@ -96,6 +96,12 @@ class Instrument(Base):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime)
     verified_provider: Mapped[str | None] = mapped_column(String(30))
 
+    # Set when the instrument cannot have a market price at all — not "no source
+    # found it" but "no price exists". A non-transferable CVR is the case that
+    # prompted this: it has no ticker, no listing and no market by construction, so
+    # counting it as a retrieval failure would be permanently misleading.
+    not_priceable_reason: Mapped[str | None] = mapped_column(String(40))
+
     # When a provider was last *asked* about this instrument — which is not the same
     # as the date of the newest bar. Free feeds lag by a day or more, so "newest bar
     # is older than today" is permanently true and cannot be used to decide freshness:

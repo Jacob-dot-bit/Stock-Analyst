@@ -119,6 +119,8 @@ export interface RefreshReport {
   updated: number
   skipped: number
   failed: number
+  /** Instruments with no possible market price — not a shortfall. */
+  not_priceable: number
   /** Instruments left when the time budget ran out. Ask again to continue. */
   remaining: number
 }

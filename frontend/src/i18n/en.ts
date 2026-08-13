@@ -182,6 +182,8 @@ export const en: Catalogue = {
     '{symbol}: still no price data. Already asked today — no configured provider covers this market on its free plan.',
   'prices.needsIsin':
     '{symbol}: no price source could even try — none of them has an identifier for it. Add its ISIN on the row (find it on your broker\u2019s instrument page) and it will be attempted on the next refresh.',
+  'prices.notPriceable':
+    '{symbol}: no market price exists for this instrument. A non-transferable right from a corporate action cannot be bought or sold, so no source anywhere quotes it.',
   'prices.noProvider': '{symbol}: no data provider is available.',
   'prices.failed': '{symbol}: retrieval failed via {provider}.',
   'prices.budgetReached': 'Time budget reached, {remaining} instrument(s) left.',

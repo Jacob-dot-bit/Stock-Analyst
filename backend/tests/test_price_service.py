@@ -401,3 +401,27 @@ class TestWhyThereIsNoData:
         second = refresh_instrument(db, instrument, chain)
 
         assert second.code == PriceOutcome.STILL_UNAVAILABLE
+
+
+class TestNotPriceable:
+    def test_no_provider_is_asked(self, db):
+        """Requests spent on something with no market are requests wasted."""
+        instrument = make_instrument(db, "US592CVR0133", None, MappingStatus.UNRESOLVED)
+        instrument.not_priceable_reason = "corporate_action"
+        db.commit()
+        provider = FakeProvider("yahoo", bars=bars_ending(date.today()))
+
+        outcome = refresh_instrument(db, instrument, ProviderChain([provider]))
+
+        assert outcome.code == PriceOutcome.NOT_PRICEABLE
+        assert provider.calls == 0
+
+    def test_it_does_not_consume_the_time_budget(self, db):
+        instrument = make_instrument(db, "US592CVR0133", None, MappingStatus.UNRESOLVED)
+        instrument.not_priceable_reason = "corporate_action"
+        db.commit()
+
+        report = refresh_many(db, [instrument], ProviderChain([FakeProvider("yahoo")]))
+
+        assert report.remaining == 0
+        assert report.outcomes[0].code == PriceOutcome.NOT_PRICEABLE

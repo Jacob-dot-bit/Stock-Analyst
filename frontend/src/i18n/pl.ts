@@ -186,6 +186,8 @@ export const pl: Catalogue = {
     '{symbol}: nadal brak notowań. Już pytaliśmy dzisiaj — żaden skonfigurowany dostawca nie obejmuje tego rynku w darmowym planie.',
   'prices.needsIsin':
     '{symbol}: żadne źródło nie mogło nawet spróbować — brakuje identyfikatora. Wpisz ISIN w wierszu (znajdziesz go na stronie instrumentu u brokera), a przy następnym odświeżeniu zostanie podjęta próba.',
+  'prices.notPriceable':
+    '{symbol}: dla tego instrumentu nie istnieje cena rynkowa. Nieprzenoszalne prawo z operacji korporacyjnej nie podlega obrotowi, więc żadne źródło go nie notuje.',
   'prices.noProvider': '{symbol}: brak dostępnego dostawcy danych.',
   'prices.failed': '{symbol}: pobieranie przez {provider} nie powiodło się.',
   'prices.budgetReached': 'Budżet czasu wyczerpany, pozostało instrumentów: {remaining}.',

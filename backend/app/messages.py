@@ -65,6 +65,8 @@ class PriceOutcome:
     #: Distinct from "no source covers this market": here there is something the user
     #: can actually do, and telling them the wrong reason sends them nowhere.
     NEEDS_ISIN = "prices.needsIsin"  # {symbol}
+    #: The instrument has no market price to find — not a gap, a property of it.
+    NOT_PRICEABLE = "prices.notPriceable"  # {symbol}
     FAILED = "prices.failed"  # {symbol, provider, error}
     BUDGET_REACHED = "prices.budgetReached"  # {remaining}
     #: Every provider throttled and no keyed fallback is configured. Emitted once per

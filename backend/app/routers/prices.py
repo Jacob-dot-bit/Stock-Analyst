@@ -37,7 +37,12 @@ def refresh_prices(
         db.execute(
             select(Instrument)
             .join(Position, Position.instrument_id == Instrument.id)
-            .where(Instrument.mapping_status != MappingStatus.UNRESOLVED)
+            # Unresolved instruments are included when they are known to be
+            # unpriceable, so the report can say so instead of omitting them.
+            .where(
+                (Instrument.mapping_status != MappingStatus.UNRESOLVED)
+                | Instrument.not_priceable_reason.is_not(None)
+            )
             .distinct()
         ).scalars()
     )
