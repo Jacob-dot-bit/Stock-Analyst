@@ -1255,6 +1255,29 @@ and this answers "what happens if one stops" without breaking one to find out.
 two, and **none depends on a single source**. Losing any one provider — Yahoo blocked, a
 quota exhausted, an endpoint changed — costs nothing.
 
+## Decision 2e.5 — Alpha Vantage was the last free candidate, and it does not qualify
+
+Kept coming up as the one untested free tier, so it was checked properly rather than
+left as a maybe.
+
+* **`TIME_SERIES_DAILY` is a premium endpoint.** Daily history — the only thing this
+  application needs — is paywalled regardless of market. That alone disqualifies it.
+* **25 requests/day**, against 37 priced holdings. Even if the endpoint were free, one
+  full refresh would not fit in a day.
+* Their own material describes non-US coverage as thinner than providers built around
+  global exchanges.
+
+Its symbol-search endpoint was probed with the demo key to inspect the universe directly;
+the demo key is restricted to documented examples, so that route was closed too.
+
+**The search for additional free price sources is closed.** Not for lack of trying: five
+sources are wired, every holding has at least two and most have three, and the remaining
+candidates are either paywalled where it matters (Alpha Vantage, EODHD, Marketstack) or
+behind a bot-detection challenge this project will not defeat (Stooq, Euronext).
+
+Effort is better spent on the scoring engine than on a sixth source that would serve
+nothing the existing five cannot.
+
 ---
 
 # Up next
