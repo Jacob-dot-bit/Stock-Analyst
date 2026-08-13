@@ -53,6 +53,8 @@ class Settings(BaseSettings):
 
     # Keyed fallback for price history, used when Yahoo throttles.
     twelvedata_api_key: str | None = None
+    # Candidate for Euronext coverage, which the Twelve Data free tier lacks.
+    fmp_api_key: str | None = None
 
     # --- Price fetching guardrails ---
     # Yahoo rate-limits hard: four rapid requests were enough to earn a 429 that
@@ -74,6 +76,7 @@ class Settings(BaseSettings):
 
     @field_validator(
         "twelvedata_api_key",
+        "fmp_api_key",
         "finnhub_api_key",
         "perplexity_api_key",
         "sec_user_agent",

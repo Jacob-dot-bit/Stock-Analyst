@@ -317,8 +317,9 @@ def _add_fallback_hint(report: RefreshReport, chain: ProviderChain) -> None:
         return
 
     # A keyed provider is one that is disabled without configuration.
+    keyless = {"yahoo", "frankfurt"}
     has_keyed_fallback = any(
-        provider.is_enabled() for provider in chain.providers if provider.name != "yahoo"
+        provider.is_enabled() for provider in chain.providers if provider.name not in keyless
     )
     if not has_keyed_fallback:
         report.outcomes.append(Message(PriceOutcome.NO_FALLBACK_CONFIGURED))

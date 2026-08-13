@@ -15,6 +15,7 @@ import pytest
 from app.providers.base import (
     Bar,
     InstrumentRef,
+    PlanLimited,
     PriceProvider,
     ProviderChain,
     ProviderUnavailable,
@@ -22,6 +23,7 @@ from app.providers.base import (
     SymbolNotFound,
     Throttle,
 )
+from app.providers.fmp import FmpProvider
 from app.providers.frankfurt import FrankfurtProvider, looks_like_isin
 from app.providers.twelvedata import TwelveDataProvider
 from app.providers.yahoo import YahooProvider
@@ -415,3 +417,59 @@ class TestFrankfurtProvider:
     )
     def test_isin_shape(self, value, valid):
         assert looks_like_isin(value) is valid
+
+
+class TestFmpProvider:
+    """Written against the documented shape; free-tier coverage is unverified."""
+
+    def test_disabled_without_a_key(self):
+        assert FmpProvider(api_key=None).is_enabled() is False
+
+    def test_parses_and_sorts_chronologically(self):
+        payload = {
+            "symbol": "DCAM.PA",
+            "historical": [
+                {"date": "2026-08-12", "open": 6.3, "high": 6.4, "low": 6.2, "close": 6.35, "volume": 200},
+                {"date": "2026-08-11", "open": 6.2, "high": 6.3, "low": 6.1, "close": 6.25, "volume": 100},
+            ],
+        }
+        provider = FmpProvider(
+            api_key="k",
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json=payload)),
+        )
+
+        bars = provider.fetch_daily(InstrumentRef(provider_symbol="DCAM.PA"), date(2026, 8, 1), date(2026, 8, 12))
+
+        assert [b.close for b in bars] == [6.25, 6.35]
+        assert bars[0].bar_date < bars[1].bar_date
+
+    def test_accepts_a_bare_list_too(self):
+        """Some symbols answer with a list rather than the wrapped object."""
+        payload = [{"date": "2026-08-11", "open": 1, "high": 1, "low": 1, "close": 1.5, "volume": 1}]
+        provider = FmpProvider(
+            api_key="k", min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json=payload)),
+        )
+
+        assert len(provider.fetch_daily(InstrumentRef(provider_symbol="X.PA"), date(2026, 8, 1), date(2026, 8, 12))) == 1
+
+    def test_plan_limitation_is_not_reported_as_a_bad_symbol(self):
+        """The lesson from Twelve Data: a plan boundary must not look like a mapping error."""
+        payload = {"Error Message": "This endpoint is not available under your current plan"}
+        provider = FmpProvider(
+            api_key="k", min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(403, json=payload)),
+        )
+
+        with pytest.raises(PlanLimited):
+            provider.fetch_daily(InstrumentRef(provider_symbol="DCAM.PA"), date(2026, 8, 1), date(2026, 8, 12))
+
+    def test_empty_history_means_unknown_symbol(self):
+        provider = FmpProvider(
+            api_key="k", min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json={"symbol": "X", "historical": []})),
+        )
+
+        with pytest.raises(SymbolNotFound):
+            provider.fetch_daily(InstrumentRef(provider_symbol="X.PA"), date(2026, 8, 1), date(2026, 8, 12))

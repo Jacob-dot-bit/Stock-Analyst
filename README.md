@@ -87,6 +87,7 @@ cleanly rather than failing startup.
 |---|---|---|
 | `BASE_CURRENCY` | Currency used for portfolio totals | — |
 | `TWELVEDATA_API_KEY` | **Recommended.** Fallback price provider for when Yahoo throttles — see below | free |
+| `FMP_API_KEY` | **Recommended for European holdings.** The only configured candidate covering Euronext | free |
 | `FINNHUB_API_KEY` | News, company profiles (60 calls/min on the free tier) | free |
 | `SEC_USER_AGENT` | Official US fundamentals via SEC EDGAR. Format `First Last email@example.com` — the SEC rejects anonymous requests | free |
 | `PERPLEXITY_API_KEY` | Qualitative synthesis | **paid** |
@@ -236,6 +237,7 @@ reported as anomalies, since that is the expected outcome.
 | Source | Role | Coverage | Note |
 |---|---|---|---|
 | Yahoo chart endpoint | Daily prices | worldwide | The backbone. Unofficial and **rate-limits hard** — four rapid requests earned a 429 that outlasted 30 minutes |
+| FMP | Daily prices | Euronext + worldwide | Free tier, 250 req/day. Key-gated; **free-tier coverage unverified** |
 | Boerse Frankfurt | Daily prices | **Europe** | No key, no session. Keyed on **ISIN only**. Prices are the Frankfurt listing, not the home market |
 | Twelve Data | Fallback prices | **US only on the free tier** | Verified live. European venues need a paid plan — their API says so explicitly |
 | SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |

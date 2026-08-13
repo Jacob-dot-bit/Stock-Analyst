@@ -17,6 +17,7 @@ from functools import lru_cache
 
 from app.config import get_settings
 from app.providers.base import ProviderChain
+from app.providers.fmp import FmpProvider
 from app.providers.frankfurt import FrankfurtProvider
 from app.providers.twelvedata import TwelveDataProvider
 from app.providers.yahoo import YahooProvider
@@ -38,5 +39,8 @@ def get_provider_chain() -> ProviderChain:
             # Twelve Data free tier does not. Only serves instruments that have an ISIN.
             FrankfurtProvider(),
             TwelveDataProvider(api_key=settings.twelvedata_api_key),
+            # Last: keyed, and the only candidate that may cover Euronext venues,
+            # which is where the remaining gap is.
+            FmpProvider(api_key=settings.fmp_api_key),
         ]
     )
