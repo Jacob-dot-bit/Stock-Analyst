@@ -150,6 +150,8 @@ def refresh_instrument(
             provider_symbol=instrument.provider_symbol,
             isin=instrument.isin,
             broker_symbol=instrument.broker_symbol,
+            name=instrument.name,
+            category=instrument.category,
         ),
         start,
         today,

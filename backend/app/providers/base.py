@@ -35,8 +35,12 @@ class InstrumentRef:
 
     provider_symbol: str | None = None
     isin: str | None = None
-    #: Only for diagnostics and logs; never used to look anything up.
     broker_symbol: str | None = None
+    #: The company or fund name the broker reported. Providers that echo a name in
+    #: their response use it to confirm they answered about the right instrument.
+    name: str | None = None
+    #: Broker category (STOCK, ETF, CFD), which some providers need to pick a namespace.
+    category: str | None = None
 
 
 @dataclass(frozen=True)

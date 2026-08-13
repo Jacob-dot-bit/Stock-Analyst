@@ -1121,6 +1121,79 @@ rather than assumed away.
 
 ---
 
+# Phase 2e — Boursorama closes the Euronext gap (2026-08-14)
+
+Pushed back on with: *"you're not going to tell me that in the whole internet there is no
+free source for these curves"*. That was right, and the reason I had not found one was a
+method problem, not an availability problem.
+
+## How it was found — by reading, not guessing
+
+Every earlier attempt at Amundi, justETF and Boursorama had **invented plausible URLs**
+and got 404/400/410. That is not searching.
+
+The page declares its own endpoint. Fetching the ETF page and grepping its HTML surfaced
+a chart bundle, `build/quote-chart*.js`; grepping the bundle surfaced
+`window.VGP={urlWS:"/bourse/action/graph/ws/", callType:"GET"}`. Two requests, no
+guessing, and the endpoint was `GetTicksEOD`.
+
+**The lesson is the method.** Hours went into inventing URLs; reading what the page says
+it calls took minutes.
+
+## Bug 2e.1 — A missing header read as a rate limit
+
+**Symptom.** The endpoint returned data, then began answering `410` with an empty body.
+It looked exactly like the Yahoo block: worked, then stopped. A 45-second pause changed
+nothing, so it was recorded as throttling.
+
+**Cause.** Not throttling at all. The working requests carried
+`X-Requested-With: XMLHttpRequest`, copied from the page; later ones had dropped it. With
+the header, `200`; without it, `410`. Every time.
+
+**Lesson.** "It worked and then stopped" is not evidence of rate limiting. The variable
+that changed was in my own request, not on the server.
+
+## Decision 2e.1 — Sending that header is in scope
+
+It is the conventional header every AJAX library sets, it describes the request
+accurately, and it is neither a token, a secret nor a challenge. Same category as the
+browser-like User-Agent already used for Yahoo and Frankfurt.
+
+That is the line, and it has not moved: Stooq's proof-of-work page and Euronext's
+AES-encrypted payload exist *specifically* to exclude non-browsers, and both were left
+alone. A header stating what the request is is not a circumvention.
+
+## Decision 2e.2 — Verify by the name in the response
+
+Boursorama prefixes tickers by type — `1rP` for Paris shares, `1rT` for trackers — and
+the response includes the instrument's name. The prefix comes from the broker's
+category, and the returned name is checked against the broker's name.
+
+Not decoration: this project had already attached C3.ai's financials to Air Liquide by
+trusting a symbol. A price series is just as easy to get wrong quietly, and here the
+check is free.
+
+## Outcome — 37 of 38 holdings priced
+
+| Provider | Holdings |
+|---|---|
+| Twelve Data | 23 |
+| Frankfurt | 10 |
+| **Boursorama** | **4** |
+
+All four French PEA ETFs recovered, with ~255 daily bars each, and closes matching the
+prices XTB reported: DCAM 6.275 vs 6.246, CAC 87.25 vs 87.96, AI 169.14 vs 171.70.
+
+Boursorama also covers the Paris-listed shares currently served by Frankfurt — the
+*home* market rather than a secondary German listing — so it sits ahead of Frankfurt in
+the chain and those will move over as they refresh.
+
+The one remaining holding without prices is the CVR, which has no quotation at all.
+
+**266 tests pass.**
+
+---
+
 # Up next
 
 | Phase | Content | Status |

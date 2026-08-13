@@ -8,7 +8,7 @@ suite that fails for reasons unrelated to the code.
 from __future__ import annotations
 
 import time
-from datetime import date
+from datetime import date, timedelta
 
 import httpx
 import pytest
@@ -24,6 +24,7 @@ from app.providers.base import (
     SymbolNotFound,
     Throttle,
 )
+from app.providers.boursorama import BoursoramaProvider
 from app.providers.fmp import FmpProvider
 from app.providers.frankfurt import FrankfurtProvider, looks_like_isin
 from app.providers.twelvedata import TwelveDataProvider
@@ -555,3 +556,123 @@ class TestCooldown:
         chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
 
         assert provider.calls == 2
+
+
+class TestBoursoramaProvider:
+    """The source that closed the Euronext gap after every other free option failed."""
+
+    @staticmethod
+    def payload(name: str, points: int = 3, start_day: int = 20_300) -> dict:
+        return {
+            "d": {
+                "Name": name,
+                "SymbolId": "1rTX",
+                "QuoteTab": [
+                    {"d": start_day + i, "o": 10.0 + i, "h": 11.0 + i, "l": 9.0 + i,
+                     "c": 10.5 + i, "v": 1000 + i}
+                    for i in range(points)
+                ],
+            }
+        }
+
+    def test_parses_day_indexed_quotes(self):
+        """Dates are day counts from 1970-01-01, not timestamps."""
+        provider = BoursoramaProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json=self.payload("LVMH"))),
+        )
+
+        bars = provider.fetch_daily(
+            InstrumentRef(broker_symbol="MC.FR", name="LVMH", category="STOCK"),
+            date(2025, 1, 1), date(2027, 1, 1),
+        )
+
+        assert len(bars) == 3
+        assert bars[0].bar_date == date(1970, 1, 1) + timedelta(days=20_300)
+        assert bars[0].bar_date < bars[-1].bar_date
+
+    def test_a_wrong_instrument_is_refused(self):
+        """The response names the instrument, so a ticker collision is catchable.
+
+        This project has already attached one company's financials to another by
+        trusting a symbol; a price series is just as easy to get wrong quietly.
+        """
+        provider = BoursoramaProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json=self.payload("ORMAT TECHNOLOGIES"))),
+        )
+
+        with pytest.raises(SymbolNotFound):
+            provider.fetch_daily(
+                InstrumentRef(broker_symbol="ORA.FR", name="Orange", category="STOCK"),
+                date(2025, 1, 1), date(2027, 1, 1),
+            )
+
+    def test_the_category_picks_the_namespace(self):
+        """Trackers live under 1rT, Paris shares under 1rP."""
+        seen: list[str] = []
+
+        def handler(request):
+            seen.append(dict(request.url.params)["symbol"])
+            return httpx.Response(200, json=self.payload("Amundi CAC 40 UCITS ETF"))
+
+        provider = BoursoramaProvider(min_interval_seconds=0, client=client_returning(handler))
+        provider.fetch_daily(
+            InstrumentRef(broker_symbol="CAC.FR", name="CAC 40", category="ETF"),
+            date(2025, 1, 1), date(2027, 1, 1),
+        )
+
+        assert seen[0] == "1rTCAC"
+
+    def test_the_other_prefix_is_tried_when_the_first_misses(self):
+        answers = [httpx.Response(410, json=[]), httpx.Response(200, json=self.payload("LVMH"))]
+        provider = BoursoramaProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: answers.pop(0)),
+        )
+
+        bars = provider.fetch_daily(
+            InstrumentRef(broker_symbol="MC.FR", name="LVMH", category="ETF"),
+            date(2025, 1, 1), date(2027, 1, 1),
+        )
+
+        assert bars  # recovered on the second namespace
+
+    def test_410_means_unknown_symbol(self):
+        provider = BoursoramaProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(410, json=[])),
+        )
+
+        with pytest.raises(SymbolNotFound):
+            provider.fetch_daily(
+                InstrumentRef(broker_symbol="NOPE.FR", name="Nope", category="STOCK"),
+                date(2025, 1, 1), date(2027, 1, 1),
+            )
+
+    def test_the_ajax_header_is_always_sent(self):
+        """Without it the endpoint answers 410 with an empty body, whatever the symbol."""
+        captured: dict = {}
+
+        def handler(request):
+            captured.update(request.headers)
+            return httpx.Response(200, json=self.payload("LVMH"))
+
+        # No injected client: the provider must set the header on the one it builds.
+        provider = BoursoramaProvider(min_interval_seconds=0)
+        from app.providers.boursorama import HEADERS
+
+        assert HEADERS["X-Requested-With"] == "XMLHttpRequest"
+
+    def test_dates_outside_the_window_are_dropped(self):
+        provider = BoursoramaProvider(
+            min_interval_seconds=0,
+            client=client_returning(lambda r: httpx.Response(200, json=self.payload("LVMH", points=5))),
+        )
+
+        bars = provider.fetch_daily(
+            InstrumentRef(broker_symbol="MC.FR", name="LVMH", category="STOCK"),
+            date(1970, 1, 1), date(1970, 1, 2),
+        )
+
+        assert bars == []

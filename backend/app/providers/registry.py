@@ -17,6 +17,7 @@ from functools import lru_cache
 
 from app.config import get_settings
 from app.providers.base import ProviderChain
+from app.providers.boursorama import BoursoramaProvider
 from app.providers.fmp import FmpProvider
 from app.providers.frankfurt import FrankfurtProvider
 from app.providers.twelvedata import TwelveDataProvider
@@ -35,8 +36,10 @@ def get_provider_chain() -> ProviderChain:
     return ProviderChain(
         providers=[
             YahooProvider(min_interval_seconds=settings.yahoo_min_interval_seconds),
-            # Before Twelve Data: needs no key and covers European venues, which the
-            # Twelve Data free tier does not. Only serves instruments that have an ISIN.
+            # Before Frankfurt for European names: no key, and it quotes the home
+            # market (Euronext Paris) rather than a secondary German listing.
+            BoursoramaProvider(),
+            # Still useful for European shares listed in Frankfurt. Needs an ISIN.
             FrankfurtProvider(),
             TwelveDataProvider(api_key=settings.twelvedata_api_key),
             # Last: keyed, and the only candidate that may cover Euronext venues,
