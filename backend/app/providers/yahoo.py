@@ -63,6 +63,10 @@ class YahooProvider(PriceProvider):
         # No API key, so always available — subject to rate limiting.
         return True
 
+    def can_serve(self, ref: InstrumentRef) -> bool:
+        # Worldwide coverage; only needs a symbol.
+        return bool(ref.provider_symbol)
+
     def _get(self, symbol: str, params: dict) -> dict:
         client = self._client or httpx.Client(timeout=self._timeout, headers=HEADERS)
         owns_client = self._client is None

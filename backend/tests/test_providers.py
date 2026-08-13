@@ -197,15 +197,19 @@ class TestTwelveDataProvider:
 
 class FakeProvider(PriceProvider):
     def __init__(self, name: str, bars: list[Bar] | None = None, error: Exception | None = None,
-                 enabled: bool = True) -> None:
+                 enabled: bool = True, serves: bool = True) -> None:
         self.name = name
         self._bars = bars or []
         self._error = error
         self._enabled = enabled
+        self._serves = serves
         self.calls = 0
 
     def is_enabled(self) -> bool:
         return self._enabled
+
+    def can_serve(self, ref) -> bool:
+        return self._serves
 
     def fetch_daily(self, ref, start, end):
         self.calls += 1
@@ -676,3 +680,71 @@ class TestBoursoramaProvider:
         )
 
         assert bars == []
+
+
+class TestMarketRouting:
+    """Providers declare what they can serve, so the chain skips hopeless calls.
+
+    A French holding sent to a US-only free tier costs a request and several seconds to
+    be told something already known — and that request comes out of a daily quota.
+    """
+
+    def test_a_provider_that_cannot_serve_is_not_called(self):
+        wrong = FakeProvider("us-only", bars=[a_bar()], serves=False)
+        right = FakeProvider("europe", bars=[a_bar()])
+
+        result = ProviderChain([wrong, right]).fetch_daily(
+            InstrumentRef(provider_symbol="TTE.PA", broker_symbol="TTE.FR"),
+            date(2024, 1, 1), date(2024, 1, 2),
+        )
+
+        assert wrong.calls == 0
+        assert result.provider == "europe"
+
+    def test_skipping_is_not_recorded_as_a_failed_attempt(self):
+        """Nothing was attempted; listing it would bury the real reasons in noise."""
+        result = ProviderChain(
+            [FakeProvider("us-only", serves=False), FakeProvider("europe", bars=[a_bar()])]
+        ).fetch_daily(InstrumentRef(provider_symbol="X"), date(2024, 1, 1), date(2024, 1, 2))
+
+        assert [a.provider for a in result.attempts] == ["europe"]
+
+    @pytest.mark.parametrize(
+        ("broker_symbol", "expected"),
+        [("AAPL.US", True), ("TTE.FR", False), ("ASML.NL", False), ("NOSUFFIX", False)],
+    )
+    def test_us_listings_are_identified_from_the_broker_symbol(self, broker_symbol, expected):
+        from app.providers.base import is_us_listing
+
+        assert is_us_listing(InstrumentRef(broker_symbol=broker_symbol)) is expected
+
+
+class TestProviderScopes:
+    """Each provider's declared scope must match what was measured live."""
+
+    def test_us_only_free_tiers_decline_european_holdings(self):
+        european = InstrumentRef(provider_symbol="TTE.PA", broker_symbol="TTE.FR")
+        american = InstrumentRef(provider_symbol="AAPL", broker_symbol="AAPL.US")
+
+        for provider in (TwelveDataProvider(api_key="k"), FmpProvider(api_key="k")):
+            assert provider.can_serve(european) is False
+            assert provider.can_serve(american) is True
+
+    def test_boursorama_declines_us_holdings(self):
+        provider = BoursoramaProvider()
+
+        assert provider.can_serve(InstrumentRef(broker_symbol="AAPL.US")) is False
+        assert provider.can_serve(InstrumentRef(broker_symbol="MC.FR", category="STOCK")) is True
+
+    def test_frankfurt_needs_an_isin(self):
+        provider = FrankfurtProvider()
+
+        assert provider.can_serve(InstrumentRef(broker_symbol="MC.FR")) is False
+        assert provider.can_serve(InstrumentRef(isin="FR0000121014")) is True
+
+    def test_yahoo_serves_anything_with_a_symbol(self):
+        """Its coverage really is worldwide; only reachability limits it."""
+        provider = YahooProvider()
+
+        assert provider.can_serve(InstrumentRef(provider_symbol="DCAM.PA")) is True
+        assert provider.can_serve(InstrumentRef()) is False

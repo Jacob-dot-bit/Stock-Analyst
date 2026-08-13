@@ -55,6 +55,16 @@ class Bar:
     volume: float | None
 
 
+#: Broker suffixes that denote a US listing. Used for routing, never for identity.
+US_SUFFIXES = ("US",)
+
+
+def is_us_listing(ref: "InstrumentRef") -> bool:
+    """Whether the instrument trades on a US venue, from its broker symbol."""
+    symbol = (ref.broker_symbol or "").upper()
+    return symbol.rpartition(".")[2] in US_SUFFIXES if "." in symbol else False
+
+
 class ProviderError(Exception):
     """Base class for provider failures. Carries a machine-readable reason."""
 
@@ -100,8 +110,15 @@ class PriceProvider(Protocol):
         """False when the provider lacks configuration (an API key, typically)."""
         ...
 
-    def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> list[Bar]:
-        """Return daily bars in ``[start, end]``, or raise a ``ProviderError``."""
+    def can_serve(self, ref: InstrumentRef) -> bool:
+        """Whether this provider could plausibly answer for this instrument.
+
+        Lets the chain skip calls that are known to fail. A French holding sent to a
+        US-only free tier costs a request, a few seconds, and returns a plan error
+        every time — quota spent to learn something already known.
+
+        Answering ``True`` is always safe: the call simply happens and may fail.
+        """
         ...
 
 
@@ -207,6 +224,12 @@ class ProviderChain:
             # Honour an earlier "slow down" instead of asking again immediately.
             if self.cooldown.is_active(provider.name):
                 result.attempts.append(Attempt(provider.name, RateLimited.reason))
+                continue
+
+            # Skip providers that cannot serve this market at all. Not recorded as an
+            # attempt: nothing was attempted, and listing it would bury the real
+            # reasons under noise.
+            if not provider.can_serve(ref):
                 continue
 
             try:

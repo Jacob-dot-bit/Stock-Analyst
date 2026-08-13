@@ -245,6 +245,11 @@ reported as anomalies, since that is the expected outcome.
 | Finnhub | News, profiles | worldwide | 60 calls/min on the free tier |
 | Perplexity | Qualitative synthesis | worldwide | **Paid** — on demand, one instrument at a time, cached |
 
+**Sources are routed by market, not tried blindly.** Each provider declares what it can
+serve, so a French holding never spends a request on a US-only free tier. On this
+portfolio that leaves 33 holdings with three independent sources and 4 with two — none
+with only one. `GET /api/prices/providers` shows the current state of each.
+
 An asymmetry we accept: fundamentals coverage is excellent for US names and noticeably
 patchier elsewhere on free tiers. The UI always shows the data coverage and which source
 actually served the data.

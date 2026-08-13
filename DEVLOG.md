@@ -1224,6 +1224,37 @@ refresh cycles to collect, and that a rebuild would have thrown away.
 Handled with an `ALTER TABLE`, preserving the data. But the point stands and is now
 concrete: **Alembic is needed before the next schema change**, not before phase 4.
 
+## Decision 2e.4 — Route by market, and make the redundancy inspectable
+
+Asked for more sources so that exhausting one leaves others. The chain already fell
+through on failure, but it tried **every** provider in the same fixed order — so a French
+holding spent a request on Twelve Data and another on FMP to be told, twice, something
+already measured: their free tiers stop at the US border.
+
+That is quota and wall-clock burned to learn nothing, and it is the opposite of
+resilience: the sources meant to be the reserve were being drained on calls that could
+not succeed.
+
+**Providers now declare what they can serve.** `can_serve(ref)` is consulted before any
+call, and a skip is deliberately **not** recorded as a failed attempt — nothing was
+attempted, and listing it would bury the real reasons in noise.
+
+| Provider | Scope | Basis |
+|---|---|---|
+| Yahoo | worldwide | needs only a symbol |
+| Boursorama | Euronext Paris | verified live |
+| Frankfurt | anything with an ISIN | keyed on ISIN alone |
+| Twelve Data | US only | HTTP 402 on `TTE.PA`, measured |
+| FMP | US only | HTTP 402 on `TTE.PA` and `DCAM.PA`, measured |
+
+**`GET /api/prices/providers`** reports each source's state and how much of the portfolio
+it could serve. Redundancy that cannot be inspected is a claim rather than a property,
+and this answers "what happens if one stops" without breaking one to find out.
+
+**Measured on the real portfolio:** 33 holdings have three independent sources, 4 have
+two, and **none depends on a single source**. Losing any one provider — Yahoo blocked, a
+quota exhausted, an endpoint changed — costs nothing.
+
 ---
 
 # Up next

@@ -13,7 +13,13 @@ from app.db import get_db
 from app.models import Instrument, MappingStatus, Position, PriceBar
 from app.prices.service import refresh_many
 from app.providers.registry import get_provider_chain
-from app.schemas import PriceHistoryOut, RefreshReportOut, SparklineOut
+from app.providers.base import InstrumentRef
+from app.schemas import (
+    PriceHistoryOut,
+    ProviderStatusOut,
+    RefreshReportOut,
+    SparklineOut,
+)
 
 router = APIRouter(prefix="/api/prices", tags=["prices"])
 
@@ -55,6 +61,43 @@ def refresh_prices(
         force=force,
     )
     return RefreshReportOut(**report.as_dict())
+
+
+@router.get("/providers", response_model=list[ProviderStatusOut])
+def list_providers(db: Session = Depends(get_db)) -> list[ProviderStatusOut]:
+    """Which price sources are configured, and how much of the portfolio each can serve.
+
+    Redundancy is only real if you can see it. This answers "what happens if one of
+    them stops" without having to break one to find out.
+    """
+    chain = get_provider_chain()
+    instruments = list(
+        db.execute(
+            select(Instrument).join(Position, Position.instrument_id == Instrument.id).distinct()
+        ).scalars()
+    )
+    refs = [
+        InstrumentRef(
+            provider_symbol=i.provider_symbol,
+            isin=i.isin,
+            broker_symbol=i.broker_symbol,
+            name=i.name,
+            category=i.category,
+        )
+        for i in instruments
+        if not i.not_priceable_reason
+    ]
+
+    return [
+        ProviderStatusOut(
+            name=provider.name,
+            enabled=provider.is_enabled(),
+            cooling_down=chain.cooldown.is_active(provider.name),
+            serves_holdings=sum(1 for ref in refs if provider.can_serve(ref)),
+            total_holdings=len(refs),
+        )
+        for provider in chain.providers
+    ]
 
 
 @router.get("/sparklines", response_model=list[SparklineOut])

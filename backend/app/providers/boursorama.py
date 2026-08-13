@@ -38,6 +38,7 @@ import httpx
 
 from app.providers.base import (
     Bar,
+    is_us_listing,
     InstrumentRef,
     PriceProvider,
     ProviderUnavailable,
@@ -84,6 +85,11 @@ class BoursoramaProvider(PriceProvider):
 
     def is_enabled(self) -> bool:
         return True
+
+    def can_serve(self, ref: InstrumentRef) -> bool:
+        # Euronext Paris only. A US ticker sent here resolves to nothing, or worse to
+        # a French company sharing the letters.
+        return not is_us_listing(ref) and bool(self._candidates(ref))
 
     def _candidates(self, ref: InstrumentRef) -> list[str]:
         """Symbols worth trying, most likely first."""

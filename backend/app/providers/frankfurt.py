@@ -79,6 +79,9 @@ class FrankfurtProvider(PriceProvider):
         # ISIN, which is decided per call rather than globally.
         return True
 
+    def can_serve(self, ref: InstrumentRef) -> bool:
+        return looks_like_isin(ref.isin)
+
     def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> list[Bar]:
         isin = (ref.isin or "").strip().upper()
         if not looks_like_isin(isin):

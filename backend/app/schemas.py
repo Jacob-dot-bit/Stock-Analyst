@@ -205,3 +205,18 @@ class SparklineOut(BaseModel):
 
     instrument_id: int
     closes: list[float]
+
+
+class ProviderStatusOut(BaseModel):
+    """What one price source can do right now.
+
+    Redundancy that cannot be inspected is a claim, not a property.
+    """
+
+    name: str
+    enabled: bool
+    #: True while backing off after a rate limit.
+    cooling_down: bool
+    #: How many held instruments this source could serve, out of the total.
+    serves_holdings: int
+    total_holdings: int

@@ -23,6 +23,7 @@ import httpx
 
 from app.providers.base import (
     Bar,
+    is_us_listing,
     InstrumentRef,
     PlanLimited,
     PriceProvider,
@@ -54,6 +55,11 @@ class TwelveDataProvider(PriceProvider):
 
     def is_enabled(self) -> bool:
         return bool(self._api_key)
+
+    def can_serve(self, ref: InstrumentRef) -> bool:
+        # Free tier is US-only, verified live: non-US symbols answer with a plan error.
+        # Calling anyway would spend a request to be told something already known.
+        return bool(ref.provider_symbol) and is_us_listing(ref)
 
     def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> list[Bar]:
         symbol = ref.provider_symbol
