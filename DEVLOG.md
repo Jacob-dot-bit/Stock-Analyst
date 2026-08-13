@@ -976,6 +976,94 @@ these endpoints tolerate, which is the actual way to not get blocked.
 
 ---
 
+# Phase 3a — Fundamentals from SEC EDGAR (2026-08-13)
+
+Prompted by a fair objection: *"we want the most data possible, otherwise why build the
+app"*. That reframed the priority correctly. Four missing ETF price series is 10% of one
+pillar; **having no fundamentals at all is 100% of three pillars**. Prices alone cannot
+answer "hold or sell".
+
+SEC EDGAR is the best source in the project — the figures come from the companies' own
+regulatory filings, not a vendor's reconstruction. Free, no key, no meaningful quota.
+
+## Bug 3a.1 — One tag chosen for a whole series
+
+**Symptom.** NVIDIA showed FY2022 revenue next to FY2026 net income.
+
+**Cause.** `_extract` took the first candidate tag that had *any* data. NVIDIA reports
+revenue under `RevenueFromContractWithCustomerExcludingAssessedTax` through FY2022 and
+switches afterwards, so the series stopped four years short — while profit, on a stable
+tag, was current.
+
+Worth noting: the module docstring warned about exactly this before the code did it.
+
+**Fix.** Merge per fiscal year across tags, higher-priority tag winning for each year.
+
+## Bug 3a.2 — Foreign filers returned nothing
+
+**Symptom.** ASML and TotalEnergies: every concept empty.
+
+**Cause.** Three assumptions, all wrong for non-US filers:
+
+| Assumption | Reality |
+|---|---|
+| Annual reports are `10-K` | Foreign private issuers file `20-F` (and `20-F/A`) |
+| Figures are in USD | **ASML reports in EUR** — reading only the USD unit found nothing |
+| The taxonomy is `us-gaap` | **TotalEnergies files under IFRS**, where revenue is `Revenue` and profit is `ProfitLoss` |
+
+**Fix.** Both forms and their amendments, both taxonomies, and any reporting currency —
+with the currency **stored on every figure**. That last part is not cosmetic: a ratio
+built from EUR fundamentals and a USD share price is wrong in a way no unit test catches.
+
+## Bug 3a.3 — Fundamentals of entirely unrelated companies
+
+**Symptom.** A coverage run reported fundamentals for 31 of 38 holdings. Reading the
+names revealed what those numbers actually were:
+
+| Holding | Resolved to | Actually |
+|---|---|---|
+| `AI.FR` | C3.ai, Inc. | **Air Liquide** |
+| `ORA.FR` | Ormat Technologies | **Orange** |
+| `SAN.FR` | Banco Santander | **Sanofi** |
+| `DSY.FR` | Big Tree Cloud Holdings | **Dassault Systèmes** |
+| `MC.FR` | Moelis & Co | **LVMH** |
+| `CAC.FR` | Camden National Corp | a CAC 40 ETF |
+
+**Cause.** The country suffix was stripped and the bare root looked up in the SEC index —
+which is keyed on **US** tickers. `AI` in the US is C3.ai; `AI.FR` is Air Liquide.
+Different companies entirely.
+
+**Why it is the worst class of bug in this project.** Every one of those would have
+produced a complete, plausible set of financials — revenue, margins, debt — attached to
+the wrong company, and fed them straight into a hold-or-sell score. Nothing about the
+output would have looked wrong.
+
+**Fix.** The registrant name found at a ticker must match the company name the broker
+reported, or the match is refused. The check is permissive on formatting
+("TotalEnergies" ≡ "TotalEnergies SE") and strict on substance, and ignores legal-form
+words, which identify nothing.
+
+**Refinement after a false rejection.** The check initially also rejected `AMD.US`,
+whose registrant is "Advanced Micro Devices Inc" against a broker name of "AMD". The rule
+is now scoped: a name match is required for **non-US** instruments only. For a US listing
+the broker ticker and the SEC ticker are the same namespace, so the lookup is exact by
+construction and demanding a name match only discards valid data.
+
+## Phase outcome
+
+**25 of 38 holdings now carry verified fundamentals** — revenue, profit, equity, assets,
+debt, cash flow and more, over five to six fiscal years each, in the filer's own
+reporting currency.
+
+Of the 13 without: 7 are European companies whose US ticker belongs to someone else and
+which do not file with the SEC under their own name; 5 are French ETFs and a CVR, which
+have no fundamentals by nature; 1 is a BDC reporting no conventional revenue line.
+
+**250 tests pass.** All three bugs above have regression tests naming the actual
+companies involved, because the abstraction is not what made them dangerous.
+
+---
+
 # Up next
 
 | Phase | Content | Status |
