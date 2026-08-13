@@ -156,11 +156,42 @@ class Throttle:
         self._last_call = now
 
 
+class Cooldown:
+    """Stops asking a provider that has just told us to stop.
+
+    A rate limit is a request to back off, and hammering through it is what turns a
+    short throttle into a long block. Once a provider answers 429, it is left alone for
+    a while instead of being retried on every one of the next thirty instruments —
+    which is both the polite behaviour and the one most likely to get us unblocked.
+    """
+
+    def __init__(self, seconds: float) -> None:
+        self.seconds = seconds
+        self._until: dict[str, float] = {}
+
+    def start(self, provider_name: str) -> None:
+        self._until[provider_name] = time.monotonic() + self.seconds
+
+    def is_active(self, provider_name: str) -> bool:
+        until = self._until.get(provider_name)
+        if until is None:
+            return False
+        if time.monotonic() >= until:
+            del self._until[provider_name]
+            return False
+        return True
+
+    def remaining(self, provider_name: str) -> float:
+        until = self._until.get(provider_name)
+        return max(0.0, until - time.monotonic()) if until else 0.0
+
+
 class ProviderChain:
     """Tries each provider in order and reports what happened at every step."""
 
-    def __init__(self, providers: list[PriceProvider]) -> None:
+    def __init__(self, providers: list[PriceProvider], cooldown_seconds: float = 900.0) -> None:
         self.providers = providers
+        self.cooldown = Cooldown(cooldown_seconds)
 
     def enabled_providers(self) -> list[PriceProvider]:
         return [p for p in self.providers if p.is_enabled()]
@@ -169,8 +200,17 @@ class ProviderChain:
         result = FetchResult()
 
         for provider in self.enabled_providers():
+            # Honour an earlier "slow down" instead of asking again immediately.
+            if self.cooldown.is_active(provider.name):
+                result.attempts.append(Attempt(provider.name, RateLimited.reason))
+                continue
+
             try:
                 bars = provider.fetch_daily(ref, start, end)
+            except RateLimited as exc:
+                self.cooldown.start(provider.name)
+                result.attempts.append(Attempt(provider.name, exc.reason))
+                continue
             except ProviderError as exc:
                 result.attempts.append(Attempt(provider.name, exc.reason))
                 continue

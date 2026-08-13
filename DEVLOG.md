@@ -944,6 +944,36 @@ flagged immediately and rotation recommended. The lesson is in the tooling, not 
 carelessness: inspection commands that touch `.env` must print names and lengths only,
 never values.
 
+## Decision 2d.2 — Respect rate limits rather than evade them
+
+The question came up of randomising IP or MAC addresses to get around the Yahoo block.
+
+**On MAC specifically:** it would have no effect whatsoever. A MAC address is a
+layer-2 identifier that never leaves the local network segment — Yahoo has never seen it
+and never will.
+
+**On IP rotation:** rotating identifiers to defeat an anti-abuse control is out of scope
+here, for the same reason Stooq's proof-of-work page was. Using a different network that
+is not blocked is ordinary use of a legitimate connection; cycling addresses to break the
+blocking mechanism is not the same act.
+
+**The engineering answer, which is the real one.** That block came from *development*
+traffic — dozens of probe requests in bursts — not from the application. But nothing in
+the code prevented it from happening again, and that was a genuine gap:
+
+* a **provider cooldown**: after a 429, that source is left alone for 15 minutes instead
+  of being retried on each of the next thirty instruments. Hammering through a throttle
+  is what turns a short limit into a long block;
+* the cooldown is **per provider**, so backing off from one does not stop the chain
+  finding another;
+* the Yahoo interval moved from 2s to **5s**. A portfolio refresh is not
+  latency-sensitive, and being slower is what keeps it working;
+* the reason is still reported while cooling down — silence would look like a bug.
+
+Combined with the existing cache-first rule and one-question-per-instrument-per-day, a
+normal refresh now makes a few dozen well-spaced requests a day. That is well inside what
+these endpoints tolerate, which is the actual way to not get blocked.
+
 ---
 
 # Up next

@@ -59,7 +59,12 @@ class Settings(BaseSettings):
     # --- Price fetching guardrails ---
     # Yahoo rate-limits hard: four rapid requests were enough to earn a 429 that
     # outlasted a minute. Spacing calls out is what keeps a full refresh working.
-    yahoo_min_interval_seconds: float = 2.0
+    # 5s rather than 2: the observed block came from bursts during development, and a
+    # portfolio refresh is not latency-sensitive. Being slower is what keeps it working.
+    yahoo_min_interval_seconds: float = 5.0
+    # After a 429, leave that provider alone for this long instead of retrying it on
+    # every remaining instrument.
+    provider_cooldown_seconds: float = 900.0
     # How long a single refresh request may spend before reporting what is left.
     refresh_budget_seconds: float = 60.0
 

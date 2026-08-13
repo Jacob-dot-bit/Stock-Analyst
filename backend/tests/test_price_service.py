@@ -167,10 +167,14 @@ class TestFreshness:
         assert second.code in {PriceOutcome.NEEDS_ISIN, PriceOutcome.STILL_UNAVAILABLE}
 
     def test_throttling_does_not_count_as_asked(self, db):
-        """Rate limiting is temporary, so the instrument must be retried next run."""
+        """Rate limiting is temporary, so the instrument must be retried next run.
+
+        The cooldown is disabled here so this tests the freshness rule alone; backing
+        off from a throttled provider is covered in TestCooldown.
+        """
         instrument = make_instrument(db)
         provider = FakeProvider("yahoo", error=RateLimited("slow down"))
-        chain = ProviderChain([provider])
+        chain = ProviderChain([provider], cooldown_seconds=0)
 
         refresh_instrument(db, instrument, chain)
         db.commit()

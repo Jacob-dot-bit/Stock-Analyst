@@ -269,6 +269,10 @@ actually served the data.
   `.PA` symbols already derived.
 - **Frankfurt prices are the Frankfurt listing.** For a Paris- or Amsterdam-listed share
   the two track closely (0–3% in practice) but they are different venues.
+- **Rate limits are respected, not worked around.** After a provider answers 429 it is
+  left alone for 15 minutes rather than retried on every remaining instrument, calls are
+  spaced 5 seconds apart, and each instrument is asked about once per day. Hammering
+  through a throttle is what turns a short limit into a long block.
 - **Refreshing prices is deliberately slow.** Free providers throttle, so a refresh is
   serialised, spaced out, and bounded by a time budget; it reports what is left and you
   click again. That is a constraint of the sources, not a bug.

@@ -33,7 +33,7 @@ def get_provider_chain() -> ProviderChain:
     settings = get_settings()
 
     return ProviderChain(
-        [
+        providers=[
             YahooProvider(min_interval_seconds=settings.yahoo_min_interval_seconds),
             # Before Twelve Data: needs no key and covers European venues, which the
             # Twelve Data free tier does not. Only serves instruments that have an ISIN.
@@ -42,5 +42,6 @@ def get_provider_chain() -> ProviderChain:
             # Last: keyed, and the only candidate that may cover Euronext venues,
             # which is where the remaining gap is.
             FmpProvider(api_key=settings.fmp_api_key),
-        ]
+        ],
+        cooldown_seconds=settings.provider_cooldown_seconds,
     )

@@ -7,6 +7,7 @@ suite that fails for reasons unrelated to the code.
 
 from __future__ import annotations
 
+import time
 from datetime import date
 
 import httpx
@@ -494,3 +495,63 @@ class TestFmpProvider:
 
         with pytest.raises(ProviderUnavailable):
             provider.fetch_daily(InstrumentRef(provider_symbol="AAPL"), date(2026, 8, 1), date(2026, 8, 12))
+
+
+class TestCooldown:
+    """A 429 is a request to back off, not a suggestion.
+
+    Hammering through a throttle is what turns a short limit into a long block — which
+    is exactly how this project's own development traffic got an IP blocked for hours.
+    """
+
+    def test_a_throttled_provider_is_not_asked_again_immediately(self):
+        throttled = FakeProvider("yahoo", error=RateLimited("slow down"))
+        chain = ProviderChain([throttled], cooldown_seconds=900)
+        ref = InstrumentRef(provider_symbol="A")
+
+        for _ in range(5):
+            chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
+
+        # One refusal is enough; the next thirty instruments must not each retry it.
+        assert throttled.calls == 1
+
+    def test_the_cooldown_still_reports_the_reason(self):
+        """Silence would look like a bug; the user needs to know why nothing happened."""
+        chain = ProviderChain([FakeProvider("yahoo", error=RateLimited("x"))], cooldown_seconds=900)
+        ref = InstrumentRef(provider_symbol="A")
+
+        chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
+        second = chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
+
+        assert second.rate_limited
+        assert second.attempts[0].reason == "rate_limited"
+
+    def test_a_cooled_down_provider_does_not_block_the_others(self):
+        """Backing off from one source must not stop the chain finding another."""
+        chain = ProviderChain(
+            [FakeProvider("yahoo", error=RateLimited("x")), FakeProvider("frankfurt", bars=[a_bar()])],
+            cooldown_seconds=900,
+        )
+        ref = InstrumentRef(provider_symbol="A")
+
+        chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
+        second = chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
+
+        assert second.provider == "frankfurt"
+
+    def test_it_expires(self):
+        chain = ProviderChain([FakeProvider("yahoo", error=RateLimited("x"))], cooldown_seconds=0.01)
+        chain.cooldown.start("yahoo")
+        time.sleep(0.02)
+
+        assert chain.cooldown.is_active("yahoo") is False
+
+    def test_zero_cooldown_never_blocks(self):
+        provider = FakeProvider("yahoo", error=RateLimited("x"))
+        chain = ProviderChain([provider], cooldown_seconds=0)
+        ref = InstrumentRef(provider_symbol="A")
+
+        chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
+        chain.fetch_daily(ref, date(2024, 1, 1), date(2024, 1, 2))
+
+        assert provider.calls == 2
