@@ -842,6 +842,43 @@ reachable — no ISIN needed.
 
 **Coverage: 33 of 38 holdings priced.**
 
+## Bug 2c.3 — The time budget was spent on instruments that needed no work
+
+**Symptom.** A run reported *8 updated, 0 already fresh, 29 remaining* — while most of
+those 29 were already up to date and would have been settled instantly.
+
+**Cause.** The budget loop walked the instruments in one pass, so it expired among
+entries that cost nothing. Skipping is free; fetching is not. Mixing them meant the
+deadline was consumed by list position rather than by work.
+
+**Fix.** Partition first: everything settleable without a network call is resolved
+before the timed loop starts. `remaining` now means *remaining fetches*, which is the
+only number a user can act on.
+
+**Effect on the same portfolio:** 16 instruments settled per run instead of 8, and the
+already-fresh ones are counted instead of being invisible.
+
+**Test note.** The original budget test pinned an exact number of clock reads and broke
+as soon as the implementation read the clock once more. It now uses a clock that
+advances on every read and asserts the invariant — settled plus remaining equals the
+total — rather than a tick count.
+
+## Decision 2c.5 — Four French PEA ETFs have no free source, and that is stated plainly
+
+Verified rather than assumed, and on the right endpoint this time: the first check used
+Frankfurt's *quote* endpoint, so the *history* endpoint was retested directly. It
+answers `s=no_data` for every candidate ISIN of `DCAM.FR`, `SPEA.FR`, `PAEEM.FR` and
+`CAC.FR`.
+
+Other routes were probed and abandoned rather than forced: Amundi's own site, justETF
+and Boursorama returned 404/400/410 on their public paths. Continuing would have meant
+guessing endpoint URLs, which is not evidence.
+
+These four are Euronext Paris listings that Yahoo covers under the `.PA` symbols already
+derived — no ISIN required. They will fill in by themselves once Yahoo is reachable from
+the network in use. Until then the UI shows no trend line and says why, which is the
+honest state.
+
 ---
 
 # Up next

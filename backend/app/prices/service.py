@@ -188,6 +188,27 @@ def refresh_instrument(
     )
 
 
+def _record(report: RefreshReport, outcome: Message) -> None:
+    report.outcomes.append(outcome)
+    if outcome.code == PriceOutcome.UPDATED:
+        report.updated += 1
+    elif outcome.code == PriceOutcome.ALREADY_FRESH:
+        report.skipped += 1
+    else:
+        # STILL_UNAVAILABLE and NEEDS_ISIN count here: no data is a shortfall, not a skip.
+        report.failed += 1
+
+
+def _needs_network(instrument: Instrument, today: date, force: bool) -> bool:
+    """Whether settling this instrument requires contacting a provider.
+
+    Used to keep the time budget for work that actually costs something.
+    """
+    if not instrument.provider_symbol and not instrument.isin:
+        return False
+    return force or not _asked_today(instrument, today)
+
+
 def _no_data_reason(instrument: Instrument) -> str:
     """Say *why* there is still no data, in terms the user can act on.
 
@@ -247,26 +268,34 @@ def _refresh_many_locked(
 ) -> RefreshReport:
     report = RefreshReport()
     started = datetime.now(UTC)
+    today = _today()
 
-    for index, instrument in enumerate(instruments):
+    # Settle everything that needs no network call first. Otherwise the budget expires
+    # among instruments that would have been skipped instantly, and the report claims
+    # dozens are "remaining" when nearly all of them are already done — which is what
+    # made a run read "8 updated, 0 already fresh, 29 remaining".
+    free, costly = [], []
+    for instrument in instruments:
+        if _needs_network(instrument, today, force):
+            costly.append(instrument)
+        else:
+            free.append(instrument)
+
+    for instrument in free:
+        _record(report, refresh_instrument(db, instrument, chain, force=force))
+    db.commit()
+
+    for index, instrument in enumerate(costly):
         elapsed = (datetime.now(UTC) - started).total_seconds()
-        if elapsed > budget_seconds and index < len(instruments):
-            report.remaining = len(instruments) - index
+        if elapsed > budget_seconds:
+            report.remaining = len(costly) - index
             report.outcomes.append(
                 Message(PriceOutcome.BUDGET_REACHED, {"remaining": report.remaining})
             )
             break
 
         outcome = refresh_instrument(db, instrument, chain, force=force)
-        report.outcomes.append(outcome)
-
-        if outcome.code == PriceOutcome.UPDATED:
-            report.updated += 1
-        elif outcome.code == PriceOutcome.ALREADY_FRESH:
-            report.skipped += 1
-        else:
-            # STILL_UNAVAILABLE counts here: no data is a shortfall, not a skip.
-            report.failed += 1
+        _record(report, outcome)
 
         # Committing per instrument means a rate limit halfway through does not
         # discard the work already done.

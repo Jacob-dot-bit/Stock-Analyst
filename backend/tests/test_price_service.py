@@ -263,15 +263,39 @@ class TestRefreshMany:
         instruments = [make_instrument(db, f"S{i}.US", f"S{i}") for i in range(5)]
         chain = ProviderChain([FakeProvider("yahoo", bars=bars_ending(date.today()))])
 
-        # A clock that jumps past the budget after the first instrument.
-        ticks = iter([datetime.now(UTC) + timedelta(seconds=t) for t in (0, 0, 999, 999, 999, 999)])
-        monkeypatch.setattr("app.prices.service.datetime", _FrozenClock(ticks))
+        # A clock that advances on every read, so the budget is crossed part-way.
+        # Asserting on an exact tick count would break whenever the implementation
+        # reads the clock one more or one fewer time.
+        monkeypatch.setattr("app.prices.service.datetime", _AdvancingClock(seconds_per_call=6))
 
         report = refresh_many(db, instruments, chain, budget_seconds=10)
 
-        assert report.remaining == 4
+        assert report.remaining > 0
         assert report.outcomes[-1].code == PriceOutcome.BUDGET_REACHED
-        assert report.outcomes[-1].params["remaining"] == 4
+        assert report.outcomes[-1].params["remaining"] == report.remaining
+        # Whatever was reached is settled, and what was not is still owed.
+        assert report.updated + report.remaining == len(instruments)
+
+    def test_fresh_instruments_do_not_consume_the_budget(self, db, monkeypatch):
+        """Skipping costs nothing, so it must not push real work past the deadline.
+
+        Otherwise a run reports "8 updated, 0 already fresh, 29 remaining" while nearly
+        all of those 29 would have been skipped instantly.
+        """
+        chain = ProviderChain([FakeProvider("yahoo", bars=bars_ending(date.today()))])
+
+        # Genuinely fresh means asked today *and* holding data, so fetch them once.
+        fresh = [make_instrument(db, f"F{i}.US", f"F{i}") for i in range(5)]
+        for instrument in fresh:
+            refresh_instrument(db, instrument, chain)
+        db.commit()
+
+        pending = make_instrument(db, "NEW.US", "NEW")
+        report = refresh_many(db, [*fresh, pending], chain, budget_seconds=60)
+
+        assert report.skipped == 5
+        assert report.updated == 1
+        assert report.remaining == 0
 
     def test_work_is_kept_when_a_later_instrument_is_rate_limited(self, db):
         """A limit hit halfway through must not discard what already succeeded."""
@@ -292,14 +316,22 @@ class TestRefreshMany:
         assert db.execute(select(PriceBar)).scalars().all()  # first instrument's bars survived
 
 
-class _FrozenClock:
-    """Minimal stand-in for the datetime module, driving refresh_many's budget."""
+class _AdvancingClock:
+    """Stand-in for the datetime module whose clock moves on every read.
 
-    def __init__(self, ticks):
-        self._ticks = ticks
+    Lets a test cross a time budget deterministically without depending on how many
+    times the implementation happens to look at the clock.
+    """
+
+    def __init__(self, seconds_per_call: int):
+        self._step = seconds_per_call
+        self._calls = 0
+        self._origin = datetime.now(UTC)
 
     def now(self, tz=None):
-        return next(self._ticks)
+        moment = self._origin + timedelta(seconds=self._step * self._calls)
+        self._calls += 1
+        return moment
 
 
 class TestConcurrency:
