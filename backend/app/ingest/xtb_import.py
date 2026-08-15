@@ -275,6 +275,11 @@ class ParsedExport:
     open_positions: list[dict[str, Any]] = field(default_factory=list)
     closed_positions: list[dict[str, Any]] = field(default_factory=list)
     cash_operations: list[dict[str, Any]] = field(default_factory=list)
+    #: One entry per individual buy fill backing `open_positions` (a holding with
+    #: `lots_count > 1` has several). Feeds the `Lot` ledger for the historical
+    #: value chart — see DEVLOG "Decision 3b.1". Discarded everywhere else in this
+    #: module after computing `opened_at`/`lots_count`, kept here instead.
+    open_lots: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[Message] = field(default_factory=list)
     sections: list[SectionSummary] = field(default_factory=list)
     #: Accounts (the "Product" column) present in the open positions. Used to replace
@@ -458,8 +463,9 @@ def parse_xtb_export(content: bytes, filename: str) -> ParsedExport:
             )
 
         if table.kind == SectionKind.OPEN_POSITIONS:
-            positions = _build_open_positions(table, result)
+            positions, open_lots = _build_open_positions(table, result)
             result.open_positions.extend(positions)
+            result.open_lots.extend(open_lots)
             count = len(positions)
         elif table.kind == SectionKind.CLOSED_POSITIONS:
             closed = _build_closed_positions(table, result)
@@ -522,13 +528,68 @@ def _synthetic_id(*parts: Any) -> str:
     return "syn-" + hashlib.sha1(payload.encode("utf-8")).hexdigest()[:20]
 
 
-def _build_open_positions(table: ParsedTable, result: ParsedExport) -> list[dict[str, Any]]:
+def _lot_from_row(row: dict[str, Any], account: str | None, symbol: str) -> dict[str, Any] | None:
+    """One buy fill from a raw Open Positions lot row.
+
+    Signed by its own ``type`` cell, independent of the aggregate-level direction
+    inference in ``_build_open_positions`` — each lot carries its own direction,
+    it does not need to be inferred from siblings.
+    """
+    volume = parse_number(row.get("volume"))
+    open_price = parse_number(row.get("open_price"))
+    if volume is None or open_price is None:
+        return None
+
+    if _normalize(row.get("type")) in {"sell", "vente", "short"}:
+        volume = -abs(volume)
+
+    open_time = row.get("open_time")
+    return {
+        "external_id": _clean_id(row.get("position_id"))
+        or _synthetic_id(account, symbol, "open-lot", open_time, volume, open_price),
+        "broker_symbol": symbol,
+        "account": account,
+        "quantity": volume,
+        "open_price": open_price,
+        "opened_at": parse_datetime(open_time),
+        "currency": _clean(row.get("currency")),
+        "raw": row.get("_raw", {}),
+    }
+
+
+def _flatten_open_lots(
+    lots_by_key: dict[tuple[str | None, str], list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    """One dict per individual buy fill, for the historical value ledger (``Lot``).
+
+    Every value in ``lots_by_key`` is a real per-lot row regardless of whether the
+    export also had an aggregate row for that holding — the aggregate/fallback
+    branching in ``_build_open_positions`` only affects how *positions* are built,
+    it does not change what counts as a lot here. Call this before that function's
+    fallback branch empties ``lots_by_key``.
+    """
+    lots_out: list[dict[str, Any]] = []
+    for (account, symbol), lots in lots_by_key.items():
+        for row in lots:
+            lot = _lot_from_row(row, account, symbol)
+            if lot is not None:
+                lots_out.append(lot)
+    return lots_out
+
+
+def _build_open_positions(
+    table: ParsedTable, result: ParsedExport
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Rebuild holdings from the aggregate rows.
 
     For each holding the export lists one aggregate row (category set, direction and
     open time blank) followed by one row per lot (direction and time set, category
     blank). Only aggregate rows become positions; summing both levels would count
     every holding twice.
+
+    Returns ``(positions, open_lots)`` — the aggregates as before, plus every
+    individual lot row that was previously discarded after being used to compute
+    ``opened_at``/``lots_count``, now kept for the ``Lot`` reconstruction ledger.
     """
     aggregates: list[dict[str, Any]] = []
     lots_by_key: dict[tuple[str | None, str], list[dict[str, Any]]] = {}
@@ -545,6 +606,9 @@ def _build_open_positions(table: ParsedTable, result: ParsedExport) -> list[dict
             lots_by_key.setdefault((account, symbol), []).append(row)
         else:
             aggregates.append(row)
+
+    # Captured before the fallback below empties `lots_by_key`.
+    open_lots = _flatten_open_lots(lots_by_key)
 
     # Fallback: some exports have no aggregate level. Each lot then becomes a position
     # in its own right rather than being lost.
@@ -609,7 +673,7 @@ def _build_open_positions(table: ParsedTable, result: ParsedExport) -> list[dict
             }
         )
 
-    return positions
+    return positions, open_lots
 
 
 def _build_closed_positions(table: ParsedTable, result: ParsedExport) -> list[dict[str, Any]]:

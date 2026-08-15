@@ -29,7 +29,6 @@ os.environ.setdefault("BASE_CURRENCY", "EUR")
 #: Credentials a developer may legitimately have in their own .env.
 CREDENTIAL_VARS = (
     "TWELVEDATA_API_KEY",
-    "FINNHUB_API_KEY",
     "PERPLEXITY_API_KEY",
     "SEC_USER_AGENT",
 )
@@ -42,9 +41,32 @@ def isolate_credentials(monkeypatch):
     Without this, the suite reads whatever is in the developer's .env: a test asserting
     "no integration is enabled" then passes or fails depending on who runs it, and a
     failure message could print a real key. Tests that need a key set one explicitly.
+
+    Clearing the environment variables alone is not enough, and this was a real gap
+    until it was caught live (see DEVLOG "Decision 3s.1"): `Settings` reads
+    `SEC_USER_AGENT` and friends from the real project `.env` FILE too
+    (`SettingsConfigDict(env_file=...)`), a source `monkeypatch.delenv` never
+    touches — it happened to never matter only because the real `.env` had never
+    actually held one of these keys before. The moment the user genuinely
+    configured `SEC_USER_AGENT` through the running app's Settings page, this
+    exact test suite started reading their real value. Blanking `env_file` here
+    makes every `Settings()` built during a test see only explicitly-set
+    environment variables, regardless of what the developer's real `.env` holds.
     """
+    from app.config import Settings
+
+    monkeypatch.setitem(Settings.model_config, "env_file", ())
+
     for name in CREDENTIAL_VARS:
         monkeypatch.delenv(name, raising=False)
+
+    # The benchmark instrument (config.py) defaults ON (an S&P 500 ETF, not an
+    # unset API key) so it needs the opposite treatment: actively disabled here
+    # rather than merely unset, or every price-refresh test written before the
+    # benchmark existed would suddenly see one extra instrument in its counts.
+    # A test exercising the benchmark itself enables it explicitly.
+    monkeypatch.setenv("BENCHMARK_BROKER_SYMBOL", "")
+    monkeypatch.setenv("BENCHMARK_PROVIDER_SYMBOL", "")
 
     # get_settings() is cached, so a value read before this fixture ran would survive.
     from app.config import get_settings
@@ -112,13 +134,21 @@ CASH_HEADERS = [
 
 
 def closed_row(
-    name, ticker, volume, open_price, open_time, close_price, close_time, pl, position_id
+    name, ticker, volume, open_price, open_time, close_price, close_time, pl, position_id,
+    open_fx_rate=1.0, close_fx_rate=1.0,
 ):
-    """Build a closed-position row in the real 25-column layout."""
+    """Build a closed-position row in the real 25-column layout.
+
+    Conversion rates default to 1.0 (i.e. instrument currency == account
+    currency) to match every existing caller's fixtures — pass real,
+    divergent rates to exercise the instrument/currency P&L split (DEVLOG
+    "Decision 3p.1"), which nothing hit before this defaulted to the
+    identity case everywhere.
+    """
     return [
         name, ticker, "STOCK", "BUY", volume, open_price, open_time, close_price, close_time,
         "My Trades", pl, pl, None, None, None, None, 0.0, None, None, None,
-        1.0, 1.0, "Android", position_id, None,
+        open_fx_rate, close_fx_rate, "Android", position_id, None,
     ]
 
 

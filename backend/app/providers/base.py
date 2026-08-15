@@ -16,9 +16,11 @@ Two rules the chain enforces:
 
 from __future__ import annotations
 
+import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Protocol, runtime_checkable
 
 
@@ -53,6 +55,21 @@ class Bar:
     low: float | None
     close: float | None
     volume: float | None
+
+
+@dataclass(frozen=True)
+class SplitEvent:
+    """A stock split or reverse split reported by a provider.
+
+    Numerator/denominator, not a single ratio float: 1/10 and 10/1 are both
+    representable exactly, which a lone float (0.1 vs 10.0) also allows —
+    kept as two fields anyway to match app.models.CorporateAction's shape
+    directly, since a provider result is persisted there almost verbatim.
+    """
+
+    effective_date: date
+    numerator: float
+    denominator: float
 
 
 #: Broker suffixes that denote a US listing. Used for routing, never for identity.
@@ -162,19 +179,28 @@ class Throttle:
         # and be wrong in principle — and it would make the first call sleep for
         # nothing under any clock that starts near zero.
         self._last_call: float | None = None
+        # Refreshes now run several instruments concurrently (see DEVLOG "Decision
+        # 3n.1") — the same provider's Throttle instance is shared process-wide
+        # (get_provider_chain() is a singleton), so two worker threads can call
+        # wait() at once. Holding the lock *through* the sleep is the point, not
+        # just protecting the read-modify-write: it is exactly what "space calls to
+        # one provider apart" needs when two threads want that provider at the same
+        # instant — one waits its turn, the other proceeds immediately after.
+        self._lock = threading.Lock()
 
     def wait(self) -> None:
         if self.min_interval <= 0:
             return
 
-        now = time.monotonic()
-        if self._last_call is not None:
-            elapsed = now - self._last_call
-            if elapsed < self.min_interval:
-                time.sleep(self.min_interval - elapsed)
-                now = time.monotonic()
+        with self._lock:
+            now = time.monotonic()
+            if self._last_call is not None:
+                elapsed = now - self._last_call
+                if elapsed < self.min_interval:
+                    time.sleep(self.min_interval - elapsed)
+                    now = time.monotonic()
 
-        self._last_call = now
+            self._last_call = now
 
 
 class Cooldown:
@@ -189,22 +215,28 @@ class Cooldown:
     def __init__(self, seconds: float) -> None:
         self.seconds = seconds
         self._until: dict[str, float] = {}
+        # Same reasoning as Throttle._lock: this dict is shared across the worker
+        # threads a parallel refresh now runs (DEVLOG "Decision 3n.1").
+        self._lock = threading.Lock()
 
     def start(self, provider_name: str) -> None:
-        self._until[provider_name] = time.monotonic() + self.seconds
+        with self._lock:
+            self._until[provider_name] = time.monotonic() + self.seconds
 
     def is_active(self, provider_name: str) -> bool:
-        until = self._until.get(provider_name)
-        if until is None:
-            return False
-        if time.monotonic() >= until:
-            del self._until[provider_name]
-            return False
-        return True
+        with self._lock:
+            until = self._until.get(provider_name)
+            if until is None:
+                return False
+            if time.monotonic() >= until:
+                del self._until[provider_name]
+                return False
+            return True
 
     def remaining(self, provider_name: str) -> float:
-        until = self._until.get(provider_name)
-        return max(0.0, until - time.monotonic()) if until else 0.0
+        with self._lock:
+            until = self._until.get(provider_name)
+            return max(0.0, until - time.monotonic()) if until else 0.0
 
 
 class ProviderChain:
@@ -217,7 +249,13 @@ class ProviderChain:
     def enabled_providers(self) -> list[PriceProvider]:
         return [p for p in self.providers if p.is_enabled()]
 
-    def fetch_daily(self, ref: InstrumentRef, start: date, end: date) -> FetchResult:
+    def fetch_daily(
+        self,
+        ref: InstrumentRef,
+        start: date,
+        end: date,
+        on_attempt: Callable[[str], None] | None = None,
+    ) -> FetchResult:
         result = FetchResult()
 
         for provider in self.enabled_providers():
@@ -231,6 +269,13 @@ class ProviderChain:
             # reasons under noise.
             if not provider.can_serve(ref):
                 continue
+
+            # A real network call is about to happen — the only point in this loop
+            # where that is true, which is why quota-usage tracking hooks in here
+            # rather than reading `result.attempts` afterward (a cooldown-skip and a
+            # real call that also got rate-limited produce an identical Attempt).
+            if on_attempt is not None:
+                on_attempt(provider.name)
 
             try:
                 bars = provider.fetch_daily(ref, start, end)
@@ -257,3 +302,50 @@ class ProviderChain:
             return result
 
         return result
+
+    def fetch_quote(
+        self, ref: InstrumentRef, on_attempt: Callable[[str], None] | None = None
+    ) -> tuple[float, str] | None:
+        """Best-effort *current* price, for callers that want fresher-than-cached data.
+
+        A provider that implements a dedicated ``fetch_quote`` (a lightweight
+        endpoint, cheaper than a full history call) is asked that way. Every other
+        enabled provider — which is most of them — is still tried: a short
+        ``fetch_daily`` window (a few days, not the ~400-day initial load) stands in
+        for a quote, using an endpoint that already exists and is already
+        throttled/cooldown-tracked. One rate-limited or unreachable source no
+        longer takes the *whole* live-estimate refresh down with it — it just moves
+        on to the next of however many providers are configured, the same
+        redundancy the daily price refresh already has.
+        """
+        today = datetime.now(UTC).date()
+
+        for provider in self.enabled_providers():
+            if self.cooldown.is_active(provider.name):
+                continue
+            if not provider.can_serve(ref):
+                continue
+
+            dedicated_fetch = getattr(provider, "fetch_quote", None)
+
+            if on_attempt is not None:
+                on_attempt(provider.name)
+
+            try:
+                if dedicated_fetch is not None:
+                    price = dedicated_fetch(ref)
+                else:
+                    bars = provider.fetch_daily(ref, today - timedelta(days=5), today)
+                    price = bars[-1].close if bars else None
+            except RateLimited:
+                self.cooldown.start(provider.name)
+                continue
+            except ProviderError:
+                continue
+            except Exception:  # noqa: BLE001 - one bad quote must not kill the round
+                continue
+
+            if price is not None:
+                return price, provider.name
+
+        return None

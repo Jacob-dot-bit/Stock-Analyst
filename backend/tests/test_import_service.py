@@ -12,6 +12,8 @@ from app.messages import MessageCode
 from app.ingest.service import import_export_file
 from app.models import (
     Instrument,
+    Lot,
+    LotType,
     MappingStatus,
     Position,
     Source,
@@ -135,6 +137,49 @@ class TestIdempotency:
         ).scalars().all()
         assert len(manual) == 1
         assert manual[0].instrument.broker_symbol == "MC.FR"
+
+
+class TestLots:
+    """The Lot ledger backing the historical value chart (DEVLOG "Decision 3b.1")."""
+
+    def test_open_and_closed_lots_are_created(self, db, xtb_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        open_lots = db.execute(select(Lot).where(Lot.lot_type == LotType.OPEN)).scalars().all()
+        closed_lots = db.execute(select(Lot).where(Lot.lot_type == LotType.CLOSED)).scalars().all()
+
+        # ASML (1 lot) + NVDA (2 lots) = 3 open; the fixture's 4 closed-position
+        # rows (including one instrument closed in two parts) = 4 closed.
+        assert len(open_lots) == 3
+        assert len(closed_lots) == 4
+        assert {l.instrument.broker_symbol for l in open_lots} == {"ASML.NL", "NVDA.US"}
+
+    def test_reimport_does_not_duplicate_lots(self, db, xtb_export):
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        assert len(db.execute(select(Lot)).scalars().all()) == 7
+
+    def test_partial_closes_sharing_a_position_id_stay_distinct_lots(self, db, xtb_export):
+        """Mirrors TestIdempotency's Transaction equivalent: the same trap
+        (Position ID not unique across partial closes) applies to Lot."""
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+
+        closed = db.execute(select(Lot).where(Lot.lot_type == LotType.CLOSED)).scalars().all()
+        assert len(closed) == 4
+
+    def test_a_lot_closed_between_two_imports_is_not_dropped(self, db, xtb_export, xtb_pea_export):
+        """Open lots are pure upsert — never wiped per account the way Position
+        is — so history survives even once its Position row is gone."""
+        import_export_file(db, xtb_export, "EUR_1234567.xlsx")
+        before = len(db.execute(select(Lot)).scalars().all())
+
+        # A second, unrelated import (a different account) must not touch the
+        # first account's already-recorded lots.
+        import_export_file(db, xtb_pea_export, "EUR_7654321.xlsx")
+        after = len(db.execute(select(Lot)).scalars().all())
+
+        assert after >= before
 
 
 class TestMultipleAccounts:

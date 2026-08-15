@@ -10,8 +10,11 @@ So the rules here are:
 * **Cache first.** Bars already stored are never re-fetched. A refresh only asks for
   the days that are missing, which after the initial load is usually a handful.
 * **Skip what is already fresh.** An instrument updated today is left alone.
-* **Serialised, with a time budget.** Work stops cleanly when the budget runs out and
-  says how many instruments remain, instead of hanging or half-failing.
+* **A handful of instruments in flight at once, with a time budget.** Different
+  instruments usually land on different providers, so processing several at a time
+  shortens the wait without spending any more quota than a sequential run would
+  (see DEVLOG "Decision 3n.1") — work still stops cleanly when the budget runs out
+  and says how many instruments remain, instead of hanging or half-failing.
 * **Per-instrument outcomes.** Every instrument reports what happened to it. Partial
   success is the normal case, not an error.
 """
@@ -19,14 +22,16 @@ So the rules here are:
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.messages import Message, PriceOutcome
 from app.models import Instrument, MappingStatus, PriceBar
+from app.prices.provider_usage import record_usage
 from app.providers.base import FetchResult, InstrumentRef, ProviderChain
 
 #: Serialises refreshes across the whole process. Two runs at once double the quota
@@ -37,6 +42,61 @@ _refresh_lock = threading.Lock()
 #: How much history to load the first time. 400 calendar days leaves enough trading
 #: days for a 200-day moving average plus a margin, which phase 3 will need.
 INITIAL_HISTORY_DAYS = 400
+
+#: How many instruments to refresh concurrently. Each provider's own Throttle still
+#: paces calls to *itself* regardless of this number — raising it only lets more
+#: *different* providers make progress at once instead of queueing for a free slot.
+#: Doubled from the original 4 on request (DEVLOG "Decision 3n.2") after 3n.1's live
+#: run showed the slow, heavily-throttled providers (Polygon/Alpha Vantage, 12s/call)
+#: were naturally self-limiting regardless of pool size, while faster ones sat waiting
+#: for a slot. Traded off against being a less "polite" API client — more
+#: simultaneous connections to free tiers, a bit more SQLite write contention — not
+#: raised further than this without more evidence it is still worth it.
+MAX_CONCURRENT_REFRESHES = 8
+
+
+@dataclass
+class RefreshProgress:
+    """Live state of the run currently in flight (or the last completed one).
+
+    Polled from a separate request while a refresh is in progress. FastAPI serves
+    each sync endpoint on its own thread, so a GET here runs concurrently with the
+    POST that is still working through the instrument list — no background task or
+    second DB session required. This is a *real* progress count (instruments
+    actually settled so far out of the total this run has to process), not a
+    simulated animation: the codebase deliberately rejected a fake progress bar
+    before, and this keeps that principle while still giving the user live feedback.
+    """
+
+    running: bool = False
+    total: int = 0
+    done: int = 0
+    current_symbol: str | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    report: "RefreshReport | None" = None
+
+
+_progress_lock = threading.Lock()
+_progress = RefreshProgress()
+
+
+def _set_progress(**kwargs) -> None:
+    with _progress_lock:
+        for key, value in kwargs.items():
+            setattr(_progress, key, value)
+
+
+def _advance_progress(current_symbol: str | None) -> None:
+    with _progress_lock:
+        _progress.done += 1
+        _progress.current_symbol = current_symbol
+
+
+def get_refresh_progress() -> RefreshProgress:
+    """A snapshot safe to read from another thread while a refresh is running."""
+    with _progress_lock:
+        return replace(_progress)
 
 
 @dataclass
@@ -72,6 +132,28 @@ def latest_bar_date(db: Session, instrument_id: int) -> date | None:
         .order_by(PriceBar.bar_date.desc())
         .limit(1)
     ).scalar_one_or_none()
+
+
+#: Outcomes that will never change on their own: a wrong ticker format, a
+#: symbol no provider's mapping heuristics could even attempt, or an
+#: instrument already flagged as having no market. Deliberately excludes
+#: NO_PROVIDER (a local config gap, not the symbol's fault) and RATE_LIMITED
+#: (today's throttling, not tomorrow's) — both can still resolve later.
+_UNRESOLVABLE_PRICE_CODES = {
+    PriceOutcome.SYMBOL_NOT_FOUND,
+    PriceOutcome.NOT_MAPPED,
+    PriceOutcome.NOT_PRICEABLE,
+}
+
+
+def is_permanently_unresolvable(message: Message) -> bool:
+    """True when no price provider will ever answer for this exact symbol.
+
+    Meant for add-time checks (watchlist, screener): a symbol this comes back
+    true for would otherwise sit forever, re-asked and re-failed on every
+    future batch refresh for no chance of success.
+    """
+    return message.code in _UNRESOLVABLE_PRICE_CODES
 
 
 def _store_bars(db: Session, instrument: Instrument, result: FetchResult) -> int:
@@ -164,6 +246,7 @@ def refresh_instrument(
         ),
         start,
         today,
+        on_attempt=lambda name: record_usage(db, name),
     )
 
     if not result.succeeded:
@@ -197,6 +280,36 @@ def refresh_instrument(
         PriceOutcome.UPDATED,
         {"symbol": symbol, "bars": inserted, "provider": result.provider},
     )
+
+
+def _refresh_instrument_threaded(
+    session_factory: sessionmaker, instrument_id: int, chain: ProviderChain, force: bool
+) -> Message:
+    """Runs one instrument's refresh in its own DB session.
+
+    A worker thread must never touch the session (or any ORM object) that
+    belongs to the thread orchestrating the refresh — SQLAlchemy Sessions are
+    not thread-safe, and neither are the ORM instances bound to them. So this
+    opens a fresh session, re-fetches the instrument by id in it, and commits
+    before handing back — the same "commit per instrument" durability the
+    sequential version had, just from a session that is this thread's alone.
+
+    `session_factory` is built from the *caller's* session's own engine
+    (`sessionmaker(bind=db.get_bind())`), not a hardcoded import of the
+    production `SessionLocal` — tests override `get_db` to point at an
+    in-memory database via `app.dependency_overrides`, and a worker that
+    quietly reconnected to the real on-disk database instead would silently
+    write everywhere except where the test (or the rest of the request) is
+    actually looking. See DEVLOG "Decision 3n.1".
+    """
+    db = session_factory()
+    try:
+        instrument = db.get(Instrument, instrument_id)
+        outcome = refresh_instrument(db, instrument, chain, force=force)
+        db.commit()
+        return outcome
+    finally:
+        db.close()
 
 
 def _record(report: RefreshReport, outcome: Message) -> None:
@@ -297,27 +410,70 @@ def _refresh_many_locked(
         else:
             free.append(instrument)
 
+    _set_progress(
+        running=True,
+        total=len(free) + len(costly),
+        done=0,
+        current_symbol=None,
+        started_at=started,
+        finished_at=None,
+        report=None,
+    )
+
     for instrument in free:
         _record(report, refresh_instrument(db, instrument, chain, force=force))
+        _advance_progress(instrument.broker_symbol)
     db.commit()
 
-    for index, instrument in enumerate(costly):
-        elapsed = (datetime.now(UTC) - started).total_seconds()
-        if elapsed > budget_seconds:
-            report.remaining = len(costly) - index
-            report.outcomes.append(
-                Message(PriceOutcome.BUDGET_REACHED, {"remaining": report.remaining})
-            )
-            break
+    # A handful of instruments in flight at once — different instruments usually
+    # land on different providers, so this shortens the wait without spending any
+    # more quota than a sequential run would (see DEVLOG "Decision 3n.1"). Each
+    # worker gets its own DB session (_refresh_instrument_threaded); this thread
+    # only ever touches `report`/`_progress`, same single-writer shape as before.
+    #
+    # A bounded pool that refills as each slot frees up, rather than submitting
+    # everything up front: `executor.submit` returns instantly, so checking the
+    # budget in a plain submit loop would barely ever trigger — nearly everything
+    # would be queued before any real time had passed. Checking again each time a
+    # future actually *completes* (real work, real elapsed time) keeps the same
+    # "budget bounds what starts, not what's already running" character the
+    # sequential version had, just refilling up to MAX_CONCURRENT_REFRESHES slots
+    # instead of one.
+    pending = list(costly)
+    symbols_by_id = {instrument.id: instrument.broker_symbol for instrument in costly}
+    # Bound to the caller's own engine — see _refresh_instrument_threaded's
+    # docstring for why this can't be the production SessionLocal directly.
+    worker_sessions = sessionmaker(bind=db.get_bind(), autoflush=False, expire_on_commit=False)
 
-        outcome = refresh_instrument(db, instrument, chain, force=force)
-        _record(report, outcome)
+    def _budget_left() -> bool:
+        return (datetime.now(UTC) - started).total_seconds() <= budget_seconds
 
-        # Committing per instrument means a rate limit halfway through does not
-        # discard the work already done.
-        db.commit()
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_REFRESHES) as executor:
+        futures: dict = {}
+
+        def _fill() -> None:
+            while pending and len(futures) < MAX_CONCURRENT_REFRESHES and _budget_left():
+                instrument = pending.pop(0)
+                future = executor.submit(
+                    _refresh_instrument_threaded, worker_sessions, instrument.id, chain, force
+                )
+                futures[future] = instrument.id
+
+        _fill()
+        while futures:
+            done, _ = wait(futures, return_when=FIRST_COMPLETED)
+            for future in done:
+                instrument_id = futures.pop(future)
+                _record(report, future.result())
+                _advance_progress(symbols_by_id[instrument_id])
+            _fill()
+
+    report.remaining = len(pending)
+    if report.remaining > 0:
+        report.outcomes.append(Message(PriceOutcome.BUDGET_REACHED, {"remaining": report.remaining}))
 
     _add_fallback_hint(report, chain)
+    _set_progress(running=False, current_symbol=None, finished_at=datetime.now(UTC), report=report)
     return report
 
 

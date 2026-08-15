@@ -27,6 +27,7 @@ from app.providers.base import (
     PriceProvider,
     ProviderUnavailable,
     RateLimited,
+    SplitEvent,
     SymbolNotFound,
     Throttle,
 )
@@ -128,6 +129,81 @@ class YahooProvider(PriceProvider):
             raise SymbolNotFound(symbol)
 
         return _parse_bars(results[0])
+
+    def fetch_splits(self, ref: InstrumentRef, start: date, end: date) -> list[SplitEvent]:
+        """Split/reverse-split events in range, from the same chart endpoint
+        `fetch_daily` already calls — `events=split` costs nothing extra
+        against the throttle, it just adds one field to the response.
+        Unofficial like the rest of this endpoint: a payload with no
+        `events`/`splits` block (nothing happened, or Yahoo changes shape)
+        yields an empty list rather than an error.
+        """
+        symbol = ref.provider_symbol
+        if not symbol:
+            raise SymbolNotFound(f"{self.name} needs a provider symbol")
+
+        payload = self._get(
+            symbol,
+            {
+                "period1": int(datetime(start.year, start.month, start.day, tzinfo=timezone.utc).timestamp()),
+                "period2": int(datetime(end.year, end.month, end.day, 23, 59, tzinfo=timezone.utc).timestamp()),
+                "interval": "1d",
+                "events": "split",
+            },
+        )
+
+        chart = payload.get("chart") or {}
+        if chart.get("error"):
+            code = (chart["error"] or {}).get("code", "")
+            if "NotFound" in str(code) or "Not Found" in str(code):
+                raise SymbolNotFound(symbol)
+            raise ProviderUnavailable(str(code))
+
+        results = chart.get("result") or []
+        if not results:
+            raise SymbolNotFound(symbol)
+
+        splits = ((results[0].get("events") or {}).get("splits") or {}).values()
+        events: list[SplitEvent] = []
+        for entry in splits:
+            numerator = entry.get("numerator")
+            denominator = entry.get("denominator")
+            timestamp = entry.get("date")
+            if numerator is None or denominator is None or timestamp is None:
+                continue
+            events.append(
+                SplitEvent(
+                    effective_date=datetime.fromtimestamp(timestamp, tz=timezone.utc).date(),
+                    numerator=float(numerator),
+                    denominator=float(denominator),
+                )
+            )
+        return sorted(events, key=lambda e: e.effective_date)
+
+    def fetch_quote(self, ref: InstrumentRef) -> float | None:
+        """Current (exchange-delayed) price, for the live portfolio estimate.
+
+        Reuses the same throttled ``_get`` as ``fetch_daily`` — one rate-limit
+        bucket to reason about, not two — but asks for a single day rather than
+        a full range, the lightest payload this endpoint offers. Reads
+        ``meta.regularMarketPrice``, which Yahoo includes on every chart
+        response regardless of the requested range.
+        """
+        symbol = ref.provider_symbol
+        if not symbol:
+            raise SymbolNotFound(f"{self.name} needs a provider symbol")
+
+        payload = self._get(symbol, {"range": "1d", "interval": "1d"})
+        chart = payload.get("chart") or {}
+        if chart.get("error"):
+            return None
+
+        results = chart.get("result") or []
+        if not results:
+            return None
+
+        price = (results[0].get("meta") or {}).get("regularMarketPrice")
+        return float(price) if price is not None else None
 
 
 def _parse_bars(result: dict) -> list[Bar]:

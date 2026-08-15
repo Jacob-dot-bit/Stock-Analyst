@@ -14,7 +14,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
 from app.main import app
@@ -23,9 +22,16 @@ from tests.test_providers import FakeProvider
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, tmp_path):
+    # A real file, not `StaticPool`-backed `:memory:`: the price refresh now
+    # runs several instruments concurrently, each in its own DB session
+    # (DEVLOG "Decision 3n.1") — StaticPool hands every session the exact same
+    # underlying sqlite3 connection object, which is not safe to drive from
+    # multiple threads at once (unlike a real file, where each session gets
+    # its own pooled connection, exactly as production already works).
     engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        f"sqlite:///{tmp_path / 'test.db'}",
+        connect_args={"check_same_thread": False, "timeout": 30},
     )
     Base.metadata.create_all(engine)
     TestingSession = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
@@ -152,6 +158,63 @@ class TestRefreshEndpoint:
 
         assert provider.calls == 0
 
+    def test_a_watchlisted_instrument_is_included_in_a_general_refresh(self, client, monkeypatch):
+        # The watchlist add flow best-effort-fetches on its own -- pin it to
+        # no providers so that fetch is a no-op and doesn't consume the
+        # FakeProvider's call count set up below for the refresh under test.
+        monkeypatch.setattr("app.routers.watchlist.get_provider_chain", lambda: ProviderChain([]))
+        client.post("/api/watchlist", json={"broker_symbol": "MC.FR"})
+
+        provider = FakeProvider("yahoo", bars=daily_bars())
+        use_provider(monkeypatch, provider)
+        client.post("/api/prices/refresh")
+
+        assert provider.calls == 1
+        watched = client.get("/api/watchlist").json()
+        assert watched[0]["current_price"] is not None
+
+    def test_a_watchlisted_instrument_is_excluded_from_a_targeted_retry(self, client, monkeypatch):
+        monkeypatch.setattr("app.routers.watchlist.get_provider_chain", lambda: ProviderChain([]))
+        client.post(
+            "/api/portfolio/positions", json={"broker_symbol": "AAPL.US", "quantity": 1, "avg_price": 100.0}
+        )
+        client.post("/api/watchlist", json={"broker_symbol": "MC.FR"})
+
+        provider = FakeProvider("yahoo", bars=daily_bars())
+        use_provider(monkeypatch, provider)
+        client.post("/api/prices/refresh?symbols=AAPL.US")
+
+        assert provider.calls == 1
+        watched = client.get("/api/watchlist").json()
+        assert watched[0]["current_price"] is None
+
+    def test_a_screener_candidate_is_included_in_a_general_refresh(self, client, monkeypatch):
+        monkeypatch.setattr("app.routers.screener.get_provider_chain", lambda: ProviderChain([]))
+        client.post("/api/screener", json={"broker_symbol": "MC.FR"})
+
+        provider = FakeProvider("yahoo", bars=daily_bars())
+        use_provider(monkeypatch, provider)
+        client.post("/api/prices/refresh")
+
+        assert provider.calls == 1
+        candidates = client.get("/api/screener").json()
+        assert candidates[0]["current_price"] is not None
+
+    def test_a_screener_candidate_is_excluded_from_a_targeted_retry(self, client, monkeypatch):
+        monkeypatch.setattr("app.routers.screener.get_provider_chain", lambda: ProviderChain([]))
+        client.post(
+            "/api/portfolio/positions", json={"broker_symbol": "AAPL.US", "quantity": 1, "avg_price": 100.0}
+        )
+        client.post("/api/screener", json={"broker_symbol": "MC.FR"})
+
+        provider = FakeProvider("yahoo", bars=daily_bars())
+        use_provider(monkeypatch, provider)
+        client.post("/api/prices/refresh?symbols=AAPL.US")
+
+        assert provider.calls == 1
+        candidates = client.get("/api/screener").json()
+        assert candidates[0]["current_price"] is None
+
 
 class TestSparklines:
     def test_empty_before_any_refresh(self, client, xtb_export):
@@ -198,6 +261,47 @@ class TestHistory:
 
     def test_unknown_instrument(self, client):
         assert client.get("/api/prices/9999/history").status_code == 404
+
+    def test_reflects_a_confirmed_split(self, client, monkeypatch, xtb_export):
+        """A raw, unadjusted 10-for-1 split (real pre-split price ~10x the
+        post-split one) must not show as a fake cliff once recorded — this
+        is the chart the user actually looks at."""
+        import_statement(client, xtb_export)
+        split_day = date.today() - timedelta(days=2)
+        bars = [
+            Bar(bar_date=split_day - timedelta(days=1), open=1000, high=1000, low=1000, close=1000.0, volume=100),
+            Bar(bar_date=split_day, open=100, high=100, low=100, close=100.0, volume=100),
+            Bar(bar_date=split_day + timedelta(days=1), open=101, high=101, low=101, close=101.0, volume=100),
+        ]
+        use_provider(monkeypatch, FakeProvider("yahoo", bars=bars))
+        client.post("/api/prices/refresh")
+
+        instrument_id = client.get("/api/portfolio").json()["positions"][0]["instrument"]["id"]
+        before = client.get(f"/api/prices/{instrument_id}/history").json()
+        raw_by_date = {p["date"]: p["close"] for p in before["points"]}
+        assert raw_by_date[split_day.isoformat()] == pytest.approx(100.0)
+
+        created = client.post(
+            "/api/corporate-actions",
+            json={
+                "instrument_id": instrument_id,
+                "action_type": "split",
+                "effective_date": split_day.isoformat(),
+                "ratio_numerator": 10,
+                "ratio_denominator": 1,
+            },
+        )
+        assert created.status_code == 201
+        assert created.json()["price_history_status"] == "raw"
+
+        after = client.get(f"/api/prices/{instrument_id}/history").json()
+        adjusted_by_date = {p["date"]: p["close"] for p in after["points"]}
+
+        # The pre-split close is restated to the post-split basis — smooth
+        # across the split date instead of a fake 10x cliff.
+        assert adjusted_by_date[(split_day - timedelta(days=1)).isoformat()] == pytest.approx(100.0)
+        assert adjusted_by_date[split_day.isoformat()] == pytest.approx(100.0)
+        assert adjusted_by_date[(split_day + timedelta(days=1)).isoformat()] == pytest.approx(101.0)
 
 
 class TestIsinEntry:

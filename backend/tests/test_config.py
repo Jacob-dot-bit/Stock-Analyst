@@ -41,12 +41,12 @@ class TestPlaceholderKeys:
         assert Settings().twelvedata_api_key == "ab12cd34"
 
     def test_the_rule_covers_every_credential(self, monkeypatch):
-        for name in ("FINNHUB_API_KEY", "PERPLEXITY_API_KEY", "SEC_USER_AGENT"):
+        for name in ("POLYGON_API_KEY", "PERPLEXITY_API_KEY", "SEC_USER_AGENT"):
             monkeypatch.setenv(name, "changeme")
 
         settings = Settings()
 
-        assert settings.finnhub_enabled is False
+        assert settings.polygon_enabled is False
         assert settings.perplexity_enabled is False
         assert settings.edgar_enabled is False
 

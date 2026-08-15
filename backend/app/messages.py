@@ -38,6 +38,13 @@ class MessageCode:
     # --- Post-import findings ------------------------------------------------
     UNRESOLVED_SYMBOLS = "import.unresolvedSymbols"  # {count, symbols}
 
+    # --- Amundi-specific ------------------------------------------------------
+    #: Amundi also sends a "Relevé d'information fiscale" (profit-sharing paid
+    #: directly to the user's bank account) through the same portal — it never
+    #: touches a tracked position, so it is recognised and skipped rather than
+    #: mis-parsed or silently dropped. See DEVLOG "Decision 3u.39".
+    AMUNDI_FISCAL_DOCUMENT_SKIPPED = "import.amundiFiscalDocumentSkipped"  # {filename}
+
 
 class PriceOutcome:
     """Result of trying to refresh one instrument's price history.
@@ -73,6 +80,108 @@ class PriceOutcome:
     #: run, because "rate limited" repeated 38 times tells the user nothing they can act
     #: on, whereas "configure a fallback" does.
     NO_FALLBACK_CONFIGURED = "prices.noFallbackConfigured"
+
+
+class FundamentalsOutcome:
+    """Result of trying to fetch one instrument's fundamentals from SEC EDGAR
+    or ESEF (`fundamentals/service.py` tries EDGAR first, ESEF as the
+    fallback — DEVLOG "Decision 3t.1"), whichever actually answers.
+
+    Mirrors `PriceOutcome`'s reasoning: best-effort per instrument, not a single
+    pass/fail for the whole batch, since coverage genuinely varies (`provider`
+    on `UPDATED` says which of the two sources actually supplied the data).
+    """
+
+    UPDATED = "fundamentals.updated"  # {symbol, concepts, provider}
+    ALREADY_FRESH = "fundamentals.alreadyFresh"  # {symbol}
+    #: ETFs and CFDs have no company financials — not a failure, a property of
+    #: the instrument. See `symbols/mapping.py::ANALYSABLE_CATEGORIES`.
+    NOT_APPLICABLE = "fundamentals.notApplicable"  # {symbol}
+    #: Neither source was even queried — EDGAR disabled (no SEC_USER_AGENT)
+    #: *and* the instrument has no name to search ESEF with either. Distinct
+    #: from SYMBOL_NOT_FOUND, which means at least one source was actually
+    #: asked and came back empty.
+    NO_PROVIDER = "fundamentals.noProvider"  # {symbol}
+    SYMBOL_NOT_FOUND = "fundamentals.symbolNotFound"  # {symbol}
+    RATE_LIMITED = "fundamentals.rateLimited"  # {symbol}
+    FAILED = "fundamentals.failed"  # {symbol, error}
+    ALREADY_RUNNING = "fundamentals.alreadyRunning"
+
+
+class NewsOutcome:
+    """Result of trying to fetch one instrument's Alpha Vantage news +
+    sentiment (`analysis/news_service.py`). Free but quota-shared with price
+    fetches — see `providers/registry.py::get_alpha_vantage_provider`.
+    """
+
+    UPDATED = "news.updated"  # {symbol, articles}
+    ALREADY_FRESH = "news.alreadyFresh"  # {symbol, days}
+    #: A legitimate answer, not a failure — persisted so the next call within
+    #: the TTL window is ALREADY_FRESH, not a repeat empty fetch.
+    EMPTY = "news.empty"  # {symbol}
+    NOT_MAPPED = "news.notMapped"  # {symbol}
+    NO_PROVIDER = "news.noProvider"  # {symbol}
+    RATE_LIMITED = "news.rateLimited"  # {symbol}
+    FAILED = "news.failed"  # {symbol, error}
+
+
+class CommentaryOutcome:
+    """Result of trying to fetch one instrument's Perplexity commentary
+    (`analysis/commentary_service.py`). See DEVLOG "Decision 0.3": one
+    instrument at a time, on explicit request, cached — never mass screening.
+    """
+
+    UPDATED = "commentary.updated"  # {symbol}
+    ALREADY_FRESH = "commentary.alreadyFresh"  # {symbol, days}
+    NO_PROVIDER = "commentary.noProvider"  # {symbol}
+    RATE_LIMITED = "commentary.rateLimited"  # {symbol}
+    FAILED = "commentary.failed"  # {symbol, error}
+
+
+class PerformanceNote:
+    """A caveat on a position's `broker_net_pl`/`broker_net_pl_pct` when
+    they come from an approximation rather than a true cost basis — stored
+    on `Position.performance_note` via `Message.as_dict()`, the same
+    language-neutral shape as an import diagnostic. See DEVLOG "Decision
+    3u.47" and `app/models.py::Position.performance_note`.
+    """
+
+    #: Mintos Core P2P's gain is real cumulative interest/bonus income
+    #: minus fees/tax (`app/ingest/mintos_transactions_import.py`), not a
+    #: price-appreciation P&L like an ordinary security.
+    MINTOS_INTEREST_INCOME = "performance.mintosInterestIncome"  # {since}
+    #: An Amundi fund's gain, when its source didn't disclose one (the
+    #: Synthese export never does — Decision 3u.44), pro-rated from the
+    #: account's known contributions — incomplete if any year was never
+    #: imported, which can overstate this figure.
+    AMUNDI_APPROXIMATE_GAIN = "performance.amundiApproximateGain"  # {account, since}
+    #: A real (not pro-rated) gain for one Amundi fund whose current
+    #: source discloses none, computed from that fund's own last known
+    #: disclosed figure (a prior import's real gain) — used only when the
+    #: fund's quantity hasn't changed since then, i.e. no new contribution
+    #: to *this* fund muddies the comparison. See DEVLOG "Decision 3u.48".
+    AMUNDI_REAL_GAIN_SINCE_SNAPSHOT = "performance.amundiRealGainSinceSnapshot"  # {since}
+
+
+class ValuationNote:
+    """A caveat on a position's *value* (not its P&L) when that value is a
+    broker-declared valuation from a periodic statement rather than a live
+    market quote — Mintos Core P2P, Amundi ESR funds. Stored on
+    `Position.valuation_note`, the same `{code, params}` shape as
+    `PerformanceNote`. Distinct from `PerformanceNote`: a position can have
+    a perfectly fresh value and still no computable P&L (that's
+    `PerformanceNote`'s job), or a stale value and a real P&L (Amundi's
+    annual PDF discloses a gain even though the statement itself is a
+    year old). See DEVLOG "Decision 3u.50".
+    """
+
+    #: The declared value is within this source's expected update cadence
+    #: (see `routers/portfolio.py::DECLARED_VALUE_FRESHNESS_DAYS`).
+    DECLARED_FRESH = "valuation.declaredFresh"  # {provider, date}
+    #: The declared value predates this source's expected update cadence —
+    #: still included in every total (a known value is never dropped for
+    #: being old), just flagged so it isn't mistaken for a live quote.
+    DECLARED_STALE = "valuation.declaredStale"  # {provider, date}
 
 
 class SymbolReason:

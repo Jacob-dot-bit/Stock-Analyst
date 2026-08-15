@@ -7,7 +7,6 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.messages import PriceOutcome
@@ -18,9 +17,16 @@ from tests.test_providers import FakeProvider
 
 
 @pytest.fixture
-def db():
+def db(tmp_path):
+    # A real file, not `StaticPool`-backed `:memory:`: refresh_many now runs
+    # several instruments concurrently, each in its own DB session (DEVLOG
+    # "Decision 3n.1") — StaticPool hands every session the same underlying
+    # sqlite3 connection object, unsafe to drive from multiple threads at
+    # once (a real file gives each session its own pooled connection, exactly
+    # like production).
     engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        f"sqlite:///{tmp_path / 'test.db'}",
+        connect_args={"check_same_thread": False, "timeout": 30},
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)()
@@ -262,6 +268,26 @@ class TestRefreshMany:
         assert report.failed == 1
         assert len(report.outcomes) == 2
 
+    def test_many_instruments_are_refreshed_correctly_when_run_concurrently(self, db):
+        """Refreshes now process several instruments at once (DEVLOG "Decision
+        3n.1") — this proves the outcome is identical to what a sequential run
+        would produce: every instrument settled exactly once, no dropped or
+        duplicated provider calls, and every worker's own DB session actually
+        persisted (visible back through this test's own session)."""
+        count = 12
+        instruments = [make_instrument(db, f"C{i}.US", f"C{i}") for i in range(count)]
+        provider = FakeProvider("yahoo", bars=bars_ending(date.today()))
+        chain = ProviderChain([provider])
+
+        report = refresh_many(db, instruments, chain, budget_seconds=30)
+
+        assert report.updated == count
+        assert report.remaining == 0
+        assert provider.calls == count
+
+        stored = db.execute(select(PriceBar)).scalars().all()
+        assert {bar.instrument_id for bar in stored} == {i.id for i in instruments}
+
     def test_budget_stops_the_run_and_reports_what_is_left(self, db, monkeypatch):
         """Partial progress must be visible, not hidden behind a hang or a half-failure."""
         instruments = [make_instrument(db, f"S{i}.US", f"S{i}") for i in range(5)]
@@ -301,21 +327,29 @@ class TestRefreshMany:
         assert report.updated == 1
         assert report.remaining == 0
 
-    def test_work_is_kept_when_a_later_instrument_is_rate_limited(self, db):
-        """A limit hit halfway through must not discard what already succeeded."""
+    def test_work_already_done_survives_a_later_rate_limit(self, db):
+        """A limit hit in one run must not discard bars an earlier run already
+        stored. (Previously this drove both instruments through one shared
+        refresh_many call and relied on "first" being processed — and hence
+        committed — strictly before "second" failed. Instruments now run
+        several at a time (DEVLOG "Decision 3n.1"), so two instruments in the
+        *same* batch sharing one provider no longer have a guaranteed order:
+        if the failing one trips the provider's cooldown before the other's
+        own attempt is checked, the other can get skipped too — a real,
+        accepted consequence of true concurrency, not a bug. Two separate
+        runs, as below, tests the actual guarantee — persisted work survives
+        a later failure — without depending on a race.
+        """
         first = make_instrument(db, "AAPL.US", "AAPL")
         second = make_instrument(db, "MSFT.US", "MSFT")
 
-        class Flaky(FakeProvider):
-            def fetch_daily(self, ref, start, end):
-                self.calls += 1
-                if ref.provider_symbol == "MSFT":
-                    raise RateLimited("slow down")
-                return bars_ending(date.today())
+        ok_chain = ProviderChain([FakeProvider("yahoo", bars=bars_ending(date.today()))])
+        refresh_many(db, [first], ok_chain)
+        assert db.execute(select(PriceBar)).scalars().all()
 
-        report = refresh_many(db, [first, second], ProviderChain([Flaky("yahoo")]))
+        limited_chain = ProviderChain([FakeProvider("yahoo", error=RateLimited("slow down"))])
+        report = refresh_many(db, [second], limited_chain)
 
-        assert report.updated == 1
         assert report.failed == 1
         assert db.execute(select(PriceBar)).scalars().all()  # first instrument's bars survived
 

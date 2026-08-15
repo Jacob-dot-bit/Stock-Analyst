@@ -79,7 +79,19 @@ CONCEPT_TAGS: dict[str, tuple[str, ...]] = {
         "CashAndCashEquivalentsAtCarryingValue",
         "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
     ),
-    "debt_long_term": ("LongTermDebtNoncurrent", "LongTermDebt"),
+    # `ConvertibleLongTermNotesPayable`/`ConvertibleDebtNoncurrent` added after
+    # live verification (Decision 3t.1 follow-up): Datadog and Okta finance
+    # via convertible notes rather than conventional long-term debt, so
+    # neither of the first two tags ever matches for them — genuinely
+    # untagged otherwise, not a scoring gap that can be closed by more tags
+    # (confirmed live: IONQ, DouYu and Honest Company simply carry no
+    # long-term debt at all).
+    "debt_long_term": (
+        "LongTermDebtNoncurrent",
+        "LongTermDebt",
+        "ConvertibleLongTermNotesPayable",
+        "ConvertibleDebtNoncurrent",
+    ),
     "operating_cash_flow": ("NetCashProvidedByUsedInOperatingActivities",),
     "capex": (
         "PaymentsToAcquirePropertyPlantAndEquipment",
@@ -98,10 +110,19 @@ IFRS_CONCEPT_TAGS: dict[str, tuple[str, ...]] = {
     "liabilities": ("Liabilities",),
     "equity": ("Equity", "EquityAttributableToOwnersOfParent"),
     "cash": ("CashAndCashEquivalents",),
-    "debt_long_term": ("NoncurrentPortionOfNoncurrentBorrowings", "NoncurrentBorrowings"),
+    # `LongtermBorrowings` added after live ESEF verification (Decision 3t.1):
+    # Air Liquide, Dassault Systèmes and Air France KLM all tag debt under
+    # this name rather than either of the first two — a fallback, not a
+    # replacement, so a filer already matching on the first two is unaffected.
+    "debt_long_term": ("NoncurrentPortionOfNoncurrentBorrowings", "NoncurrentBorrowings", "LongtermBorrowings"),
     "operating_cash_flow": ("CashFlowsFromUsedInOperatingActivities",),
     "capex": ("PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",),
-    "shares_diluted": ("WeightedAverageShares",),
+    # `NumberOfSharesOutstanding` is a point-in-time count, not the diluted
+    # weighted average `WeightedAverageShares` is — a lower-priority fallback
+    # for filers (confirmed live: Air France KLM) that don't tag the latter at
+    # all. `AnnualFigure.tag` still records which one actually produced a
+    # given value, so this substitution is never silent.
+    "shares_diluted": ("WeightedAverageShares", "NumberOfSharesOutstanding"),
 }
 
 
