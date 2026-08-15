@@ -1,8 +1,13 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { AlertsBell } from './components/AlertsBell'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { useI18n } from './i18n'
-import { Placeholder } from './pages/Placeholder'
+import { Dividends } from './pages/Dividends'
 import { Portfolio } from './pages/Portfolio'
+import { Screener } from './pages/Screener'
+import Settings from './pages/Settings'
+import { Transactions } from './pages/Transactions'
+import { Watchlist } from './pages/Watchlist'
 
 export default function App() {
   const { t } = useI18n()
@@ -13,9 +18,12 @@ export default function App() {
         <span className="brand">{t('app.title')}</span>
         <nav className="nav">
           <NavLink to="/portfolio">{t('nav.portfolio')}</NavLink>
+          <NavLink to="/transactions">{t('nav.transactions')}</NavLink>
           <NavLink to="/watchlist">{t('nav.watchlist')}</NavLink>
           <NavLink to="/gems">{t('nav.gems')}</NavLink>
+          <NavLink to="/settings">{t('settings.title')}</NavLink>
         </nav>
+        <AlertsBell />
         <LanguageSwitcher />
       </header>
 
@@ -23,22 +31,11 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/portfolio" replace />} />
           <Route path="/portfolio" element={<Portfolio />} />
-          <Route
-            path="/watchlist"
-            element={
-              <Placeholder
-                titleKey="watchlist.title"
-                descriptionKey="watchlist.description"
-                phaseKey="phase.4"
-              />
-            }
-          />
-          <Route
-            path="/gems"
-            element={
-              <Placeholder titleKey="gems.title" descriptionKey="gems.description" phaseKey="phase.5" />
-            }
-          />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/dividends" element={<Dividends />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/gems" element={<Screener />} />
         </Routes>
       </main>
 

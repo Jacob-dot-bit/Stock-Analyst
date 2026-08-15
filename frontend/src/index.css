@@ -14,6 +14,26 @@
   --warning: #8a5a00;
   --warning-soft: #fdf3e0;
 
+  /* Score bands (analysis indicator, not a verdict) — deliberately its own
+     blue/gray scale, never --positive/--negative/--warning: a score is a
+     descriptive aggregate, not a gain/loss or an alert. See DEVLOG
+     "Decision 3u.37". High/low reuse --accent/--text-muted (already
+     neutral-information tokens elsewhere); only the middle tier needed a
+     dedicated in-between color. */
+  --score-mid: #4a6fa5;
+  --score-mid-soft: #eef2f8;
+
+  /* Categorical series palette (validated: adjacent-pair CVD safe, ≤8 slots).
+     Fixed order — a given slot index always gets the same hue, never cycled. */
+  --series-1: #2a78d6; /* blue */
+  --series-2: #eb6834; /* orange */
+  --series-3: #1baf7a; /* aqua */
+  --series-4: #eda100; /* yellow */
+  --series-5: #e87ba4; /* magenta */
+  --series-6: #008300; /* green */
+  --series-7: #4a3aa7; /* violet */
+  --series-8: #e34948; /* red */
+
   --radius: 10px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
 
@@ -38,7 +58,18 @@
     --negative-soft: #3a1f1d64;
     --warning: #f0c069;
     --warning-soft: #33291364;
+    --score-mid: #a8c5e8;
+    --score-mid-soft: #2a374d80;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
   }
 }
 
@@ -100,6 +131,18 @@ body {
   font-weight: 550;
 }
 
+.alerts-bell {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.alerts-bell:hover { filter: brightness(0.95); }
+
 /* Pushes the language switcher to the far right of the bar. */
 .language-switcher {
   margin-left: auto;
@@ -127,7 +170,11 @@ body {
 .content {
   flex: 1;
   width: 100%;
-  max-width: 1180px;
+  /* Widened from 1180px — the positions table (13 columns, one per data
+     point) genuinely needs more room on a real desktop monitor than the
+     rest of the app's prose-width pages do; this was forcing it to
+     horizontal-scroll on screens that had plenty of space to spare. */
+  max-width: 1440px;
   margin: 0 auto;
   padding: 1.5rem;
 }
@@ -165,6 +212,21 @@ body {
   font-weight: 600;
 }
 
+.settings-group {
+  margin-bottom: 1.8rem;
+}
+
+.settings-group > h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.settings-group > p.muted {
+  margin: 0 0 0.9rem;
+  font-size: 0.85rem;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -200,6 +262,28 @@ body {
 
 .table-wrap {
   overflow-x: auto;
+  /* A wide table (13 columns) routinely needs to scroll even at the widened
+     .content max-width — macOS hides scrollbars until actively scrolling by
+     default, which made that scrolling undiscoverable: nothing on screen
+     hinted the cut-off columns were reachable at all, not missing. Forced
+     visible here, cross-browser, rather than relying on the OS default. */
+  scrollbar-width: auto;
+  scrollbar-color: var(--text-muted) var(--surface-alt);
+  padding-bottom: 0.3rem;
+}
+
+.table-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: var(--surface-alt);
+  border-radius: 999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 999px;
 }
 
 table {
@@ -227,6 +311,26 @@ tbody tr:hover {
   background: var(--surface-alt);
 }
 
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+th.sortable:hover {
+  color: var(--text);
+}
+
+th.sortable.sorted {
+  color: var(--accent);
+}
+
+th .sort-arrow {
+  display: inline-block;
+  width: 0.9em;
+  margin-left: 0.15rem;
+  font-size: 0.7rem;
+}
+
 td.num, th.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -250,6 +354,318 @@ td.negative { color: var(--negative); }
 .tag.manual { background: var(--accent-soft); color: var(--accent); }
 .tag.unresolved { background: var(--warning-soft); color: var(--warning); }
 .tag.neutral { background: var(--surface-alt); color: var(--text-muted); }
+.tag.negative { background: var(--negative-soft); color: var(--negative); }
+
+/* Corporate-action confidence badges — distinct from provenance/source.
+   "confirmed" reuses the accent (blue) already meaning "information" for
+   .tag.manual; "review" reuses warning/amber (never negative/red: a
+   single-source finding or a conflict is a prompt to look, not an error). */
+.tag.confidence-confirmed { background: var(--accent-soft); color: var(--accent); }
+.tag.confidence-review { background: var(--warning-soft); color: var(--warning); }
+.tag.confidence-neutral { background: var(--surface-alt); color: var(--text-muted); }
+
+.data-health-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.weight-high {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+/* --- Refresh progress bar --- */
+
+.refresh-progress-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+
+.refresh-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.refresh-progress-label {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+}
+
+/* Indeterminate variant: no total/done to report (e.g. a live Finviz scan),
+ * just a moving segment so the operation reads as "running", not "stuck". */
+.refresh-progress-fill.indeterminate {
+  width: 40% !important;
+  animation: refresh-progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes refresh-progress-indeterminate {
+  0% {
+    margin-left: 0%;
+  }
+  50% {
+    margin-left: 60%;
+  }
+  100% {
+    margin-left: 0%;
+  }
+}
+
+/* --- Price status badge --- */
+
+.price-status {
+  cursor: help;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.price-status-fresh { color: var(--positive); }
+.price-status-stale { color: var(--warning); }
+.price-status-error { color: var(--negative); }
+.price-status-not_priceable,
+.price-status-unmapped { color: var(--text-muted); }
+
+/* --- Score badge + detail (Phase 3 scoring engine) --- */
+
+.score-badge {
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.score-badge-expanded { border-color: var(--accent); }
+
+.score-badge-chevron {
+  margin-left: 0.25rem;
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+/* Deliberately blue/gray, not the positive/warning/negative triad used for
+   gains, losses, and alerts elsewhere — a score is a descriptive indicator,
+   not a verdict. See DEVLOG "Decision 3u.37". */
+.score-band-high { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.score-band-mid { background: var(--score-mid-soft); color: var(--score-mid); border-color: transparent; }
+.score-band-low { background: var(--surface-alt); color: var(--text-muted); border-color: transparent; }
+.score-band-none { color: var(--text-muted); background: none; border: none; cursor: default; padding: 0; }
+
+.score-detail-row td {
+  background: var(--surface-alt);
+  padding: 0.9rem 1rem;
+}
+
+.score-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.score-summary {
+  grid-column: 1 / -1;
+  margin-bottom: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.score-summary-sentence { margin: 0 0 0.4rem; }
+
+.score-summary-lists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.score-summary-list strong { display: block; margin-bottom: 0.2rem; }
+
+.score-summary-list ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.score-detail-pillar-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.score-detail-metrics {
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.score-detail-metrics td {
+  padding: 0.15rem 0.3rem;
+  border: none;
+}
+
+.score-detail-reason {
+  font-size: 0.72rem;
+}
+
+/* --- Insights: news/sentiment + AI commentary (phase 6) --- */
+
+.insights-badge {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.insights-badge-expanded { border-color: var(--accent); color: var(--accent); }
+
+.insights-detail-row td {
+  background: var(--surface-alt);
+  padding: 0.9rem 1rem;
+}
+
+.insights-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.2rem;
+}
+
+.insights-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.insights-articles, .insights-citations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.insights-article {
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* Deliberately one flat informational style regardless of tone — this
+   describes an article's tone, not the app's own view, so it never uses
+   --positive/--negative. The label text itself ("nettement favorable" vs
+   "défavorable") already carries the direction. See DEVLOG "Decision
+   3u.38". */
+.sentiment-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+/* --- Position detail panel: one consolidated "Détails" row per position,
+   replacing the separate score/insights expand rows in PositionsTable
+   specifically (DEVLOG "Decision 3u.31"). Vertical sections, not tabs. --- */
+
+.position-detail-row td {
+  background: var(--surface-alt);
+  padding: 0.9rem 1rem;
+}
+
+.position-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.position-detail-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.position-detail-section h5 {
+  margin: 0.7rem 0 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.position-detail-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem 1.2rem;
+  margin: 0;
+}
+
+.position-detail-facts > div { display: flex; flex-direction: column; }
+.position-detail-facts dt { font-size: 0.72rem; color: var(--text-muted); }
+.position-detail-facts dd { margin: 0; font-size: 0.9rem; }
+
+.position-detail-table {
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.position-detail-table td, .position-detail-table th {
+  padding: 0.2rem 0.4rem;
+}
+
+/* --- Portfolio breakdown (stacked bar + legend) --- */
+
+.breakdown-bar {
+  display: flex;
+  height: 20px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-alt);
+}
+
+.breakdown-segment {
+  height: 100%;
+  box-sizing: border-box;
+  border-right: 2px solid var(--surface);
+}
+
+.breakdown-segment:last-child {
+  border-right: none;
+}
+
+.breakdown-legend {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.4rem;
+}
+
+.breakdown-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.breakdown-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.breakdown-label {
+  font-weight: 500;
+}
+
+.breakdown-value {
+  font-size: 0.8rem;
+}
 
 /* --- Messages --- */
 
@@ -273,6 +689,12 @@ td.negative { color: var(--negative); }
   color: var(--negative);
 }
 
+.notice.success {
+  background: var(--positive-soft);
+  border-color: var(--positive);
+  color: var(--positive);
+}
+
 .notice.info {
   background: var(--accent-soft);
   border-color: var(--accent);
@@ -285,6 +707,73 @@ td.negative { color: var(--negative); }
 }
 
 .notice li { margin-bottom: 0.25rem; }
+
+/* --- Carte "à regarder aujourd'hui" --- */
+
+.attention-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attention-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  padding-left: 1.1rem;
+  position: relative;
+}
+
+.attention-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.attention-item.warning::before { background: var(--warning); }
+.attention-item.missing::before { background: var(--negative); }
+
+/* --- Checklist de démarrage --- */
+
+.onboarding-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.onboarding-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.onboarding-check {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.onboarding-item.done {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.onboarding-item.done .onboarding-check { color: var(--positive); }
+
+.onboarding-why {
+  color: var(--text-muted);
+  text-decoration: none;
+}
 
 /* --- Formulaires et boutons --- */
 
@@ -347,6 +836,81 @@ input, select {
 }
 
 .field input { width: 150px; }
+
+.symbol-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  margin: 2px 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  width: 260px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.symbol-suggestions li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.symbol-suggestions li button:hover {
+  background: var(--surface-alt);
+}
+
+.column-picker {
+  position: relative;
+}
+
+.column-picker summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.column-picker summary::-webkit-details-marker {
+  display: none;
+}
+
+.column-picker-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  margin: 4px 0 0;
+  padding: 0.5rem;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.column-picker-menu label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
 
 .dropzone {
   border: 1.5px dashed var(--border);

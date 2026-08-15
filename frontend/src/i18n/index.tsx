@@ -76,6 +76,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     () => ({
       two: new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       upToFour: new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }),
+      // Whole numbers (e.g. a 0-100 score) — no forced decimals, unlike `two`.
+      upToZero: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
       date: new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }),
     }),
     [locale],
@@ -85,6 +87,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     // A missing value renders as an em dash, never as "0": unknown is not zero.
     const formatNumber = (input: number | null | undefined, digits = 2) => {
       if (input === null || input === undefined) return '—'
+      if (digits === 0) return numberFormats.upToZero.format(input)
       return digits === 2 ? numberFormats.two.format(input) : numberFormats.upToFour.format(input)
     }
 

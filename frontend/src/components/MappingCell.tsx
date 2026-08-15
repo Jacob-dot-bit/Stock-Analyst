@@ -86,6 +86,14 @@ export function MappingCell({ instrument, onUpdated }: Props) {
 
   const { provider_symbol, mapping_status } = instrument
 
+  // Structurally never priceable (CFD, corporate-action residual, P2P
+  // aggregate, employee-savings fund) — there is no ticker to look up, so
+  // "needs fixing" would send the user hunting for nothing. Same exclusion
+  // as `_unresolved_instruments()` on the backend. See DEVLOG "Decision 3u.39".
+  if (instrument.not_priceable_reason) {
+    return provider_symbol ? <code>{provider_symbol}</code> : <span className="muted">{t('common.notApplicable')}</span>
+  }
+
   return (
     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
       {provider_symbol ? <code>{provider_symbol}</code> : null}
