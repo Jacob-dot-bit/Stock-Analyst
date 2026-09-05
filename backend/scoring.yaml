@@ -1,0 +1,122 @@
+# Scoring engine tuning — pillar weights, metric weights, and score bands.
+#
+# Edited freely: this file is read fresh at process start (app/scoring/config.py's
+# get_scoring_config() is lru_cache'd for the life of the process), never written
+# to by the app. A metric missing its inputs is dropped rather than scored as 0 —
+# its weight is excluded and the remaining weights in its pillar renormalize; a
+# pillar with nothing scorable is itself dropped the same way at the composite
+# level. See DEVLOG "Decision 3r.1".
+#
+# `direction: lower_is_better` / `higher_is_better` metrics score linearly between
+# `zero_at` (0 points) and `full_at` (100 points). `kind: binary` metrics (the
+# Quality pillar's Piotroski-style checks) score 0 or 100, pass/fail.
+
+version: 1
+
+pillars:
+  value:
+    weight: 30
+    metrics:
+      # Graham's defensive-investor P/E ceiling (The Intelligent Investor).
+      pe_ratio:
+        weight: 25
+        direction: lower_is_better
+        full_at: 15
+        zero_at: 30
+      # Graham's P/B ≤ 1.5 criterion (paired with the P/E×P/B ≤ 22.5 "Graham number").
+      pb_ratio:
+        weight: 20
+        direction: lower_is_better
+        full_at: 1.5
+        zero_at: 4.0
+      # Buffett's owner-earnings / free-cash-flow-yield emphasis.
+      fcf_yield:
+        weight: 20
+        direction: higher_is_better
+        full_at: 0.08
+        zero_at: 0.0
+      # Graham's conservative-leverage criterion.
+      debt_to_equity:
+        weight: 20
+        direction: lower_is_better
+        full_at: 0.5
+        zero_at: 2.0
+      # Trailing-12mo per-share dividend (lot-replayed, see DEVLOG "Decision
+      # 3u.4") over current price — a market-comparable shareholder-yield
+      # signal, not "yield on cost". Secondary to Graham/Buffett's core value
+      # metrics above, so kept at the lowest weight of the five.
+      dividend_yield:
+        weight: 15
+        direction: higher_is_better
+        full_at: 0.04
+        zero_at: 0.0
+
+  growth:
+    weight: 25
+    metrics:
+      revenue_cagr:
+        weight: 40
+        direction: higher_is_better
+        full_at: 0.15
+        zero_at: 0.0
+        min_years: 3
+      net_income_cagr:
+        weight: 30
+        direction: higher_is_better
+        full_at: 0.15
+        zero_at: 0.0
+        min_years: 3
+      # O'Shaughnessy-style growth-persistence: share of years with positive YoY
+      # revenue growth, not just the endpoint-to-endpoint CAGR.
+      revenue_growth_consistency:
+        weight: 30
+        direction: higher_is_better
+        full_at: 1.0
+        zero_at: 0.4
+        min_years: 3
+
+  quality:
+    weight: 25
+    metrics:
+      # Piotroski (2000) F-Score, adapted to the concepts this app has (no
+      # current assets/liabilities, so the working-capital signals are omitted;
+      # 5 of the original 9 signals survive intact).
+      roa_positive:
+        weight: 20
+        kind: binary
+      cfo_positive:
+        weight: 20
+        kind: binary
+      accruals_quality:
+        weight: 20
+        kind: binary
+      leverage_not_increasing:
+        weight: 20
+        kind: binary
+      no_significant_dilution:
+        weight: 20
+        kind: binary
+
+  technical:
+    weight: 20
+    metrics:
+      # Faber, "A Quantitative Approach to Tactical Asset Allocation" — 200-day
+      # trend filter.
+      price_vs_sma200:
+        weight: 40
+        direction: higher_is_better
+        full_at: 0.10
+        zero_at: -0.20
+      # Jegadeesh & Titman (1993) 12-1 momentum (skip the most recent month,
+      # the standard academic formulation).
+      momentum_12_1:
+        weight: 35
+        direction: higher_is_better
+        full_at: 0.20
+        zero_at: -0.20
+      # Golden-cross / death-cross trend signal.
+      sma50_vs_sma200:
+        weight: 25
+        direction: higher_is_better
+        full_at: 0.03
+        zero_at: -0.03
