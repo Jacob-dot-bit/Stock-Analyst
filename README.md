@@ -68,6 +68,19 @@ cd backend && .venv/bin/python -m uvicorn app.main:app --reload --port 8000
 
 Interactive API docs: <http://127.0.0.1:8000/docs>
 
+Schema changes go through Alembic (`backend/alembic/`), not by hand-editing the
+database. The app applies pending migrations itself on every startup — nothing to
+run manually to *use* the app. When you change a model in `app/models.py`, generate
+the migration for it before committing:
+
+```bash
+cd backend && .venv/bin/alembic revision --autogenerate -m "short description"
+```
+
+Review the generated file in `alembic/versions/` before committing — autogenerate
+is a good first draft, not a guarantee (it won't detect a plain column rename, for
+instance, and will instead emit a drop + add that loses data).
+
 ### Frontend
 
 ```bash
@@ -88,9 +101,9 @@ cleanly rather than failing startup.
 | `BASE_CURRENCY` | Currency used for portfolio totals | — |
 | `TWELVEDATA_API_KEY` | **Recommended.** Fallback price provider for when Yahoo throttles — see below | free |
 | `FMP_API_KEY` | Optional third US price source (250 req/day). Does **not** cover Euronext on the free tier | free |
-| `FINNHUB_API_KEY` | News, company profiles (60 calls/min on the free tier) | free |
 | `SEC_USER_AGENT` | Official US fundamentals via SEC EDGAR. Format `First Last email@example.com` — the SEC rejects anonymous requests | free |
-| `PERPLEXITY_API_KEY` | Qualitative synthesis | **paid** |
+| `ALPHA_VANTAGE_API_KEY` | Fallback prices, plus per-instrument news + sentiment (the "Insights" row expander) | free |
+| `PERPLEXITY_API_KEY` | Per-instrument AI qualitative commentary, on request — see "Insights" | **paid** |
 
 ### Tests
 
@@ -227,10 +240,10 @@ reported as anomalies, since that is the expected outcome.
 | 1c | Version control, data scrubbing | ✅ done |
 | 1d | English codebase, i18n (en/fr/pl) | ✅ done |
 | 2 | Provider layer, market prices, charts | ✅ done |
-| 3 | Scoring engine (5 pillars, `scoring.yaml`) | to do |
-| 4 | Watchlist and entry timing | to do |
-| 5 | Hidden gems page (screener) | to do |
-| 6 | Qualitative synthesis via Perplexity | to do |
+| 3 | Scoring engine (4 pillars, `scoring.yaml`) | ✅ done |
+| 4 | Watchlist and entry timing | ✅ done |
+| 5 | Hidden gems page (screener) | ✅ done |
+| 6 | News/sentiment (Alpha Vantage) + qualitative commentary (Perplexity) | ✅ done |
 
 ### Planned data sources (phase 2)
 
@@ -242,8 +255,8 @@ reported as anomalies, since that is the expected outcome.
 | Boerse Frankfurt | Daily prices | **Europe** | No key, no session. Keyed on **ISIN only**. Prices are the Frankfurt listing, not the home market |
 | Twelve Data | Fallback prices | **US only on the free tier** | Verified live. European venues need a paid plan — their API says so explicitly |
 | SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |
-| Finnhub | News, profiles | worldwide | 60 calls/min on the free tier |
-| Perplexity | Qualitative synthesis | worldwide | **Paid** — on demand, one instrument at a time, cached |
+| Alpha Vantage | Fallback prices + news/sentiment | worldwide | Free, 5 req/min. `NEWS_SENTIMENT` shares the same throttle as its price fetches |
+| Perplexity | Qualitative commentary | worldwide | **Paid** — on demand, one instrument at a time, cached |
 
 **Sources are routed by market, not tried blindly.** Each provider declares what it can
 serve, so a French holding never spends a request on a US-only free tier. On this
