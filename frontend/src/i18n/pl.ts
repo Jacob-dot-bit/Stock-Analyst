@@ -14,6 +14,7 @@ export const pl: Catalogue = {
   'nav.transactions': 'Transakcje',
   'nav.watchlist': 'Obserwowane',
   'nav.gems': 'Perełki',
+  'nav.taxPrep': 'Przygotowanie podatkowe',
   'alerts.tooltip': {
     one: '{count} pozycja z watchlisty osiągnęła cenę docelową',
     few: '{count} pozycje z watchlisty osiągnęły cenę docelową',
@@ -827,6 +828,44 @@ export const pl: Catalogue = {
   'dividends.status.no_withholding': 'Brak potrącenia',
   'dividends.status.unmatched_tax': 'Nieprzypisane potrącenie',
   'dividends.exportDetailCsv': 'Eksportuj (CSV, szczegóły transakcji)',
+
+  // --- Przygotowanie podatkowe ---------------------------------------------
+  'taxPrep.title': 'Roczne przygotowanie podatkowe',
+  'taxPrep.subtitle':
+    'Zaimportowane przepływy do uzgodnienia z Twoimi dokumentami podatkowymi, wg konta i roku — nigdy obliczenie podatku.',
+  'taxPrep.disclaimer':
+    'To zestawienie opiera się na zaimportowanych danych. Pomaga uzgodnić Twoje transakcje z dostępnymi dokumentami podatkowymi (IFU, raport podatkowy Mintos...), ale nie oblicza ostatecznego podatku i nie zastępuje Twojej deklaracji ani indywidualnej porady podatkowej.',
+  'taxPrep.empty': 'Brak zaimportowanych transakcji z datą.',
+  'taxPrep.emptyYear': 'Nie znaleziono istotnej podatkowo aktywności w tym roku.',
+  'taxPrep.yearLabel': 'Rok podatkowy',
+  'taxPrep.exportCsv': 'Eksportuj (CSV)',
+
+  'taxPrep.envelope.cto': 'Rachunek maklerski',
+  'taxPrep.envelope.pea': 'PEA',
+  'taxPrep.envelope.p2p': 'P2P',
+  'taxPrep.envelope.employee_savings': 'Oszczędności pracownicze',
+
+  'taxPrep.status.to_reconcile': 'Do uzgodnienia',
+  'taxPrep.status.not_applicable': 'Nie dotyczy',
+
+  'taxPrep.dividendsGross': 'Dywidendy brutto',
+  'taxPrep.dividendsWithholding': 'Podatek u źródła',
+  'taxPrep.interest': 'Odsetki',
+  'taxPrep.realizedGains': 'Zrealizowane zyski',
+  'taxPrep.realizedLosses': 'Zrealizowane straty',
+  'taxPrep.fees': 'Opłaty',
+  'taxPrep.deposits': 'Wpłaty',
+  'taxPrep.withdrawals': 'Wypłaty',
+  'taxPrep.otherFlows': 'Inne przepływy (informacyjne)',
+  'taxPrep.unmatchedSalesLine':
+    'Wykryto {count} sprzedaż(y) na kwotę {amount} — zysk/strata nieobliczone: uzgodnienie partii (FIFO) niedostępne.',
+
+  'taxPrep.noWithdrawalDetected':
+    'Nie zaimportowano żadnej wypłaty za ten rok. Zyski pozostają wewnątrz koperty i nie są opodatkowane, dopóki w niej pozostają.',
+  'taxPrep.withdrawalDetected':
+    'Wykryto wypłatę na kwotę {amount}. Obowiązujące zasady podatkowe (wiek planu, warunki wyjścia) nie są obliczane automatycznie przez to narzędzie — sprawdź je samodzielnie lub z doradcą podatkowym.',
+  'taxPrep.unmatchedSales': '{count} sprzedaż(y) bez obliczonego zysku (uzgodnienie partii niedostępne).',
+  'taxPrep.notApplicable': 'Nie wykryto żadnej istotnej podatkowo operacji w tej kopercie w tym roku.',
 
   // --- Kopia zapasowa --------------------------------------------------------
   'backup.title': 'Kopia zapasowa',

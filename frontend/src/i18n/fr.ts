@@ -7,6 +7,7 @@ export const fr: Catalogue = {
   'nav.transactions': 'Transactions',
   'nav.watchlist': 'Watchlist',
   'nav.gems': 'Pépites',
+  'nav.taxPrep': 'Préparation fiscale',
   'alerts.tooltip': {
     one: '{count} élément de la watchlist a atteint son prix cible',
     other: '{count} éléments de la watchlist ont atteint leur prix cible',
@@ -819,6 +820,44 @@ export const fr: Catalogue = {
   'dividends.status.no_withholding': 'Aucune retenue',
   'dividends.status.unmatched_tax': 'Retenue non attribuée',
   'dividends.exportDetailCsv': 'Exporter (CSV, détail des transactions)',
+
+  // --- Préparation fiscale ---------------------------------------------------
+  'taxPrep.title': 'Préparation fiscale annuelle',
+  'taxPrep.subtitle':
+    "Les flux importés à rapprocher de vos documents fiscaux, par compte et par année — jamais un calcul d'impôt.",
+  'taxPrep.disclaimer':
+    "Cette synthèse est fondée sur les données importées. Elle aide à rapprocher vos opérations des documents fiscaux disponibles (IFU, rapport fiscal Mintos...), mais ne calcule pas votre impôt final et ne remplace pas votre déclaration ni un conseil fiscal personnalisé.",
+  'taxPrep.empty': 'Aucune transaction datée importée pour le moment.',
+  'taxPrep.emptyYear': 'Aucune activité fiscalement pertinente trouvée pour cette année.',
+  'taxPrep.yearLabel': 'Année fiscale',
+  'taxPrep.exportCsv': 'Exporter (CSV)',
+
+  'taxPrep.envelope.cto': 'Compte titres',
+  'taxPrep.envelope.pea': 'PEA',
+  'taxPrep.envelope.p2p': 'P2P',
+  'taxPrep.envelope.employee_savings': 'Épargne salariale',
+
+  'taxPrep.status.to_reconcile': 'À rapprocher',
+  'taxPrep.status.not_applicable': 'Non applicable',
+
+  'taxPrep.dividendsGross': 'Dividendes bruts',
+  'taxPrep.dividendsWithholding': 'Retenue à la source',
+  'taxPrep.interest': 'Intérêts',
+  'taxPrep.realizedGains': 'Plus-values réalisées',
+  'taxPrep.realizedLosses': 'Moins-values réalisées',
+  'taxPrep.fees': 'Frais',
+  'taxPrep.deposits': 'Versements',
+  'taxPrep.withdrawals': 'Retraits',
+  'taxPrep.otherFlows': 'Autres flux (informatifs)',
+  'taxPrep.unmatchedSalesLine':
+    '{count} vente(s) détectée(s) pour {amount} — plus-value non calculée : rapprochement des lots (FIFO) non disponible.',
+
+  'taxPrep.noWithdrawalDetected':
+    "Aucun retrait n'a été importé pour cette année. Les gains restent à l'intérieur de l'enveloppe et ne sont pas imposables tant qu'ils y demeurent.",
+  'taxPrep.withdrawalDetected':
+    'Un retrait de {amount} a été détecté. La fiscalité applicable dépend de règles (ancienneté du plan, conditions de sortie) que cet outil ne calcule pas automatiquement — à vérifier vous-même ou avec un conseil fiscal.',
+  'taxPrep.unmatchedSales': '{count} vente(s) sans plus-value calculée (rapprochement des lots non disponible).',
+  'taxPrep.notApplicable': "Aucune opération fiscalement pertinente détectée dans cette enveloppe pour cette année.",
 
   // --- Sauvegarde ----------------------------------------------------------
   'backup.title': 'Sauvegarde',

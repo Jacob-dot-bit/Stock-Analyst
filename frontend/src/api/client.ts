@@ -50,6 +50,7 @@ import type {
   ScreenerCandidate,
   Sparkline,
   SymbolSearchResult,
+  TaxYearSummary,
   Transaction,
   TransactionList,
   ValueHistory,
@@ -215,6 +216,10 @@ export const api = {
     const query = q.toString()
     return request<DividendDetailRow[]>(`/api/dividends/detail${query ? `?${query}` : ''}`)
   },
+
+  getTaxYears: () => request<{ years: number[] }>('/api/tax/years'),
+
+  getTaxSummary: (year: number) => request<TaxYearSummary>(`/api/tax/summary?year=${year}`),
 
   createBackup: () => request<Backup>('/api/backup', { method: 'POST' }),
 

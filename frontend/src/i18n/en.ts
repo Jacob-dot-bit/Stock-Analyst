@@ -14,6 +14,7 @@ export const en: Catalogue = {
   'nav.transactions': 'Transactions',
   'nav.watchlist': 'Watchlist',
   'nav.gems': 'Hidden gems',
+  'nav.taxPrep': 'Tax prep',
   'alerts.tooltip': {
     one: '{count} watchlist item at or below its target price',
     other: '{count} watchlist items at or below their target price',
@@ -815,6 +816,43 @@ export const en: Catalogue = {
   'dividends.status.no_withholding': 'No withholding',
   'dividends.status.unmatched_tax': 'Unattributed withholding',
   'dividends.exportDetailCsv': 'Export (CSV, transaction detail)',
+
+  // --- Tax prep ---------------------------------------------------------
+  'taxPrep.title': 'Annual tax preparation',
+  'taxPrep.subtitle': 'Imported flows to reconcile against your own tax documents, by account and year — never a tax calculation.',
+  'taxPrep.disclaimer':
+    'This summary is based on imported data. It helps reconcile your transactions against available tax documents (IFU, Mintos tax report...), but it does not compute your final tax and does not replace your tax return or personalised tax advice.',
+  'taxPrep.empty': 'No dated transactions imported yet.',
+  'taxPrep.emptyYear': 'No tax-relevant activity found for this year.',
+  'taxPrep.yearLabel': 'Tax year',
+  'taxPrep.exportCsv': 'Export (CSV)',
+
+  'taxPrep.envelope.cto': 'Brokerage account',
+  'taxPrep.envelope.pea': 'PEA',
+  'taxPrep.envelope.p2p': 'P2P',
+  'taxPrep.envelope.employee_savings': 'Employee savings',
+
+  'taxPrep.status.to_reconcile': 'To reconcile',
+  'taxPrep.status.not_applicable': 'Not applicable',
+
+  'taxPrep.dividendsGross': 'Gross dividends',
+  'taxPrep.dividendsWithholding': 'Withholding tax',
+  'taxPrep.interest': 'Interest',
+  'taxPrep.realizedGains': 'Realized gains',
+  'taxPrep.realizedLosses': 'Realized losses',
+  'taxPrep.fees': 'Fees',
+  'taxPrep.deposits': 'Deposits',
+  'taxPrep.withdrawals': 'Withdrawals',
+  'taxPrep.otherFlows': 'Other flows (informational)',
+  'taxPrep.unmatchedSalesLine':
+    '{count} sale(s) detected for {amount} — gain/loss not computed: lot (FIFO) reconciliation unavailable.',
+
+  'taxPrep.noWithdrawalDetected':
+    'No withdrawal was imported for this year. Gains stay inside the wrapper and are not taxable while they remain there.',
+  'taxPrep.withdrawalDetected':
+    'A withdrawal of {amount} was detected. The applicable tax rules (plan age, exit conditions) are not computed automatically by this tool — check them yourself or with a tax advisor.',
+  'taxPrep.unmatchedSales': '{count} sale(s) with no computed gain (lot reconciliation unavailable).',
+  'taxPrep.notApplicable': 'No tax-relevant operation detected in this wrapper for this year.',
 
   // --- Backup ----------------------------------------------------------------
   'backup.title': 'Backup',

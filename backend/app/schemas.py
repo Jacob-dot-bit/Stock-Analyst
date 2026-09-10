@@ -1101,6 +1101,54 @@ class TransactionListOut(BaseModel):
     summary: TransactionSummaryOut
 
 
+class TaxOtherFlowOut(BaseModel):
+    """One `OTHER`-typed transaction shown as-is, never bucketed into a
+    guessed tax category. See `app/tax/service.py`."""
+
+    label: str
+    amount: float
+
+
+class TaxEnvelopeSummaryOut(BaseModel):
+    """One account's tax-relevant activity for one calendar year — a
+    reconciliation aid, never a tax calculation. No rate is ever applied
+    here; every figure is a plain sum of already-imported transactions.
+    See DEVLOG "Decision 3u.60"."""
+
+    account: str
+    #: "cto" | "pea" | "p2p" | "employee_savings"
+    envelope_kind: str
+    dividends_gross: float | None
+    dividends_withholding: float | None
+    interest: float | None
+    realized_gains: float | None
+    realized_losses: float | None
+    fees: float | None
+    deposits: float | None
+    withdrawals: float | None
+    #: Real `SELL` transactions with no matching `CLOSED_TRADE` figure —
+    #: their gain/loss is never estimated (needs a validated FIFO engine
+    #: this app does not have yet).
+    unmatched_sales_count: int
+    unmatched_sales_amount: float | None
+    other_flows: list[TaxOtherFlowOut]
+    #: "to_reconcile" | "not_applicable"
+    status: str
+    notes: list[MessageOut]
+
+
+class TaxYearSummaryOut(BaseModel):
+    tax_year: int
+    envelopes: list[TaxEnvelopeSummaryOut]
+    #: Always present — the permanent, non-dismissible boundary statement
+    #: this feature must never let the user forget.
+    disclaimer: MessageOut
+
+
+class TaxYearsAvailableOut(BaseModel):
+    years: list[int]
+
+
 class DividendSummaryRowOut(BaseModel):
     """One calendar year × account's dividend totals — see
     `dividends/service.py::dividend_summary`. Computed directly from

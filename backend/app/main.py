@@ -23,6 +23,7 @@ from app.routers import (
     prices,
     screener,
     scoring,
+    tax,
     transactions,
     watchlist,
     settings as settings_router,
@@ -95,6 +96,7 @@ app.include_router(factors.router)
 app.include_router(dividends.router)
 app.include_router(backup.router)
 app.include_router(corporate_actions.router)
+app.include_router(tax.router)
 
 
 @app.get("/api/health", tags=["system"])

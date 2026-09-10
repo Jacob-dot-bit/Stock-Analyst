@@ -490,6 +490,37 @@ export interface DividendSummaryRow {
  * couldn't be attributed to any dividend — a genuine anomaly worth a look). */
 export type DividendReconciliationStatus = 'matched' | 'no_withholding' | 'unmatched_tax'
 
+export type TaxEnvelopeKind = 'cto' | 'pea' | 'p2p' | 'employee_savings'
+
+export interface TaxOtherFlow {
+  label: string
+  amount: number
+}
+
+export interface TaxEnvelopeSummary {
+  account: string
+  envelope_kind: TaxEnvelopeKind
+  dividends_gross: number | null
+  dividends_withholding: number | null
+  interest: number | null
+  realized_gains: number | null
+  realized_losses: number | null
+  fees: number | null
+  deposits: number | null
+  withdrawals: number | null
+  unmatched_sales_count: number
+  unmatched_sales_amount: number | null
+  other_flows: TaxOtherFlow[]
+  status: 'to_reconcile' | 'not_applicable'
+  notes: ApiMessage[]
+}
+
+export interface TaxYearSummary {
+  tax_year: number
+  envelopes: TaxEnvelopeSummary[]
+  disclaimer: ApiMessage
+}
+
 export interface DividendDetailRow {
   id: number
   executed_at: string | null

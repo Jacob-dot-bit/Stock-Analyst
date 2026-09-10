@@ -184,6 +184,37 @@ class ValuationNote:
     DECLARED_STALE = "valuation.declaredStale"  # {provider, date}
 
 
+class TaxPrepNote:
+    """Explanatory codes on one envelope's annual tax-reconciliation summary
+    (`app/tax/service.py`) — never a tax amount or a verdict, only a fact
+    about what was found or why something wasn't computed. See DEVLOG
+    "Decision 3u.60". This is a reconciliation *aid*, not a tax
+    calculator: it never computes a final tax liability, and every note
+    here exists to make that boundary explicit rather than silent.
+    """
+
+    #: A PEA/employee-savings envelope with no `WITHDRAWAL` transaction this
+    #: tax year — under French law, gains and dividends kept inside these
+    #: wrappers are not taxed while held, so there is genuinely nothing
+    #: taxable to report, not a gap in the data.
+    NO_WITHDRAWAL_DETECTED = "taxPrep.noWithdrawalDetected"  # {year}
+    #: A withdrawal was detected — the wrapper-specific rules that then
+    #: apply (PEA age, employee-savings blocking period) are not evaluated
+    #: automatically; flagged for the user's own or an advisor's review.
+    WITHDRAWAL_DETECTED = "taxPrep.withdrawalDetected"  # {amount}
+    #: Raw `SELL` transactions exist with no matching realised-gain figure
+    #: (no `CLOSED_TRADE` row) — a real gain/loss exists but computing it
+    #: needs a validated FIFO lot-matching engine this app does not have
+    #: yet. Never estimated in the meantime. See DEVLOG "Decision 3u.60".
+    UNMATCHED_SALES = "taxPrep.unmatchedSales"  # {count}
+    #: No transaction this year gives this envelope any tax-relevant
+    #: activity at all (e.g. a not-yet-funded or fully dormant account).
+    NOT_APPLICABLE = "taxPrep.notApplicable"
+    #: The permanent, non-dismissible boundary statement shown on every
+    #: tax-prep view — this feature reconciles, it never calculates.
+    DISCLAIMER = "taxPrep.disclaimer"
+
+
 class SymbolReason:
     """Why a broker symbol could or could not be mapped to a data provider."""
 
