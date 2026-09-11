@@ -4203,7 +4203,7 @@ complete report — 32 updated (28 via EDGAR, 4 via ESEF: AI.FR, MC.FR, DSY.FR,
 AF.FR, the same four ESEF-fallback names from Decision 3t.1), 5
 not_applicable (the ETFs), 0 failed, total wall-clock 41 seconds.
 
-## Decision 3u.10 — CLAUDE.md + ARCHITECTURE.md: a reference map, not just a log (2026-08-21)
+## Decision 3u.10 — A reference map, not just a log (2026-08-21)
 
 User asked directly why finalizing Phase 4 (Watchlist) took so much exploring,
 and whether it was avoidable. Real answer: this app's own "reuse, don't
@@ -4230,15 +4230,17 @@ Added two new root-level files:
   immediately after writing it, confirming an exact match (the only two
   "misses" were a verification-script limitation with multi-line decorators,
   not real gaps).
-- **`CLAUDE.md`** — the standing rule that makes the reference actually stay
-  a reference: update `ARCHITECTURE.md` in the same piece of work whenever an
-  endpoint, model, or reusable pattern is added or changed, the same
-  discipline this DEVLOG already gets. `CLAUDE.md` is auto-loaded every
-  session, which is what makes this durable across conversations rather than
-  a one-off intention that only holds within this one.
+- **A working-conventions file** — the standing rule that makes the reference
+  actually stay a reference: update `ARCHITECTURE.md` in the same piece of
+  work whenever an endpoint, model, or reusable pattern is added or changed,
+  the same discipline this DEVLOG already gets. Loaded automatically at the
+  start of every session, which is what made this durable across
+  conversations rather than a one-off intention that only held within one.
+  (Later removed from the repository — see the project's own housekeeping
+  around going public.)
 
 Real test of the rule, immediately: this very entry is the fix for the rule
-almost being broken on its first day — the CLAUDE.md/ARCHITECTURE.md work
+almost being broken on its first day — the conventions/ARCHITECTURE.md work
 itself had no DEVLOG entry until the user asked "is the DEVLOG up to date?"
 and the honest answer was no.
 

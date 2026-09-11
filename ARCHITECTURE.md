@@ -1,8 +1,8 @@
 # Architecture reference
 
 A map, not a story — for the *why* behind any of this, see [DEVLOG.md](DEVLOG.md).
-For what the app does today, see [README.md](README.md). Keep this file current:
-see [CLAUDE.md](CLAUDE.md)'s standing rule.
+For what the app does today, see [README.md](README.md). Keep this file current
+whenever a router endpoint, model, or pattern changes.
 
 ## Directory map
 
