@@ -11,11 +11,21 @@ venv/
 .env.*
 !.env.example
 
-# Local data (SQLite database, HTTP cache, broker exports)
-data/*.db
-data/*.sqlite
+# Local data (SQLite database, HTTP cache, broker exports) — the wildcard suffix
+# also covers SQLite's WAL/SHM/journal sidecar files (stock_analyst.db-wal etc.),
+# not just the exact ".db"/".sqlite" filename.
+data/*.db*
+data/*.sqlite*
 data/cache/
 data/imports/
+
+# Database backups — real portfolio snapshots, same sensitivity as data/.
+backups/
+
+# Raw broker/provider exports (XTB, Mintos, Amundi statements) — real personal
+# financial documents (name, account numbers, balances). Never committed, same
+# sensitivity as data/ and backups/ above.
+Extractions/
 
 # Frontend
 node_modules/
