@@ -32,6 +32,10 @@ node_modules/
 dist/
 .vite/
 
+# Local run logs from scripts/ (e.g. scripts/export_for_hermes.py) — operational
+# noise, never source, never committed.
+*.log
+
 # Editors / OS
 .vscode/
 .idea/
