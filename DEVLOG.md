@@ -8056,3 +8056,87 @@ already checks, liquidity-by-asset-class, valuation-risk breakdown,
 historical drawdown) — stays a separate, later chantier once this
 model has stabilized in real use. A decision journal (per-trade
 rationale/thesis/review-date log) is the chantier after that.
+
+## Decision 3u.60 — Annual tax-year reconciliation: a rapprochement aid, deliberately not a tax calculator (2026-09-10)
+
+The user asked for tax-declaration help ("calculer les taxes pour les
+déclarations"), explicitly accepting the legal risk after this project's
+own standing rule against it (roadmap memory, and this session's earlier
+"pas de calcul fiscal PEA/CTO prétendument définitif" guardrail) was
+raised. A detailed follow-up spec reframed the goal correctly before any
+code was written: not a tax calculator, a **reconciliation assistant** —
+collect, classify, explain, and flag gaps against official documents;
+never announce a "final tax" or apply a rate. Naming follows this exactly:
+"Préparation fiscale" / "Synthèse fiscale à rapprocher", never "Calcul
+d'impôt".
+
+**A real, load-bearing fact surfaced before writing anything**, precisely
+because scoping questions were asked first rather than assumed: this
+portfolio's PEA has **zero taxable activity this year, regardless of its
+age** — under French law, dividends and gains stay inside a PEA/PEG/PERCO
+wrapper untaxed until an actual withdrawal, and the real transaction data
+shows no `WITHDRAWAL` row for PEA or either Amundi account this year. A
+naive design that just summed "PEA dividends" as taxable income would have
+been factually wrong from the first row shipped.
+
+**v1 scope, deliberately narrow** (`app/tax/service.py`,
+`routers/tax.py`, `GET /api/tax/summary?year=`, `GET /api/tax/years`, `GET
+/api/tax/summary.csv`): one `TaxEnvelopeSummary` per account with any
+transaction in the selected calendar year — plain sums of already-imported
+transactions, **no tax rate ever applied, no liability ever computed**.
+`_classify_envelope` maps an account name to `cto | pea | p2p |
+employee_savings` (a heuristic on the account string, since no structured
+"wrapper type" field exists on `Transaction` yet). Dividends/withholding
+are **not recomputed** — `dividends/service.py::dividend_summary` (Decision
+3u.28) is reused as-is, specifically to avoid silently reintroducing the
+exact bug that module's own docstring documents having found and fixed
+live (French FTT/UK stamp duty sharing `TxType.TAX` with genuine dividend
+withholding). Every other figure (interest, realized gains/losses, fees,
+deposits, withdrawals) is a direct sum by `TxType`, split into gains vs.
+losses shown *separately*, never netted.
+
+**Explicitly never computed, by design**: a final PFU/barème tax figure;
+any Mintos-ETF plus-value (real `SELL` transactions exist with no
+`CLOSED_TRADE` counterpart — flagged `taxPrep.unmatchedSales`, "rapprochement
+des lots (FIFO) non disponible", never estimated); any consequence of a
+detected PEA/employee-savings withdrawal beyond flagging it for the user's
+own or an advisor's review (`taxPrep.withdrawalDetected` — plan age and
+exit conditions are not modeled). `Instrument`-less `OTHER` transactions
+(Amundi's own annual-statement aggregate lines — "versements_volontaires",
+"abondement_net"...) are shown verbatim as `other_flows`, never bucketed
+into a guessed tax category, and never counted as taxable activity.
+
+**One real UX bug found and fixed via live verification, not by the test
+suite**: an account with *only* contribution-side `OTHER` flows (Amundi PEG
+in a year with no dividend/interest/gain activity) initially showed two
+notes that said the same thing in different words — "aucun retrait
+importé" and "aucune opération pertinente" both firing at once. Fixed by
+suppressing the generic `NOT_APPLICABLE` note whenever a more specific
+PEA/employee-savings note already explains the same conclusion.
+
+21 new tests (`tests/test_tax_service.py`) — envelope classification, each
+figure computed correctly, the PEA-no-withdrawal vs. PEA-withdrawal
+branches, the Mintos-ETF unmatched-sales case, the CTO account with both
+raw `SELL` *and* `CLOSED_TRADE` never double-counting the same sale as
+"unmatched", year filtering, and an API-level test asserting the words
+"rate"/"tax_due"/"pfu" never appear anywhere in a response. Full backend
+suite: **1014 passed**.
+
+**Frontend**: new `TaxPrep.tsx` page (`/tax-prep`, new top-level nav
+entry), a year picker, one card per envelope with a non-dismissible
+disclaimer always shown above the data, and a CSV export
+(`preparation_fiscale_{year}.csv`) — matching the roadmap's step 6 ahead
+of schedule since it cost nothing extra once the summary endpoint existed.
+Live-verified against the real portfolio across four real tax years
+(2023–2026): correctly showed a genuine 5-unmatched-sale Mintos ETF year,
+a contribution-only Amundi year, and the always-true "no PEA withdrawal"
+state. `tsc -b`/`oxlint` clean (same two pre-existing warnings).
+
+**Deliberately not built in this v1, per the user's own "ordre de mise en
+œuvre"**: the versioned `TaxRuleSet`/`TaxClassification` model (steps 2–3
+of their spec — no PFU rate is hardcoded anywhere yet, so there is nothing
+to version), reconciliation against an imported IFU/Mintos tax-report
+document (steps 4–5), and the FIFO lot-matching engine for Mintos ETF
+(step 7, explicitly gated on validating its output against real Mintos
+tax reports across several years before ever showing a number). All
+remain named, scoped follow-ups, not started.

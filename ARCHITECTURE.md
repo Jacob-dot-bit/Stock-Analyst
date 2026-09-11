@@ -148,6 +148,11 @@ frontend/src/
 - `GET  /summary.csv`, `GET /detail.csv` — same data as CSV downloads.
 - Descriptive only — never computes a tax liability. See "Dividends by year and account" below and DEVLOG "Decision 3u.28".
 
+### `/api/tax` (`routers/tax.py`)
+- `GET  /years` — every calendar year with at least one dated transaction.
+- `GET  /summary?year=` — one row per account with tax-relevant activity that year: dividends/withholding (delegates to `dividends/service.py::dividend_summary`, never recomputed), interest, realized gains/losses (kept separate, never netted), fees, deposits, withdrawals, and `OTHER`-typed flows shown verbatim. **No tax rate is ever applied and no liability is ever computed** — a reconciliation aid, not a tax calculator. See "Annual tax-year reconciliation" below and DEVLOG "Decision 3u.60".
+- `GET  /summary.csv` — same data as a CSV download.
+
 ### `/api/backup` (`routers/backup.py`)
 - `POST ""` — create a timestamped copy of the live database in `backups/`; prunes beyond the 10 most recent.
 - `GET  ""` — list existing backups, newest first.
@@ -522,6 +527,47 @@ migration is a routine `add_column`. Rows imported before the column existed
 are backfilled via `POST /api/transactions/backfill-accounts`, which
 recovers the value from each row's own `raw` JSON — the same
 normalised-alias matching the importer itself uses, applied backwards.
+
+**Annual tax-year reconciliation.** `app/tax/service.py` — explicitly a
+**reconciliation aid, not a tax calculator**: it never applies a rate and
+never computes a final liability, only sums what was already imported.
+Requested with that exact framing after the user accepted the risk of a
+prior, narrower "calculate my tax" ask and then rescoped it themselves
+before any code was written. See DEVLOG "Decision 3u.60".
+
+`compute_tax_year_summary(db, tax_year)` groups every dated `Transaction`
+by account for the requested calendar year, classifies each account's
+wrapper via `_classify_envelope` (a heuristic on the account name — `pea`,
+`p2p`, `employee_savings`, defaulting to `cto` — since no structured
+wrapper-type field exists on `Transaction` yet), and sums by `TxType`:
+dividends/withholding are **delegated to `dividends/service.py::dividend_summary`
+rather than recomputed**, specifically to avoid silently reintroducing the
+FTT/stamp-duty-vs-withholding bug that module's own docstring documents
+having found live; interest, realized gains, realized losses (kept
+separate, never netted into one "gain"), fees, deposits and withdrawals
+are direct sums by type. `OTHER`-typed rows (Amundi's own annual-statement
+aggregate lines) are surfaced verbatim as `other_flows`, never bucketed
+into a guessed category and never counted as taxable activity.
+
+A real, load-bearing legal fact drove the design, found by checking real
+data before writing anything: a PEA/PEG/PERCO wrapper with no `WITHDRAWAL`
+transaction this year has **zero** taxable activity regardless of the
+wrapper's age — gains and dividends stay untaxed while held. `_summarize_envelope`
+reflects this directly rather than approximating it: a PEA/employee-savings
+envelope always gets a `taxPrep.noWithdrawalDetected` or
+`taxPrep.withdrawalDetected` note (the latter never resolves the
+consequence, which depends on rules — plan age, exit conditions — this
+service does not model); the generic `taxPrep.notApplicable` note is
+suppressed whenever one of those more specific notes already explains the
+same conclusion, to avoid two notes repeating one fact.
+
+A real `SELL` transaction with no matching `CLOSED_TRADE` row (the Mintos
+ETF sub-account: raw buys/sells with no broker-computed realized figure)
+is never estimated — flagged `taxPrep.unmatchedSales` instead, needing a
+validated FIFO lot-matching engine this app does not have yet (explicitly
+deferred, gated on validating its output against real Mintos tax reports
+across several years before showing a single derived figure, not on the
+code merely running).
 
 **Backup and restore.** `backup/service.py` — a plain timestamped copy of
 the live SQLite file into `backups/` (gitignored, same sensitivity as
