@@ -8142,3 +8142,54 @@ document (steps 4–5), and the FIFO lot-matching engine for Mintos ETF
 (step 7, explicitly gated on validating its output against real Mintos
 tax reports across several years before ever showing a number). All
 remain named, scoped follow-ups, not started.
+
+## Decision 3u.61 — Moved off the daily-driver laptop onto a dedicated host, and stopped running the servers by hand (2026-09-11/12)
+
+The whole project (repo incl. `.git`, `data/stock_analyst.db`, both
+`.env` files) moved from this Kali laptop to a dedicated always-on
+host — done as part of a broader move of the Hermes gateway to the same
+host, since the `*/15 * * * * export_for_hermes.py` cron (Hermes'
+`portfolio-analyst` skill's only data source) couples the two projects:
+without this app's backend answering on `127.0.0.1:8000`, that skill has
+nothing to read. `Stock-Analyst`'s own git remote
+(`github.com/Jacob-dot-bit/Stock-Analyst`, private) was already current,
+so no separate transfer step was needed for the code itself beyond a
+`git clone` on the new host — the manual copy this session actually did
+(`rsync`, since a stale local commit was still possible) doubled as the
+verification that the remote truly was in sync (`git status` came back
+clean).
+
+**Real bug found while setting up the frontend on the new host — not
+present on the old laptop, so never seen before**: `npm install` succeeds
+(with `npm WARN EBADENGINE` noise), but `npm run dev` crashes immediately
+with `SyntaxError: The requested module 'node:util' does not provide an
+export named 'styleText'`. Cause: Debian 12's packaged `nodejs` is
+v18.20.4, while Vite 8 and `react-router@7` require Node ≥20.19 or
+≥22.12 — `styleText` only exists from Node 20.12 on. The old laptop
+happened to already have a newer Node installed for unrelated reasons,
+so this had never been exercised. Fixed with `nvm` (Node 22) rather than
+touching the system package, to avoid clobbering anything else on the
+host that might expect the distro's own Node.
+
+**Operational fragility fixed, not just relocated**: on the old laptop,
+both the backend (`uvicorn --reload`) and the frontend (`vite`) were
+processes started by hand and left running in a terminal — surviving
+purely because that laptop was rarely rebooted. Reproducing that same
+pattern with `nohup` on the new host would have silently broken the
+15-minute export cron on the very first reboot (`Connection refused`,
+looping forever, nothing surfaced anywhere). Replaced with two `systemd`
+units (`stock-analyst-backend.service`, `stock-analyst-frontend.service`,
+`Restart=on-failure`) instead — verified end to end after an actual
+kernel-update reboot of the host: both came back on their own, and the
+export log kept writing successful entries straight through it with no
+manual intervention. Unit definitions and the exact setup steps live in
+the Hermes repo's `MIGRATION.md` (this project's own repo doesn't carry
+host-provisioning concerns), since the same steps apply regardless of
+which project's servers are being made persistent on that host.
+
+**Not affected, confirmed rather than assumed**: `vite.config.ts`'s
+loopback-only default (`VITE_DEV_HOST_ALL`) still applies unchanged on
+the new host — the frontend service sets that env var explicitly (needed
+here since the new host has no display of its own, browsed to only from
+another machine), the backend stays on `127.0.0.1` exactly as documented
+in `scripts/export_for_hermes.py`'s own module docstring.
