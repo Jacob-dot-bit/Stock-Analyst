@@ -69,7 +69,7 @@ _REAL_HEADER = [
 
 def _real_shaped_row(montant_investi: float) -> list[object]:
     return [
-        "id-1", "LVX0000TEST1", "30.04.2031", 12.0, 56, "Prêt personnel", "yes", "16.10.2023",
+        "id-1", "LVX0000TEST1", "30.04.2031", 10.90, 56, "Prêt personnel", "yes", "16.10.2023",
         0.01, 0.01, 1.0, 123456, 5.1, "EUR", 2.0, montant_investi, "30.04.2024", "Kenya",
         "Lender", "MS investment", 999999, None, None, 0.0, 0.0, "12345-01",
     ]

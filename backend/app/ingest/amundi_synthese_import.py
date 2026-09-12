@@ -11,7 +11,7 @@ here) and `Mes avoirs par échéance` — one row per (fund, vesting maturity)
 pair, since a French "Plan Epargne Groupe" allocates a new tranche with
 its own 5-year lock-up maturity each year. The same fund can therefore
 have several rows here (this account's real export had two maturities for
-"the company-shareholding fund" alone) —
+a single company-shareholding fund alone) —
 summed per fund here to match `amundi_import.py`'s one-position-per-fund
 model, never modelled per-tranche. Each fund's own row block is followed
 by a "Ligne Total" subtotal row (blank fund name) — skipped, not

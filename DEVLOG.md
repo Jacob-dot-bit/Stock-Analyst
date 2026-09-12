@@ -314,8 +314,8 @@ triggers past 8 slices.
 
 ## Step 2b.5 — Live-estimated portfolio value with FX conversion (Phase B, 2026-08-14)
 
-**Context.** Direct follow-up to Bug 2b.4: the user wanted the gap between the two computed totals
-gap actually closed, not just explained. Doing that correctly requires
+**Context.** Direct follow-up to Bug 2b.4: the user wanted the gap between the
+two computed totals actually closed, not just explained. Doing that correctly requires
 converting each holding's price into the base currency — the thing the codebase
 had explicitly avoided until now for lack of a reliable FX source (see README
 "No FX conversion is applied").
@@ -6840,10 +6840,10 @@ building anything, rather than assumed usable:
    it tracks free cash cycling through auto-invest reinvestment, not the
    portfolio's invested value.
 2. **The same export, full history** (`(copy 1).csv`, 2025-01-01 to
-   2026-09-08, a large number of rows): same rejection, confirmed more thoroughly —
-   `Solde` stayed just as small across the *entire* 20-month history. No
-   amount of additional history fixes this; it is structurally the wrong
-   metric, not a stale one.
+   2026-09-08, a large number of rows): same rejection, confirmed more
+   thoroughly — `Solde` stayed just as small across the *entire* 20-month
+   history. No amount of additional history fixes this; it is structurally
+   the wrong metric, not a stale one.
 3. **`Investments-08-09-2026.xlsx`** (from Mintos's "My investments" page,
    several hundred active note fragments): usable. Summing its `Montant investi`
    column matches the user's own stated real total (read directly off the
@@ -7077,8 +7077,8 @@ supports *before* building anything:
   real contribution figures, but only for the years actually imported.
   Live-checked: only 2023 and 2025 exist for this account, 2024 is
   missing entirely — a naive "value − known contributions" gain would
-  read as a large percentage for Amundi PEG, not because that's wrong arithmetic,
-  but because the denominator is known-incomplete.
+  read as an implausibly large percentage for Amundi PEG, not because
+  that's wrong arithmetic, but because the denominator is known-incomplete.
 - **Mintos**: tried the full account-statement CSV's real "Dépôts"
   (deposit) transactions as a cost basis first — rejected: the file only
   covers 2025-01-01 onward, while the account opened in April 2024 (its
@@ -7189,14 +7189,14 @@ rejected outright.
 **Live-verified against the real portfolio, end to end, including the
 mid-verification bugs above** (each caught by testing against the real
 data, not assumed correct after the unit tests passed): Mintos Core P2P
-now shows a real invested amount and gain, a noticeable percentage, "depuis le
-2024-04-01" (the account's real, provable inception date, opening_balance
-0.0 in its first quarterly PDF); Amundi PEG shows a real amount and gain
-of a large percentage, "depuis le 2023-12-31" (the earliest year actually imported —
-explicitly and honestly a likely overstatement, per the user's own
-chosen tradeoff); Amundi PERCO shows its own real amount and a percentage. Global
-portfolio totals (which mix these with ordinary priced holdings) rose
-unrealised, a percentage accordingly. Full backend suite: 947
+now shows a real invested amount and gain, "depuis le 2024-04-01" (the
+account's real, provable inception date, opening_balance 0.0 in its first
+quarterly PDF); Amundi PEG shows a real amount and gain, "depuis le
+2023-12-31" (the earliest year actually imported — explicitly and
+honestly a likely overstatement, per the user's own chosen tradeoff);
+Amundi PERCO shows its own real amount and gain. Global portfolio totals
+(which mix these with ordinary priced holdings) rose unrealised
+accordingly. Full backend suite: 947
 passed (929 + 30 − 12 net, after also folding in the two revised P2P
 tests). Frontend (`tsc -b`, `oxlint`) clean, same two pre-existing
 warnings only, confirmed live in-browser in English (translation working
@@ -7246,8 +7246,8 @@ approximation, even if others now have an exact figure.
 **Live-verified against the real portfolio**: after re-importing all
 three annual PDFs (2023/2024/2025) plus the live Synthese export in
 chronological order, FONDS MONETAIRE PEG (Amundi PEG) now shows an exact
-gain, a percentage "depuis le 2025-12-31" — replacing what would otherwise
-have been its share of the account's crude a large percentage pro-rata — while
+gain, "depuis le 2025-12-31" — replacing what would otherwise have been
+its share of the account's cruder pro-rata approximation — while
 the company-shareholding fund, whose quantity changed between
 2025 and 2026 due to a new contribution, correctly still falls back to
 the account-level approximation. The Amundi PEG account total itself
@@ -7519,8 +7519,8 @@ bullets and Mintos now shows one instead of none.
 `test_account_valuation_note_prefers_stale_over_fresh_across_its_positions`
 in `TestDeclaredValuationFreshness`, `tests/test_api.py`) — full backend
 suite: 961 passed (959 + 2). Frontend `tsc -b` clean. **Live-verified**:
-the real "By account" table now shows the correct value with a `†` marker for Mintos Core P2P
-with a footnote reading "Mintos Core P2P † — Value declared by Mintos as
+the real "By account" table now shows the correct value with a `†`
+marker for Mintos Core P2P, with a footnote reading "Mintos Core P2P † — Value declared by Mintos as
 of 2026-09-08 — the latest imported statement, within the expected
 window for this kind of source," and Amundi PEG/PERCO each show both
 their existing `*` performance footnote and the new `†` valuation one.
@@ -7536,7 +7536,7 @@ real database rather than trusting the earlier live-check: the account
 
 ```text
 18  08:46  Investments-08-09-2026.xlsx        → position created, net_pl = None
-20  10:20  20260908-account-statement.csv     → net_pl = 450.00 (this file's own window)
+20  10:20  20260908-account-statement.csv     → net_pl = [montant] (this file's own window)
 23  10:48  20260908-account-statement.csv     → re-import, no-op (dedup)
 33  12:08  Investments-08-09-2026.xlsx        → net_pl wiped back to None  ← the bug
 ```
@@ -7574,7 +7574,7 @@ the *destructive* side effect of a value-only re-import is removed.
 
 New test `TestGainSurvivesALaterValueOnlyImport` (`tests/
 test_mintos_transactions_import.py`) reproduces the exact sequence: import
-the transactions CSV (gain = 450.00), then re-import the Investments
+the transactions CSV (a non-zero gain), then re-import the Investments
 snapshot, assert the gain and `performance_note` survive unchanged and
 `broker_market_value` still updates normally. Full backend suite: 962
 passed (961 + 1).
@@ -7584,13 +7584,12 @@ against the real database with the same parsed figures as the original
 correct import (real income, real cost, period 2025-01-01 →
 2026-09-08) — idempotent by design, so this replayed the exact production
 code path rather than hand-computing a number to write in. The live
-position now correctly shows a real `broker_net_pl`,
-`broker_net_pl_pct`, `performance_note` (since 2024-04-01). Global
-portfolio unrealised result rose accordingly
-(exactly the restored gain), performance from a percentage to
-a percentage. Confirmed in-browser: the "By account" table now shows Mintos
-Core P2P with both its `†` (declared value) and `*` (interest-income)
-footnotes, real Investi/Latent amounts, Perf. a noticeable percentage*.
+position now correctly shows a real `broker_net_pl`, `broker_net_pl_pct`,
+`performance_note` (since 2024-04-01). Global portfolio unrealised result
+rose accordingly (exactly the restored gain). Confirmed in-browser: the
+"By account" table now shows Mintos Core P2P with both its `†` (declared
+value) and `*` (interest-income) footnotes, real Investi/Latent amounts
+and performance.
 
 **Lesson, stated plainly so it doesn't recur**: a live value of `None`
 proves "not currently set," never "never computed" — the earlier entry

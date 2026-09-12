@@ -79,8 +79,8 @@ class TestImportAmundiFilePersistence:
     `parse_amundi_statement` with a synthetic `ParsedAmundiExport`."""
 
     def test_fund_avg_price_and_gain_are_derived_not_invented(self, db):
-        # Real 2025 PEG figures (see DEVLOG "Decision 3u.39"): gross 300.00,
-        # Amundi's own estimated gain 25.00 -> cost = 226.13, qty = 18.5000.
+        # avg_price must be derived (gross - gain) / qty, never Amundi's own
+        # per-unit price field — see DEVLOG "Decision 3u.39".
         parsed = ParsedAmundiExport(
             as_of=date(2025, 12, 31),
             funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 18.5000, 10.50000, 300.00, 25.00)],

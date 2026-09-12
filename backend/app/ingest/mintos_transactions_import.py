@@ -6,7 +6,7 @@ aggregate opening/closing balance once per quarter.
 
 Real structure observed on a 2026-09-08 export
 (``Date,"ID de transaction :",Détails,Mouvement,Solde,Devise,"Type de
-paiement"``, ~150,000 rows, 2025-01-01 through the export date): one row
+paiement"``, a large number of rows, 2025-01-01 through the export date): one row
 per real transaction, with a running cash balance ("Solde") that DEVLOG
 "Decision 3u.43" already established is *not* the portfolio's total
 invested value — it is the free cash cycling through auto-invest

@@ -1260,9 +1260,9 @@ def _persist_amundi_export(
             # check above) would make every fund look opened today. Only
             # as honest as the earliest matching-name snapshot actually on
             # file; a fund whose name drifted between export formats (see
-            # DEVLOG "Decision 3u.48"'s FONDS RETRAITE PERCO / FONDS RETRAITE PERCO SOLIDAIRE
-            # finding) still falls back to this import's own date, same as
-            # before. See DEVLOG "Decision 3u.49".
+            # DEVLOG "Decision 3u.48"'s fund-name-mismatch finding) still
+            # falls back to this import's own date, same as before. See
+            # DEVLOG "Decision 3u.49".
             earliest_as_of = (
                 db.execute(
                     select(func.min(AmundiFundSnapshot.as_of)).where(

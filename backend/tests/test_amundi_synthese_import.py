@@ -265,7 +265,7 @@ class TestImportAmundiSyntheseFilePersistence:
         "Decision 3u.49"."""
         pdf_parsed = ParsedAmundiExport(
             as_of=date(2023, 12, 31),
-            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 18.5000, 11.31, 285.00, 6.00)],
+            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 18.5000, 9.80, 285.00, 6.00)],
         )
         with patch("app.ingest.service.parse_amundi_statement", return_value=pdf_parsed):
             import_amundi_file(db, b"fake-pdf", "annual-2023.pdf")
@@ -390,7 +390,7 @@ class TestAmundiRealGainSinceSnapshot:
     def test_unchanged_quantity_uses_exact_gain_since_last_disclosed_snapshot(self, db):
         pdf_parsed = ParsedAmundiExport(
             as_of=date(2024, 12, 31),
-            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 18.5000, 10.5, 260.00, 5.0)],
+            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 18.5000, 8.90, 260.00, 6.50)],
         )
         with patch("app.ingest.service.parse_amundi_statement", return_value=pdf_parsed):
             import_amundi_file(db, b"fake-pdf", "annual-2024.pdf")
@@ -398,7 +398,7 @@ class TestAmundiRealGainSinceSnapshot:
         # Same quantity, no gain disclosed, worth more now.
         synthese_parsed = ParsedAmundiExport(
             as_of=date(2026, 9, 8),
-            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 18.5000, 12.0, 290.00, None)],
+            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 18.5000, 10.90, 290.00, None)],
         )
         with patch("app.ingest.service.parse_amundi_synthese_export", return_value=synthese_parsed):
             import_amundi_synthese_file(db, b"fake-xlsb", "Synthese_20260908_104534.xlsb")
@@ -414,7 +414,7 @@ class TestAmundiRealGainSinceSnapshot:
     def test_changed_quantity_falls_back_to_pro_rata_instead_of_exact(self, db):
         pdf_parsed = ParsedAmundiExport(
             as_of=date(2024, 12, 31),
-            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 20.0, 10.0, 200.0, 5.0)],
+            funds=[_fund("FONDS MONETAIRE PEG", "Amundi PEG", 20.0, 10.0, 200.0, 6.50)],
             aggregate_totals={"Amundi PEG": {"versements_volontaires": 195.0}},
         )
         with patch("app.ingest.service.parse_amundi_statement", return_value=pdf_parsed):
