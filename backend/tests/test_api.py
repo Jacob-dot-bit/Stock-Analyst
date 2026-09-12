@@ -359,9 +359,9 @@ class TestP2PAggregate:
                     account="Mintos Core P2P",
                     quantity=1,
                     avg_price=5000.0,  # required placeholder, still unused
-                    broker_market_value=8000.00,
+                    broker_market_value=5000.0,
                     broker_net_pl=250.0,
-                    broker_net_pl_pct=6.50,
+                    broker_net_pl_pct=5.0,
                     performance_note={"code": "performance.mintosInterestIncome", "params": {"since": "2024-06-30"}},
                     currency="EUR",
                 )
@@ -370,9 +370,9 @@ class TestP2PAggregate:
 
         position = client.get("/api/portfolio").json()["positions"][0]
 
-        assert position["current_value"] == 8000.00
+        assert position["current_value"] == 5000.0
         assert position["current_unrealized_pl"] == 250.0
-        assert position["current_unrealized_pl_pct"] == 6.50
+        assert position["current_unrealized_pl_pct"] == 5.0
         assert position["performance_note"] == {
             "code": "performance.mintosInterestIncome",
             "params": {"since": "2024-06-30"},

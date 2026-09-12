@@ -160,7 +160,7 @@ class TestImportMintosTransactionsFilePersistence:
         db.add(
             Position(
                 instrument_id=instrument.id, source="IMPORT", account="Mintos Core P2P",
-                quantity=1, avg_price=4500.00, broker_market_value=4500.00, currency="EUR",
+                quantity=1, avg_price=3000.00, broker_market_value=3000.00, currency="EUR",
             )
         )
         db.commit()
@@ -179,7 +179,7 @@ class TestImportMintosTransactionsFilePersistence:
             "params": {"since": "2025-01-01"},
         }
         # The value itself is untouched by this importer.
-        assert position.broker_market_value == 4500.00
+        assert position.broker_market_value == 3000.00
 
     def test_combines_with_pre_period_periodic_pdf_interest_without_double_counting(self, db):
         """The exact scenario this feature was built for: quarterly PDFs
@@ -190,7 +190,7 @@ class TestImportMintosTransactionsFilePersistence:
         db.add(
             Position(
                 instrument_id=instrument.id, source="IMPORT", account="Mintos Core P2P",
-                quantity=1, avg_price=4500.00, broker_market_value=8000.00, currency="EUR",
+                quantity=1, avg_price=3000.00, broker_market_value=8000.00, currency="EUR",
             )
         )
         # Pre-existing periodic-PDF-derived interest/fee, all before the
@@ -224,7 +224,7 @@ class TestImportMintosTransactionsFilePersistence:
             import_mintos_transactions_file(db, b"fake", "20260908-account-statement.csv")
 
         position = db.execute(select(Position)).scalar_one()
-        # 5.00 - 0.10 (pre-period) + 500.00 - 50.00 (this file) = 454.00
+        # 5.00 - 1.00 (pre-period) + 500.00 - 50.00 (this file) = 454.00
         assert position.broker_net_pl == pytest.approx(454.00)
         # "Since" reflects the earliest known period_start (2024-04-01),
         # not this file's own (2025-01-01) — the whole point of combining
@@ -236,7 +236,7 @@ class TestImportMintosTransactionsFilePersistence:
         db.add(
             Position(
                 instrument_id=instrument.id, source="IMPORT", account="Mintos Core P2P",
-                quantity=1, avg_price=4500.00, broker_market_value=4500.00, currency="EUR",
+                quantity=1, avg_price=3000.00, broker_market_value=3000.00, currency="EUR",
             )
         )
         db.commit()
