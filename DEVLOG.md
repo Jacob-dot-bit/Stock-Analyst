@@ -230,8 +230,8 @@ and the final summary notice replaces it.
 
 ## Bug 2b.4 — Portfolio total didn't match the real, current broker value
 
-**Symptom.** User reported the app showing [montant] while their broker platform showed
-[montant] right after clicking "Refresh prices" — a a small (~1.7%) gap that refreshing
+**Symptom.** User reported the app showing [montant A] while their broker platform showed
+[montant B] right after clicking "Refresh prices" — a small (~1.7%) gap that refreshing
 repeatedly did not close.
 
 **Cause.** Not a bug in the strict sense, but a genuine architecture gap the user
@@ -368,9 +368,9 @@ price refresh has populated `PriceBar`, shows a plausible delta, and degrades to
 
 ## Bug 2b.5 — Live estimate came out 57% too low, 23/37 positions "could not be estimated"
 
-**Symptom.** First real-world run of the live estimate: [montant] shown against an
-official total of ~[montant] — a huge gap, not a plausible one-day market move —
-with 23 of 37 positions flagged as missing a price or currency.
+**Symptom.** First real-world run of the live estimate: a much lower figure shown
+against the real official total — a huge gap, not a plausible one-day market
+move — with 23 of 37 positions flagged as missing a price or currency.
 
 **Cause.** `providers/fx.py` pointed at `https://api.frankfurter.app/latest`.
 That host now 301-redirects to `https://api.frankfurter.dev/v1/latest` — the
@@ -400,8 +400,8 @@ data itself is the problem.
 
 ## Step 2b.6 — Manual "Recalculate" for the live estimate (2026-08-14)
 
-**Context.** After the Frankfurter fix, the estimate landed at [montant] against
-the real total — a ~0.5% gap, down from 57%. User asked how often it refreshes.
+**Context.** After the Frankfurter fix, the estimate landed within ~0.5% of the
+real total, down from 57%. User asked how often it refreshes.
 Answer at the time: only on page load and after another action re-triggers
 `load()` (import, price refresh, position add/delete) — no background timer.
 
@@ -2133,8 +2133,8 @@ than hunt for a sixth provider, the question was what the instrument actually is
 Pfizer acquired Metsera for $65.60 per share **plus** a contingent value right worth up
 to $20.65 more, tied to three clinical and regulatory milestones. That CVR is
 **non-transferable**: no ticker, no listing, no market. It cannot be bought or sold, so
-no source anywhere quotes it. XTB itself reports a price of 0.00 against a placeholder
-nominal placeholder value.
+no source anywhere quotes it. XTB itself reports a price of 0.00 against a nominal
+placeholder value.
 
 This is not a coverage gap. It is a property of the instrument, and no provider could
 ever close it.
@@ -2571,8 +2571,8 @@ than assuming the literal header text.
 
 **Realised P&L, one query.** `CLOSED_TRADE.amount` already *is* realised P&L per
 position — summed with one `SUM(amount) WHERE type = CLOSED_TRADE` and added as a fifth
-stat tile on the main Portfolio page, next to "Résultat latent" (item #3). a real, non-zero figure on the
-real portfolio, confirmed live.
+stat tile on the main Portfolio page, next to "Résultat latent" (item #3). A real,
+non-zero figure on the real portfolio, confirmed live.
 
 Verified live end to end: 1395 real transactions surfaced (previously invisible),
 correct per-transaction account recovery ("My Trades"/"PEA") on real English-language
@@ -5657,16 +5657,16 @@ has no label to check, and no manual-entry path exists for a trade tax
 specifically, only for a withholding correction). After the fix: orphan
 count dropped from 25 to 1 (a genuine "US Dividends Reclassification"
 adjustment, correctly still shown), and PEA's apparent withholding dropped
-from a noticeably larger figure (per year) to a much smaller one — the FTT on French trades
-had been masquerading as dividend withholding.
+sharply per year — the FTT on French trades had been masquerading as
+dividend withholding.
 
 **The same bug already existed, silently, in a page shipped months ago.**
 `routers/transactions.py::_compute_summary` (backing the Transactions
 page's own "Retenue à la source" figure) summed the same unfiltered
 `TxType.TAX` bucket — it would have kept disagreeing with the new
 Dividends page's more accurate number forever if left alone. Fixed by
-reusing `_is_dividend_withholding` there too: the real total moved from
-sharply downward, and the two pages now agree exactly.
+reusing `_is_dividend_withholding` there too: the real total shrank
+accordingly, and the two pages now agree exactly.
 
 **What the view deliberately does not do**, per the user's own explicit
 list: no PFU/barème calculation, no French-vs-foreign tax-credit logic, no
@@ -6576,10 +6576,10 @@ Core P2P aggregate must never be given a PRU or a computed gain/loss.
 Both obvious choices are misleading: "PRU = last declared value" implies
 a real cost that was never disclosed, and "PRU = cumulative
 `Investments`" double-counts principal that gets automatically
-reinvested every quarter (worked example the user supplied: if [montant] is
-invested once and Mintos auto-reinvests every repayment, `Investments`
-sums to far more than [montant] even though only [montant] was ever actually
-deposited). Decision: **value shown, PRU and gain/loss deliberately not
+reinvested every quarter (worked example the user supplied: if [montant]
+is invested once and Mintos auto-reinvests every repayment, `Investments`
+sums to far more than that amount even though only [montant] was ever
+actually deposited). Decision: **value shown, PRU and gain/loss deliberately not
 computed** — a real, distinct UI state ("non applicable" / "non
 calculable"), not a fabricated zero.
 
@@ -6702,8 +6702,8 @@ HTTP endpoints. The duplicate was correctly deduplicated
 (`transactions_inserted: 0`); the fiscal document was correctly detected
 and skipped with `import.amundiFiscalDocumentSkipped`. Resulting real
 positions matched hand-checked figures exactly: Amundi PEG/PERCO gains
-of real, matching figures against Amundi's own 2025 statement, Mintos
-Core P2P showing a value of [montant] with `unrealized_pl`,
+matched Amundi's own 2025 statement exactly, Mintos
+Core P2P showing a value with `unrealized_pl`,
 `unrealized_pl_pct`, and `current_price` all `null` and a "non
 applicable" PRU in both the table and the detail panel. Portfolio
 breakdown by asset class now shows "Employee savings funds" and "P2P
@@ -6767,9 +6767,9 @@ inspection and by confirming `/api/health`'s `env_files` flips to
 ## Decision 3u.42 — A P2P position's whole value, not just its P&L, was silently excluded from every total (2026-09-07)
 
 Found live: the user reported the portfolio total looked wrong — XTB's
-own total ([montant]) matched the broker's site, but Mintos Core P2P
-(declared [montant] on the real Mintos site) wasn't reflected anywhere in
-the app's totals at all, and Amundi's total ([montant] on the real site)
+own total matched the broker's site, but Mintos Core P2P
+(declared value on the real Mintos site) wasn't reflected anywhere in
+the app's totals at all, and Amundi's total (on the real site)
 looked too low as well.
 
 Two independent problems, confirmed separately rather than assumed to be
@@ -6784,10 +6784,10 @@ fabricating a cost basis for it. `_aggregate()`'s exclusion check was
 "P&L unknown" exactly like "value unknown" and dropping the position from
 the sum *entirely*, even though its value was perfectly known and had
 been surfaced by `_current_position_figures` for exactly this purpose.
-Live-confirmed before the fix: Mintos's real position showed
-`current_value: 4500.00` in the positions list, but the "Mintos Core P2P"
+Live-confirmed before the fix: Mintos's real position showed a real,
+non-null `current_value` in the positions list, but the "Mintos Core P2P"
 account row in `totals.accounts` showed `market_value: null`, and the
-global `totals.market_value` ([montant]) excluded it too — the
+global `totals.market_value` excluded it too — the
 account-level bug was the same root cause as the whole-portfolio one, not
 a second one. No existing test caught this: `TestP2PAggregate`'s two
 tests both asserted only the per-position `current_value`/
@@ -6806,19 +6806,18 @@ Mintos's value now counts toward both `totals.market_value` and its own
 account row, with `excluded_positions == 0`; a P2P position alongside a
 normally-valued one sums correctly (doesn't exclude or double-count
 either). Live-verified against the real DB after the fix: global
-`market_value` went from [montant] to [montant] (Mintos's [montant] now
-included), `excluded_positions` from 1 to 0, `has_incomplete_data` from
+`market_value` rose to include Mintos's own value now
+included, `excluded_positions` from 1 to 0, `has_incomplete_data` from
 `true` to `false`.
 
 **A separate, non-code problem: both imports are stale.** Even after the
-fix, Mintos shows [montant], not the user's stated current [montant] —
-traced to the imported source file itself:
-`a quarterly Mintos statement PDF`
-is a quarterly statement covering 2025-07-01 to 2025-09-30, a full year
+fix, Mintos's imported value still doesn't match the user's stated
+current total — traced to the imported source file itself: a quarterly
+statement covering 2025-07-01 to 2025-09-30, a full year
 before this session's date (2026-09-08). Nothing in the code can recover
 a balance the source document itself doesn't contain; re-importing a
-current Mintos statement is the only fix. Amundi's total ([montant] in
-the app vs. [montant] reported) is very likely the same root cause — Amundi
+current Mintos statement is the only fix. Amundi's total (well under
+what the user reported) is very likely the same root cause — Amundi
 only publishes periodic/annual snapshot PDFs (Decision 3u.39), and the
 imported filename (`DOCINT_RAC (copy 1).pdf`) carries no date to confirm
 directly, but a code-side explanation was ruled out (its `broker_net_pl`
@@ -6837,21 +6836,22 @@ building anything, rather than assumed usable:
 1. **`20260908-account-statement.csv`** (a single day, 00:01-11:02): a raw
    cash-ledger export (interest/principal/tax-withholding micro-transactions
    per loan fragment) with a running `Solde` column. Rejected: `Solde` never
-   exceeded a small fraction of the real total across that day — it tracks free cash cycling through
-   auto-invest reinvestment, not the portfolio's invested value.
+   rose above a small fraction of the real invested total across that day —
+   it tracks free cash cycling through auto-invest reinvestment, not the
+   portfolio's invested value.
 2. **The same export, full history** (`(copy 1).csv`, 2025-01-01 to
    2026-09-08, a large number of rows): same rejection, confirmed more thoroughly —
-   `Solde` never exceeded a still-small fraction across the *entire* 20-month history. No
+   `Solde` stayed just as small across the *entire* 20-month history. No
    amount of additional history fixes this; it is structurally the wrong
    metric, not a stale one.
 3. **`Investments-08-09-2026.xlsx`** (from Mintos's "My investments" page,
    several hundred active note fragments): usable. Summing its `Montant investi`
-   column gives [montant] — matching the user's own stated real total
-   ([montant], read directly off the Mintos site the same day) to within
-   a small gap, close enough to attribute to the two observations not being the
-   exact same instant rather than a wrong column. `Principal restant`
+   column matches the user's own stated real total (read directly off the
+   Mintos site the same day) closely enough to attribute the small
+   remaining gap to the two observations not being the exact same instant
+   rather than a wrong column. `Principal restant`
    (the outstanding note balance net of amortization) was checked too and
-   does *not* match ([montant] for the same file) — some narrower
+   does *not* match — some narrower
    figure than "this investment's current value," left unused.
 
 Built a second Mintos import path rather than folding this into the
@@ -6885,9 +6885,9 @@ cross-source-supersession tests above, reusing `_p2p_period`/
 
 **Live-verified against the real portfolio**: preview showed
 `positions_found: 1, transactions_found: 1, warnings: []`; the real
-import updated Mintos Core P2P's displayed value from [montant] (the
-stale 2025-07/09 PDF) to [montant]; the global portfolio total rose from
-[montant] to [montant] accordingly. Full backend suite: 912 passed (901
+import updated Mintos Core P2P's displayed value from the stale 2025-07/09
+PDF figure to the fresh one; the global portfolio total rose
+accordingly. Full backend suite: 912 passed (901
 + 11 new).
 
 ## Decision 3u.44 — The same live-snapshot fix for Amundi, plus a second, recurring `_current_position_figures` gap it exposed (2026-09-08)
@@ -6902,11 +6902,11 @@ unused) and `Mes avoirs par échéance` — one row per (fund, vesting
 maturity) pair, since a French "Plan Epargne Groupe" allocates a new
 tranche with its own 5-year lock-up maturity every year. The same fund can
 have several rows here — this account's real export had two maturities
-for "the company-shareholding fund" alone (68.0000 + 145.0000
-parts) — summed per fund to match the existing one-position-per-fund
-model. Live cross-check: summing `Montant évalué` across every fund gave
-[montant], matching the user's stated real Amundi total ([montant]) far
-more closely than the already-imported annual PDF's [montant] — which
+for "the company-shareholding fund" alone — summed per fund
+to match the existing one-position-per-fund
+model. Live cross-check: summing `Montant évalué` across every fund
+matched the user's stated real Amundi total far
+more closely than the already-imported annual PDF's figure — which
 undercounted specifically because it was missing that second, more
 recently allocated tranche of the company-shareholding fund, not because the PDF import
 itself was ever wrong, just older.
@@ -6967,9 +6967,9 @@ shape as Mintos's.
 
 **Live-verified against the real portfolio**: preview showed
 `positions_found: 3, warnings: []`, correctly split across both accounts;
-the real import updated Amundi's total from [montant] to [montant] (PEG
-[montant] + PERCO [montant]); after the broker-fallback fix, the global
-portfolio total reached [montant] (from [montant]), `has_incomplete_data`
+the real import updated Amundi's total sharply upward (PEG and PERCO
+both correctly split); after the broker-fallback fix, the global
+portfolio total rose accordingly, `has_incomplete_data`
 back to `false`, `excluded_positions: 0`. Full backend suite: 927 passed
 (912 + 13 + 2).
 
@@ -7189,14 +7189,14 @@ rejected outright.
 **Live-verified against the real portfolio, end to end, including the
 mid-verification bugs above** (each caught by testing against the real
 data, not assumed correct after the unit tests passed): Mintos Core P2P
-now shows [montant] invested / +[montant] / a noticeable percentage, "depuis le
+now shows a real invested amount and gain, a noticeable percentage, "depuis le
 2024-04-01" (the account's real, provable inception date, opening_balance
-0.0 in its first quarterly PDF); Amundi PEG shows [montant] / +[montant]
-/ a large percentage, "depuis le 2023-12-31" (the earliest year actually imported —
+0.0 in its first quarterly PDF); Amundi PEG shows a real amount and gain
+of a large percentage, "depuis le 2023-12-31" (the earliest year actually imported —
 explicitly and honestly a likely overstatement, per the user's own
-chosen tradeoff); Amundi PERCO shows [montant] / +[montant] / a percentage. Global
-portfolio totals (which mix these with ordinary priced holdings) rose to
-[montant] unrealised / a percentage accordingly. Full backend suite: 947
+chosen tradeoff); Amundi PERCO shows its own real amount and a percentage. Global
+portfolio totals (which mix these with ordinary priced holdings) rose
+unrealised, a percentage accordingly. Full backend suite: 947
 passed (929 + 30 − 12 net, after also folding in the two revised P2P
 tests). Frontend (`tsc -b`, `oxlint`) clean, same two pre-existing
 warnings only, confirmed live in-browser in English (translation working
@@ -7246,7 +7246,7 @@ approximation, even if others now have an exact figure.
 **Live-verified against the real portfolio**: after re-importing all
 three annual PDFs (2023/2024/2025) plus the live Synthese export in
 chronological order, FONDS MONETAIRE PEG (Amundi PEG) now shows an exact
-+[montant] / a percentage "depuis le 2025-12-31" — replacing what would otherwise
+gain, a percentage "depuis le 2025-12-31" — replacing what would otherwise
 have been its share of the account's crude a large percentage pro-rata — while
 the company-shareholding fund, whose quantity changed between
 2025 and 2026 due to a new contribution, correctly still falls back to
@@ -7358,15 +7358,15 @@ piecemeal per fund.
 **Context, and a correction to Decision 3u.42's own numbers.** 3u.42
 fixed a real bug — a P2P/Amundi position's whole value was excluded from
 every total whenever its P&L was unknown — and, at the time, reported
-Mintos Core P2P's value as a stale [montant] (from a 2025-07-01→09-30
-quarterly PDF, a year old) and flagged Amundi's [montant] as "probably
+Mintos Core P2P's value as stale (from a 2025-07-01→09-30
+quarterly PDF, a year old) and flagged Amundi's total as "probably
 the same staleness issue." Between that decision and this one, Decision
 3u.49 had the user re-import a live Mintos "Investments" export and
 fresh Amundi Synthese/PDF statements the same day (2026-09-08) — so as
-of *this* entry, live Mintos Core P2P reads [montant] and Amundi PEG+PERCO
-combined read ~17,986€, both matching the real, current site values the
-user reported directly ([montant], [montant]). The specific "[montant]
-stale" example throughout 3u.42/3u.46 is therefore historical, not the
+of *this* entry, both Mintos Core P2P and Amundi PEG+PERCO
+combined match the real, current site values the
+user reported directly. The specific "stale value"
+example throughout 3u.42/3u.46 is therefore historical, not the
 live state — recorded here so a future reader doesn't chase a staleness
 that has already been fixed by a re-import.
 
@@ -7469,7 +7469,7 @@ confirmed in-browser: the 🗓 badge switched to `price-status-stale` with
 the correct tooltip, Data Health showed "1 old declared valuation," and
 the total banner appeared — then restored `value_as_of` to 2026-09-08
 and re-confirmed Data Health and the banner both went back to clean.
-Portfolio total unchanged throughout ([montant], `excluded_positions: 0`).
+Portfolio total unchanged throughout, `excluded_positions: 0`.
 
 ## Bug 3u.51 — The "By account" table gave Mintos Core P2P no context for its bare "—" cells (2026-09-08)
 
@@ -7553,7 +7553,7 @@ existing row *in place* rather than replacing it — were never part of
 this function's own field list, so the fresh `INSERT` simply left them at
 their column default: `None`. Re-importing batch 33 (a plain re-upload of
 the same Investments file, done after the transactions CSV) blew away
-the real [montant] gain batch 20 had just computed, with nothing anywhere
+the real gain batch 20 had just computed, with nothing anywhere
 signalling that anything had been lost — the account went from "real gain
 known" to "no P&L known" silently, indistinguishable in the UI from
 "never computed."
@@ -7581,16 +7581,16 @@ passed (961 + 1).
 
 **Live-verified and repaired**: re-ran `import_mintos_transactions_file`
 against the real database with the same parsed figures as the original
-correct import (income [montant], cost [montant], period 2025-01-01 →
+correct import (real income, real cost, period 2025-01-01 →
 2026-09-08) — idempotent by design, so this replayed the exact production
 code path rather than hand-computing a number to write in. The live
-position now correctly shows `broker_net_pl: [montant]`,
+position now correctly shows a real `broker_net_pl`,
 `broker_net_pl_pct`, `performance_note` (since 2024-04-01). Global
-portfolio unrealised result moved from [montant] to [montant]
-(+[montant], exactly the restored gain), performance from a percentage to
+portfolio unrealised result rose accordingly
+(exactly the restored gain), performance from a percentage to
 a percentage. Confirmed in-browser: the "By account" table now shows Mintos
 Core P2P with both its `†` (declared value) and `*` (interest-income)
-footnotes, Investi [montant], Latent +[montant]*, Perf. a noticeable percentage*.
+footnotes, real Investi/Latent amounts, Perf. a noticeable percentage*.
 
 **Lesson, stated plainly so it doesn't recur**: a live value of `None`
 proves "not currently set," never "never computed" — the earlier entry
