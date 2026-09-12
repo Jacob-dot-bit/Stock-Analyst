@@ -53,7 +53,7 @@ _HEADER_VALUE = "Montant évalué"
 
 
 def _account_for_dispositif(label: str) -> str:
-    """"PERCO LIBRE Entreprise" -> "Amundi PERCO"; anything else (every
+    """"PERCO LIBRE ..." -> "Amundi PERCO"; anything else (every
     real "Plan Epargne Groupe..." label seen) -> "Amundi PEG" — the same
     two-account convention `amundi_import.py` uses."""
     return AMUNDI_ACCOUNTS["PERCO"] if "PERCO" in label.upper() else AMUNDI_ACCOUNTS["PEG"]

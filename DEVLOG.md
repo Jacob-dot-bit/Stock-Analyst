@@ -6908,8 +6908,8 @@ model. Live cross-check: summing `Montant évalué` across every fund
 matched the user's stated real Amundi total far
 more closely than the already-imported annual PDF's figure — which
 undercounted specifically because it was missing that second, more
-recently allocated tranche of the company-shareholding fund, not because the PDF import
-itself was ever wrong, just older.
+recently allocated tranche of the company-shareholding fund, not because
+the PDF import itself was ever wrong, just older.
 
 Built the equivalent of Decision 3u.43's Mintos solution: rather than a
 second full copy of the persistence logic, `import_amundi_file`'s body
@@ -7335,9 +7335,9 @@ Amundi PDFs/Synthese and the Mintos Investments export against the fixed
 backend: FONDS MONETAIRE PEG now shows "Depuis" 12/31/2023 (was
 09/08/2026), Mintos Core P2P shows 04/01/2024 (was 09/08/2026, now
 matching its real, previously-established inception date exactly),
-FONDS ACTIONNARIAT SALARIE shows 12/31/2025 (an improvement, though not as far
-back as 2023 — see the caveat below). Confirmed live in-browser, not just
-via the API.
+the company-shareholding fund shows 12/31/2025 (an improvement, though
+not as far back as 2023 — see the caveat below). Confirmed live
+in-browser, not just via the API.
 
 **Known, disclosed limitation, not fixed here**: FONDS RETRAITE PERCO (Amundi
 PERCO) still shows today, because — as already found and documented in
