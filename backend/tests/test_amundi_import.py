@@ -42,10 +42,10 @@ class TestToFloat:
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [
-            ("123,45 €", 300.00),
+            ("123,45 €", 123.45),
             ("-38,25 %", -38.25),
             ("18,5000", 18.5000),
-            ("1 234,56 €", 1986.60),  # thousands space, seen in real statements
+            ("1 234,56 €", 1234.56),  # thousands space, seen in real statements
             (None, None),
             ("", None),
         ],

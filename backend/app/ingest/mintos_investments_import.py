@@ -12,12 +12,12 @@ no "as of" date inside the file's own content — the filename
 naming convention) is the only date signal this format carries.
 
 Live cross-checked the same day against the account's real total, as
-reported directly by the user from the Mintos site ([montant]): summing
-this file's ``Montant investi`` column gives [montant] — the a small gap gap
-explained by interest/repayments settling continuously between the two
-observations, not a wrong column. ``Principal restant`` (the outstanding
-note balance net of amortization already received) was checked too and
-does *not* match ([montant] for the same file) — evidently some narrower
+reported directly by the user from the Mintos site: summing
+this file's ``Montant investi`` column matches closely — the small
+remaining gap explained by interest/repayments settling continuously
+between the two observations, not a wrong column. ``Principal restant``
+(the outstanding note balance net of amortization already received) was
+checked too and does *not* match — evidently some narrower
 figure than "this investment's current value" — deliberately left unused.
 See DEVLOG "Decision 3u.43".
 """

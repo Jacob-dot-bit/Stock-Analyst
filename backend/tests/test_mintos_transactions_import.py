@@ -6,12 +6,11 @@ statement export as a test fixture — same personal-data reasoning as the
 other Mintos/Amundi test modules. The real file (150,000 rows, 2025-01-01
 to 2026-09-08) was cross-checked manually during development (DEVLOG
 "Decision 3u.47"): summing exactly the income/cost types this module
-recognises gave a real cumulative interest of [montant] and costs of
-[montant] for that window — combined with the periodic PDF's own
-pre-2025 interest/fee transactions (a smaller, older interest/fee figure), a total net gain of
-[montant] against a [montant] current value (~12.8% cumulative, a
-plausible multi-year P2P yield — the strongest evidence the
-categorisation is right, not just plausible-looking).
+recognises gave a real cumulative interest and cost figure for that
+window — combined with the periodic PDF's own pre-2025 interest/fee
+transactions, a total net gain against the current value that worked out
+to a plausible multi-year P2P yield (low double-digit percent) — the
+strongest evidence the categorisation is right, not just plausible-looking.
 """
 
 from __future__ import annotations

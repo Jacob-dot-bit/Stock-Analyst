@@ -11,7 +11,7 @@ here) and `Mes avoirs par échéance` — one row per (fund, vesting maturity)
 pair, since a French "Plan Epargne Groupe" allocates a new tranche with
 its own 5-year lock-up maturity each year. The same fund can therefore
 have several rows here (this account's real export had two maturities for
-"the company-shareholding fund" alone, two separate tranches) —
+"the company-shareholding fund" alone) —
 summed per fund here to match `amundi_import.py`'s one-position-per-fund
 model, never modelled per-tranche. Each fund's own row block is followed
 by a "Ligne Total" subtotal row (blank fund name) — skipped, not
@@ -21,11 +21,11 @@ Unlike the annual PDF, this export carries no per-fund gain/loss figure —
 `ParsedFund.estimated_gain_loss` is always `None` from this source.
 
 Live cross-checked the same day against the account's real total, as
-reported directly by the user ([montant] for all of Amundi): summing every
-fund's `Montant évalué` here gives [montant] — the a small gap gap explained by
+reported directly by the user: summing every
+fund's `Montant évalué` here matches closely — the small gap explained by
 the two observations not being the exact same instant, not a wrong
 column. The already-imported annual PDF's total for the same funds
-([montant]) undercounts specifically because it was missing this
+undercounts specifically because it was missing this
 account's second, more recently allocated tranche of the company-shareholding fund — not
 because anything about the PDF import itself is wrong, just older. See
 DEVLOG "Decision 3u.44".

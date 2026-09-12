@@ -5,11 +5,11 @@ Deliberately does not commit a copy of the user's real Mintos "Investments"
 export as a test fixture — like the quarterly PDF (see
 `test_mintos_import.py`'s module docstring), it carries real personal loan
 data. The real file was instead cross-checked manually during development
-(see DEVLOG "Decision 3u.43"): summing its `Montant investi` column gave
-[montant], matching the account's real total ([montant], reported by the
-user directly from the Mintos site) to within a few euros — the small gap
-explained by interest/repayments settling continuously between the two
-observations. Tests here use a small synthetic workbook built in-memory
+(see DEVLOG "Decision 3u.43"): summing its `Montant investi` column matched
+the account's real total (reported by the user directly from the Mintos
+site) closely — the small remaining gap explained by interest/repayments
+settling continuously between the two observations. Tests here use a
+small synthetic workbook built in-memory
 with openpyxl instead.
 """
 

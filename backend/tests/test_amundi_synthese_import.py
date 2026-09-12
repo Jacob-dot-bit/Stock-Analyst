@@ -5,9 +5,8 @@ Deliberately does not commit a copy of the user's real Amundi Synthese
 export as a test fixture — same personal-data reasoning as
 `test_amundi_import.py` and `test_mintos_investments_import.py`. The real
 file was cross-checked manually during development (DEVLOG "Decision
-3u.44"): summing its `Montant évalué` column across every fund gave
-[montant], matching the account's real total ([montant], reported by the
-user directly) to within a small gap.
+3u.44"): summing its `Montant évalué` column across every fund matched
+the account's real total (reported by the user directly) closely.
 
 `pyxlsb` has no writer (only a reader), so there is no way to build a
 small synthetic `.xlsb` file the way the other importers' tests build a
