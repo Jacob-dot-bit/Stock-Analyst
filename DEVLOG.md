@@ -8151,9 +8151,9 @@ host — done as part of a broader move of the Hermes gateway to the same
 host, since the `*/15 * * * * export_for_hermes.py` cron (Hermes'
 `portfolio-analyst` skill's only data source) couples the two projects:
 without this app's backend answering on `127.0.0.1:8000`, that skill has
-nothing to read. `Stock-Analyst`'s own git remote
-(`github.com/Jacob-dot-bit/Stock-Analyst`, private) was already current,
-so no separate transfer step was needed for the code itself beyond a
+nothing to read. `Stock-Analyst`'s own git remote — `github.com/Jacob-dot-bit/Stock-Analyst`,
+public, unlike Hermes' own repo — was already current, so no separate
+transfer step was needed for the code itself beyond a
 `git clone` on the new host — the manual copy this session actually did
 (`rsync`, since a stale local commit was still possible) doubled as the
 verification that the remote truly was in sync (`git status` came back
