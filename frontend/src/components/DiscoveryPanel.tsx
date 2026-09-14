@@ -49,6 +49,10 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   // so this filter has nothing to do with them and stays local to this
   // panel rather than lifted to `Screener.tsx` like the price filter is.
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all')
+  // The "simplest cut" data-quality gate: a computed score, a fresh and
+  // correctly mapped price, and no unresolved corporate-action candidate.
+  // See DEVLOG "Step 3u.62"'s addendum.
+  const [dataQualityOnly, setDataQualityOnly] = useState(false)
 
   async function loadCandidates(nextRankBy: RankBy) {
     setError(null)
@@ -162,6 +166,11 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
     return c.recommendation === verdictFilter
   }
 
+  function matchesDataQualityFilter(c: DiscoveryCandidate): boolean {
+    if (!dataQualityOnly) return true
+    return c.composite_score !== null && c.instrument.price_status === 'fresh' && !c.corporate_action_pending
+  }
+
   function candidateRow(c: DiscoveryCandidate, showScores: boolean) {
     return (
       <tr key={c.instrument.id}>
@@ -220,6 +229,21 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.dataQualityFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.dataQualityFilterHint')}
+        </p>
+        <label>
+          <input
+            type="checkbox"
+            checked={dataQualityOnly}
+            onChange={(e) => setDataQualityOnly(e.target.checked)}
+          />{' '}
+          {t('discovery.dataQualityFilterOption')}
+        </label>
+      </div>
+
+      <div style={{ marginBottom: '1.2rem' }}>
         <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.sp500.title')}</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           {t('discovery.sp500.description')}
@@ -267,6 +291,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                 {candidates
                   .filter(withinPriceRange)
                   .filter(matchesVerdictFilter)
+                  .filter(matchesDataQualityFilter)
                   .map((c) => candidateRow(c, true))}
               </tbody>
             </table>
@@ -304,7 +329,10 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
           const results = finvizResults[preset]
           if (!results) return null
           const failedCount = finvizFailed[preset] ?? 0
-          const filteredResults = results.filter(withinPriceRange).filter(matchesVerdictFilter)
+          const filteredResults = results
+            .filter(withinPriceRange)
+            .filter(matchesVerdictFilter)
+            .filter(matchesDataQualityFilter)
           return (
             <div key={preset} style={{ marginTop: '0.6rem' }}>
               <div className="muted" style={{ fontSize: '0.82rem' }}>

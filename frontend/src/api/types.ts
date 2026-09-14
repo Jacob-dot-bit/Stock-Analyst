@@ -43,7 +43,7 @@ export interface Instrument {
   verified_at: string | null
   verified_provider: string | null
   not_priceable_reason: string | null
-  /** Computed server-side. See backend `_price_status` for the rule. */
+  /** Computed server-side. See backend `prices/service.py::price_status` for the rule. */
   price_status: 'fresh' | 'stale' | 'error' | 'not_priceable' | 'unmapped' | null
 }
 
@@ -664,6 +664,11 @@ export interface DiscoveryCandidate {
    * `composite_score`, Discovery-only exception to this app's usual
    * fact-based labeling (see DEVLOG "Decision 3u.21"). */
   recommendation: 'buy' | 'hold' | 'sell' | null
+  /** True when an unresolved (single-source, conflicting, or
+   * suspect-ticker-reuse) corporate-action candidate exists for this
+   * instrument — powers the data-quality filter's "no pending corporate
+   * action" condition. */
+  corporate_action_pending: boolean
 }
 
 export interface DiscoveryFinvizResult {

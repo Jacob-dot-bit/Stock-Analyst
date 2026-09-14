@@ -21,9 +21,9 @@ from app.corporate_actions.service import load_actions_by_instrument, price_fact
 from app.db import get_db
 from app.ingest.service import get_or_create_instrument
 from app.models import Instrument, Position, PriceBar, WatchlistItem
-from app.prices.service import is_permanently_unresolvable, latest_bar_date, refresh_instrument
+from app.prices.service import is_permanently_unresolvable, latest_bar_date, price_status as _price_status, refresh_instrument
 from app.providers.registry import get_provider_chain
-from app.routers.portfolio import _price_status, _resolve_current_price
+from app.routers.portfolio import _resolve_current_price
 from app.routers.scoring import score_to_out
 from app.schemas import (
     InstrumentOut,

@@ -8221,3 +8221,59 @@ same as the price filter. Reused `filters.all` (already used by
 `PositionsTable`) rather than adding a new "All" key. `tsc -b`/`oxlint`
 clean (same two pre-existing warnings); all three i18n catalogues still
 at parity (752 keys each, verified by direct comparison).
+
+## Decision 3u.63 — Discovery's data-quality gate, the "simplest cut" of the fuller Pépites-filters vision (2026-09-15)
+
+Same day, immediate follow-up: this chantier had been scoped much further
+in an earlier session (see memory `stock-analyst-roadmap-2026-09.md` item
+5 of the 2026-09-08 re-prioritization) into a dozen filter dimensions
+(market/country, sector, instrument type, cap, valuation/growth data
+availability, data quality, analysis score, dividend yield, debt, minimum
+history, fresh-data-only) plus an explicit "not a recommendation"
+disclaimer — with the user's own suggested starting point: a single
+toggle for "instruments avec données suffisamment complètes ET cours
+récent ET sans problème de mapping ET sans corporate action en attente",
+data-quality gating before adding financial criteria. Built exactly that
+starting slice, not the full dozen dimensions.
+
+**Real layering wart found and fixed while wiring this up**: `_price_status`
+(and its `FRESH_WINDOW_DAYS` constant) lived in `routers/portfolio.py`,
+already cross-imported from there by `routers/screener.py` and
+`routers/watchlist.py` — a router importing from another router, backwards
+layering that happened to work only because Python doesn't enforce module
+boundaries. Adding a third cross-import for Discovery was the point where
+this stopped being tolerable. Moved both to `prices/service.py` (the
+natural home — a pure function of `Instrument`, no router dependencies)
+as public `price_status`/`FRESH_WINDOW_DAYS`, re-exported into
+`portfolio.py` under the same `_price_status` alias so every existing
+call site and comment reference stays valid. No behavior change — full
+suite still 1015 passing (3 new tests) after the move.
+
+**The four conditions collapse into three checks, not four**: "cours
+récent" and "sans problème de mapping" are both already folded into a
+single `price_status == 'fresh'` check (`price_status` returns
+`'unmapped'` before it ever gets to evaluate freshness) — reusing this
+one existing signal instead of re-deriving mapping/freshness separately
+avoided a second implementation of a rule that already exists. "Données
+suffisamment complètes" is `composite_score is not None` (already on
+`DiscoveryCandidateOut`, no backend work). "Sans corporate action en
+attente" is a genuinely new field, `corporate_action_pending: bool`,
+computed once per request (not per row) via
+`corporate_actions/service.py::list_outstanding_candidates` — the exact
+same merge/classify engine Data Health v2 and the "Candidats à confirmer"
+list already rely on, no new query logic invented.
+
+Frontend: one checkbox ("N'afficher que les candidats aux données
+fiables") below the verdict filter, ANDed with both existing filters.
+3 new backend tests (price_status reflects an unmapped instrument;
+corporate_action_pending true/false against a real seeded
+`ProviderCorporateActionCandidate` row) — full suite 1015 passed.
+`tsc -b`/`oxlint` clean; i18n catalogues at parity (755 keys each).
+
+**Deliberately not built in this slice**: market/country, sector,
+instrument type, cap, dividend yield, debt, minimum-history-length
+filters, and the explicit "not a recommendation" disclaimer rework — all
+still named in the memory note as the fuller vision, none scoped yet.
+Cap/dividend-yield/debt in particular need new derived metrics (this app
+only stores raw filed XBRL figures today, not ratios) — a real backend
+chantier of its own, not a filter-UI addition.

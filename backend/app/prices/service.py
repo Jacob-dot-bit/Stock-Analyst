@@ -34,10 +34,39 @@ from app.models import Instrument, MappingStatus, PriceBar
 from app.prices.provider_usage import record_usage
 from app.providers.base import FetchResult, InstrumentRef, ProviderChain
 
+#: An instrument checked within this many days counts as "fresh" rather than "stale".
+#: Wider than one day because weekends and holidays mean "checked two days ago" is
+#: still the most current data available, not a sign anything is wrong.
+FRESH_WINDOW_DAYS = 4
+
 #: Serialises refreshes across the whole process. Two runs at once double the quota
 #: spent and gain nothing — which happened for real when a click in the browser and a
 #: call from a terminal overlapped, re-fetching six instruments that had just landed.
 _refresh_lock = threading.Lock()
+
+
+def price_status(instrument: Instrument) -> str:
+    """One of 'fresh' | 'stale' | 'error' | 'not_priceable' | 'unmapped'.
+
+    Drives the price-status badge wherever an instrument's market price is
+    shown (positions, screener, watchlist, discovery). Computed from fields
+    already written by the import and refresh pipelines — nothing new to
+    maintain.
+    """
+    if instrument.not_priceable_reason:
+        return "not_priceable"
+    if instrument.mapping_status == MappingStatus.UNRESOLVED:
+        return "unmapped"
+    if instrument.verified_at is None:
+        # Mapped and priceable, but no provider has ever returned data for it —
+        # distinct from "never asked" (checked_at is also None in that case, which
+        # only happens right after import, before any refresh has run).
+        return "error" if instrument.prices_checked_at else "unmapped"
+
+    checked = instrument.prices_checked_at
+    if checked is not None and (datetime.now(UTC).date() - checked.date()).days <= FRESH_WINDOW_DAYS:
+        return "fresh"
+    return "stale"
 
 #: How much history to load the first time. 400 calendar days leaves enough trading
 #: days for a 200-day moving average plus a margin, which phase 3 will need.

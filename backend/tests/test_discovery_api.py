@@ -21,7 +21,14 @@ from app.db import Base, get_db
 from app.discovery.service import refresh_batch
 from app.ingest.service import get_or_create_instrument
 from app.main import app
-from app.models import DiscoveryCandidate, Instrument, Position, ScreenerCandidate, WatchlistItem
+from app.models import (
+    DiscoveryCandidate,
+    Instrument,
+    Position,
+    ProviderCorporateActionCandidate,
+    ScreenerCandidate,
+    WatchlistItem,
+)
 from app.providers.base import Bar, ProviderChain, RateLimited, SymbolNotFound
 from app.scoring.service import InstrumentScore, PillarScore
 from tests.test_providers import FakeProvider
@@ -243,6 +250,58 @@ class TestCandidates:
 
         by_symbol = {c["instrument"]["broker_symbol"]: c["recommendation"] for c in response.json()}
         assert by_symbol == {"BUY.US": "buy", "HOLD.US": "hold", "SELL.US": "sell"}
+
+    def test_price_status_is_computed_per_candidate(self, client, monkeypatch):
+        """Powers the data-quality filter's "cours récent, pas de souci de
+        mapping" condition — reuses `prices/service.py::price_status`
+        unchanged, same signal the positions/screener/watchlist tables
+        already show. A bare `Instrument()` here never gets a
+        `provider_symbol` (see `_mapped_instrument`'s own docstring), so it
+        reads as "unmapped"."""
+        a = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")
+        _seed([a])
+        _seed([DiscoveryCandidate(instrument_id=a.id, source="sp500")])
+        monkeypatch.setattr("app.discovery.service.compute_scores", fake_scores({a.id: {"value": 90}}))
+
+        response = client.get("/api/discovery/candidates?rank_by=value")
+
+        assert response.json()[0]["instrument"]["price_status"] == "unmapped"
+
+    def test_corporate_action_pending_true_when_an_outstanding_candidate_exists(self, client, monkeypatch):
+        """Powers the data-quality filter's "sans corporate action en
+        attente" condition — reuses
+        `corporate_actions/service.py::list_outstanding_candidates`
+        unchanged, the same merge/classify engine Data Health and the
+        "Candidats à confirmer" list already rely on. A single provider's
+        `ok` row with no corroborating source classifies as
+        `candidate_single_source` — outstanding, never auto-applied."""
+        a = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US", provider_symbol="AAA")
+        _seed([a])
+        _seed([DiscoveryCandidate(instrument_id=a.id, source="sp500")])
+        _seed(
+            [
+                ProviderCorporateActionCandidate(
+                    instrument_id=a.id, provider="alpha_vantage",
+                    event_date=date(2024, 1, 1), event_type="split",
+                    numerator=2, denominator=1, provider_status="ok",
+                )
+            ]
+        )
+        monkeypatch.setattr("app.discovery.service.compute_scores", fake_scores({a.id: {"value": 90}}))
+
+        response = client.get("/api/discovery/candidates?rank_by=value")
+
+        assert response.json()[0]["corporate_action_pending"] is True
+
+    def test_corporate_action_pending_false_with_no_outstanding_candidate(self, client, monkeypatch):
+        a = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")
+        _seed([a])
+        _seed([DiscoveryCandidate(instrument_id=a.id, source="sp500")])
+        monkeypatch.setattr("app.discovery.service.compute_scores", fake_scores({a.id: {"value": 90}}))
+
+        response = client.get("/api/discovery/candidates?rank_by=value")
+
+        assert response.json()[0]["corporate_action_pending"] is False
 
     def test_excludes_a_candidate_with_no_score_for_the_requested_pillar(self, client, monkeypatch):
         a = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")

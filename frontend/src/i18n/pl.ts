@@ -665,6 +665,10 @@ export const pl: Catalogue = {
   'discovery.verdictFilterLabel': 'Filtr werdyktu',
   'discovery.verdictFilterHint':
     'Stosowany do rankingu S&P 500 i skanów Finviz poniżej — ręcznie wybrani kandydaci powyżej nie mają werdyktu do filtrowania.',
+  'discovery.dataQualityFilterLabel': 'Jakość danych',
+  'discovery.dataQualityFilterOption': 'Pokazuj tylko kandydatów z wiarygodnymi danymi',
+  'discovery.dataQualityFilterHint':
+    'Wymaga obliczonego wyniku, aktualnej i poprawnie zmapowanej ceny oraz braku oczekującej weryfikacji zdarzenia korporacyjnego.',
   'discovery.rankByValue': 'Sortuj wg Value',
   'discovery.rankByGrowth': 'Sortuj wg Growth',
   'discovery.valueScore': 'Value',

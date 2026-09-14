@@ -50,7 +50,7 @@ class InstrumentOut(BaseModel):
     verified_provider: str | None = None
     not_priceable_reason: str | None = None
     #: Computed server-side: 'fresh' | 'stale' | 'error' | 'not_priceable' | 'unmapped'.
-    #: See portfolio.py:_price_status for the rule.
+    #: See prices/service.py:price_status for the rule.
     price_status: str | None = None
 
 
@@ -938,6 +938,12 @@ class DiscoveryCandidateOut(BaseModel):
     #: "buy" | "hold" | "sell" | None (None when there's no composite score
     #: to derive it from — never guessed).
     recommendation: str | None = None
+    #: True when this instrument has an unresolved corporate-action
+    #: candidate (single-source, conflicting, or suspect-ticker-reuse) that
+    #: hasn't been confirmed or dismissed yet — see
+    #: `corporate_actions/service.py::list_outstanding_candidates`. Powers
+    #: the data-quality filter's "no pending corporate action" condition.
+    corporate_action_pending: bool = False
 
 
 class DiscoveryFinvizOut(BaseModel):

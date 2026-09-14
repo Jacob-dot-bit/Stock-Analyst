@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.corporate_actions.service import list_outstanding_candidates
 from app.db import get_db
 from app.discovery.service import (
     import_sp500_universe,
@@ -21,7 +22,7 @@ from app.discovery.service import (
 from app.fundamentals.service import fetch_fundamentals
 from app.ingest.service import get_or_create_instrument
 from app.models import DiscoveryCandidate
-from app.prices.service import refresh_instrument
+from app.prices.service import price_status as _price_status, refresh_instrument
 from app.providers.finviz_screener import fetch_preset
 from app.providers.registry import get_edgar_provider, get_esef_provider, get_provider_chain
 from app.routers.portfolio import _resolve_current_price
@@ -30,6 +31,7 @@ from app.schemas import (
     DiscoveryFinvizOut,
     DiscoveryImportOut,
     DiscoveryRefreshOut,
+    InstrumentOut,
 )
 from app.scoring.config import get_scoring_config
 from app.scoring.service import compute_scores
@@ -57,11 +59,20 @@ def refresh(db: Session = Depends(get_db)) -> DiscoveryRefreshOut:
     return DiscoveryRefreshOut(**result)
 
 
-def _to_out(db: Session, row: dict) -> DiscoveryCandidateOut:
+def _pending_instrument_ids(db: Session) -> set[int]:
+    """Instruments with an unresolved corporate-action candidate — computed
+    once per request (cache-only, no provider calls, same query Data Health
+    reuses) rather than per candidate row."""
+    return {c.instrument_id for c in list_outstanding_candidates(db)}
+
+
+def _to_out(db: Session, row: dict, pending_ids: set[int]) -> DiscoveryCandidateOut:
     instrument = row["instrument"]
+    instrument_out = InstrumentOut.model_validate(instrument)
+    instrument_out.price_status = _price_status(instrument)
     price, source = _resolve_current_price(db, instrument, {})
     return DiscoveryCandidateOut(
-        instrument=instrument,
+        instrument=instrument_out,
         source=row["source"],
         composite_score=row["composite_score"],
         value_score=row["value_score"],
@@ -69,6 +80,7 @@ def _to_out(db: Session, row: dict) -> DiscoveryCandidateOut:
         current_price=price,
         price_source=source,
         recommendation=row["recommendation"],
+        corporate_action_pending=instrument.id in pending_ids,
     )
 
 
@@ -83,7 +95,8 @@ def get_candidates(
     """
     config = get_scoring_config()
     rows = ranked_candidates(db, rank_by, limit, config)
-    return [_to_out(db, row) for row in rows]
+    pending_ids = _pending_instrument_ids(db)
+    return [_to_out(db, row, pending_ids) for row in rows]
 
 
 @router.post("/finviz", response_model=DiscoveryFinvizOut)
@@ -98,6 +111,7 @@ def finviz_scan(
     """
     entries = fetch_preset(preset)
     config = get_scoring_config()
+    pending_ids = _pending_instrument_ids(db)
 
     candidates = []
     failed = 0
@@ -127,9 +141,11 @@ def finviz_scan(
 
             price, price_source = _resolve_current_price(db, instrument, {})
             composite = score.composite if score else None
+            instrument_out = InstrumentOut.model_validate(instrument)
+            instrument_out.price_status = _price_status(instrument)
             candidates.append(
                 DiscoveryCandidateOut(
-                    instrument=instrument,
+                    instrument=instrument_out,
                     source=f"finviz:{preset}",
                     composite_score=composite,
                     value_score=pillar_score(score, "value") if score else None,
@@ -137,6 +153,7 @@ def finviz_scan(
                     current_price=price,
                     price_source=price_source,
                     recommendation=recommendation_from_composite(composite),
+                    corporate_action_pending=instrument.id in pending_ids,
                 )
             )
         except Exception:

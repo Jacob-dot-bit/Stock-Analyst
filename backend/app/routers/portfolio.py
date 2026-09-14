@@ -40,6 +40,7 @@ from app.prices.fx_service import get_rate as get_fx_rate
 from app.prices.history_service import compute_value_history
 from app.prices.provider_usage import record_usage
 from app.prices.quote_service import fetch_live_quotes, get_quote_progress
+from app.prices.service import FRESH_WINDOW_DAYS, price_status as _price_status
 from app.providers.base import InstrumentRef, ProviderError
 from app.providers.fmp import FmpProvider
 from app.providers.frankfurt import looks_like_isin
@@ -97,11 +98,6 @@ BREAKDOWN_DIMENSIONS = {"category", "currency", "country", "sector"}
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
-#: An instrument checked within this many days counts as "fresh" rather than "stale".
-#: Wider than one day because weekends and holidays mean "checked two days ago" is
-#: still the most current data available, not a sign anything is wrong.
-FRESH_WINDOW_DAYS = 4
-
 #: How old a broker-*declared* (non-market) valuation can be before it counts as
 #: stale, keyed by `Instrument.not_priceable_reason`. Mintos statements arrive
 #: quarterly (live "Investments" exports in between, whenever the user pulls
@@ -141,28 +137,6 @@ def _declared_valuation_note(
     if age_days <= DECLARED_VALUE_FRESHNESS_DAYS[reason]:
         return "fresh", Message(ValuationNote.DECLARED_FRESH, params).as_dict()
     return "stale", Message(ValuationNote.DECLARED_STALE, params).as_dict()
-
-
-def _price_status(instrument: Instrument) -> str:
-    """One of 'fresh' | 'stale' | 'error' | 'not_priceable' | 'unmapped'.
-
-    Drives the status badge in the positions table. Computed from fields already
-    written by the import and refresh pipelines — nothing new to maintain.
-    """
-    if instrument.not_priceable_reason:
-        return "not_priceable"
-    if instrument.mapping_status == MappingStatus.UNRESOLVED:
-        return "unmapped"
-    if instrument.verified_at is None:
-        # Mapped and priceable, but no provider has ever returned data for it —
-        # distinct from "never asked" (checked_at is also None in that case, which
-        # only happens right after import, before any refresh has run).
-        return "error" if instrument.prices_checked_at else "unmapped"
-
-    checked = instrument.prices_checked_at
-    if checked is not None and (datetime.now(UTC).date() - checked.date()).days <= FRESH_WINDOW_DAYS:
-        return "fresh"
-    return "stale"
 
 
 def _resolve_current_price(

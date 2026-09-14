@@ -654,6 +654,10 @@ export const en: Catalogue = {
   'discovery.verdictFilterLabel': 'Verdict filter',
   'discovery.verdictFilterHint':
     'Applied to the S&P 500 ranking and Finviz scans below — the hand-picked candidates above have no verdict to filter by.',
+  'discovery.dataQualityFilterLabel': 'Data quality',
+  'discovery.dataQualityFilterOption': 'Only show candidates with reliable data',
+  'discovery.dataQualityFilterHint':
+    'Requires a computed score, a fresh and correctly mapped price, and no pending corporate-action check.',
   'discovery.rankByValue': 'Rank by Value',
   'discovery.rankByGrowth': 'Rank by Growth',
   'discovery.valueScore': 'Value',
