@@ -8192,3 +8192,32 @@ the new host — the frontend service sets that env var explicitly (needed
 here since the new host has no display of its own, browsed to only from
 another machine), the backend stays on `127.0.0.1` exactly as documented
 in `scripts/export_for_hermes.py`'s own module docstring.
+
+## Step 3u.62 — Discovery verdict filter, alongside the existing price filter (2026-09-15)
+
+Roadmap item 14 (raised in passing at the end of the corporate-actions
+Phase 3 discussion, 2026-09-07): filter Discovery candidates by verdict
+in addition to the existing price range — the user's own example, a
+"buy" verdict under a given price threshold.
+
+**Scoped to `DiscoveryPanel` only, not lifted to `Screener.tsx`**: unlike
+the shared price filter (Decision 3u.54/3u.55), `recommendation` only
+exists on `DiscoveryCandidateOut` — `ScreenerTable`'s hand-picked
+candidates have no verdict field to filter by, so a shared control at
+the page level would silently do nothing for that list. Kept as local
+state inside `DiscoveryPanel`, with its own hint explicitly saying it
+covers the S&P 500 ranking and Finviz scans below it, not the candidates
+list above.
+
+Four toggle buttons (All/Buy/Hold/Sell, same pattern as the existing
+`rankBy` toggle), ANDed with the price filter already in effect. Same
+"unknown excluded, never a false match" discipline as the price filter:
+a candidate with `recommendation: null` (no composite score to derive
+one from) is excluded whenever a specific verdict is selected, not shown
+under "All" filtering logic by coincidence.
+
+No backend change — filtering is client-side over data already fetched,
+same as the price filter. Reused `filters.all` (already used by
+`PositionsTable`) rather than adding a new "All" key. `tsc -b`/`oxlint`
+clean (same two pre-existing warnings); all three i18n catalogues still
+at parity (752 keys each, verified by direct comparison).

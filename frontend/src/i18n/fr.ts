@@ -654,6 +654,9 @@ export const fr: Catalogue = {
   'discovery.recommendation.hold': 'Conserver',
   'discovery.recommendation.sell': 'Vendre',
   'discovery.recommendation.none': 'Pas de données',
+  'discovery.verdictFilterLabel': 'Filtre par verdict',
+  'discovery.verdictFilterHint':
+    'Appliqué au classement S&P 500 et aux scans Finviz ci-dessous — les candidats choisis à la main plus haut n’ont pas de verdict à filtrer.',
   'discovery.rankByValue': 'Classer par Value',
   'discovery.rankByGrowth': 'Classer par Growth',
   'discovery.valueScore': 'Value',

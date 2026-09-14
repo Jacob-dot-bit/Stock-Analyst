@@ -16,6 +16,7 @@ interface Props {
 
 type RankBy = 'value' | 'growth'
 type FinvizPreset = 'insider_buys' | 'oversold'
+type VerdictFilter = 'all' | 'buy' | 'hold' | 'sell'
 
 /**
  * Automated candidate discovery — two sources feeding the same "hidden
@@ -43,6 +44,11 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   const [finvizResults, setFinvizResults] = useState<Partial<Record<FinvizPreset, DiscoveryCandidate[]>>>({})
   const [finvizFailed, setFinvizFailed] = useState<Partial<Record<FinvizPreset, number>>>({})
   const [finvizBusy, setFinvizBusy] = useState<FinvizPreset | null>(null)
+  // Applies to both lists below (S&P 500 ranking and Finviz scans) — the
+  // hand-picked `ScreenerTable` candidates carry no `recommendation` field,
+  // so this filter has nothing to do with them and stays local to this
+  // panel rather than lifted to `Screener.tsx` like the price filter is.
+  const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all')
 
   async function loadCandidates(nextRankBy: RankBy) {
     setError(null)
@@ -148,6 +154,14 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
     return true
   }
 
+  function matchesVerdictFilter(c: DiscoveryCandidate): boolean {
+    if (verdictFilter === 'all') return true
+    // Same convention as the price filter: a candidate with no
+    // computable verdict is excluded when a specific one is asked for,
+    // never shown as if it matched.
+    return c.recommendation === verdictFilter
+  }
+
   function candidateRow(c: DiscoveryCandidate, showScores: boolean) {
     return (
       <tr key={c.instrument.id}>
@@ -186,6 +200,24 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </p>
 
       {error && <div className="notice error">{error}</div>}
+
+      <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.verdictFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.verdictFilterHint')}
+        </p>
+        <div className="form-row">
+          {(['all', 'buy', 'hold', 'sell'] as VerdictFilter[]).map((option) => (
+            <button
+              key={option}
+              className={verdictFilter === option ? 'primary' : undefined}
+              onClick={() => setVerdictFilter(option)}
+            >
+              {option === 'all' ? t('filters.all') : t(`discovery.recommendation.${option}`)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
         <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.sp500.title')}</h3>
@@ -231,7 +263,12 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   <th />
                 </tr>
               </thead>
-              <tbody>{candidates.filter(withinPriceRange).map((c) => candidateRow(c, true))}</tbody>
+              <tbody>
+                {candidates
+                  .filter(withinPriceRange)
+                  .filter(matchesVerdictFilter)
+                  .map((c) => candidateRow(c, true))}
+              </tbody>
             </table>
           </div>
         )}
@@ -267,7 +304,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
           const results = finvizResults[preset]
           if (!results) return null
           const failedCount = finvizFailed[preset] ?? 0
-          const filteredResults = results.filter(withinPriceRange)
+          const filteredResults = results.filter(withinPriceRange).filter(matchesVerdictFilter)
           return (
             <div key={preset} style={{ marginTop: '0.6rem' }}>
               <div className="muted" style={{ fontSize: '0.82rem' }}>
