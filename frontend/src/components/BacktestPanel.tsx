@@ -87,7 +87,7 @@ export function BacktestPanel() {
             <dl className="position-detail-facts" style={{ marginTop: '0.6rem' }}>
               <div>
                 <dt>{t('backtest.testAccuracy')}</dt>
-                <dd>{formatNumber(report.test_accuracy * 100, 1)}%</dd>
+                <dd>{formatNumber(report.test_accuracy * 100)}%</dd>
               </div>
               <div>
                 <dt>{t('backtest.avgReturnUp')}</dt>
