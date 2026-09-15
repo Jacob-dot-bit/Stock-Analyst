@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { DiscoveryCandidate } from '../api/types'
 import { useI18n } from '../i18n'
+import { BacktestPanel } from './BacktestPanel'
 import { PredictionBackfillButton } from './PredictionBackfillButton'
 import { RecommendationBadge } from './RecommendationBadge'
 
@@ -429,6 +430,10 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
 
       <div style={{ marginTop: '1.2rem' }}>
         <PredictionBackfillButton />
+      </div>
+
+      <div style={{ marginTop: '1.2rem' }}>
+        <BacktestPanel />
       </div>
     </div>
   )

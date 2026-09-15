@@ -695,13 +695,29 @@ export const pl: Catalogue = {
   'discovery.finviz.scanningNotice':
     'Skan w toku — dostawcy o darmowym poziomie mogą potrzebować kilku minut. Nie zamykaj tej strony.',
 
-  'prediction.title': 'Predykcja (etap 1: historia cen)',
+  'prediction.title': 'Historia cen',
   'prediction.description':
-    'Prawdziwy model predykcyjny potrzebuje rzetelnego backtestu, a ten potrzebuje głębszej historii cen niż ta aplikacja normalnie przechowuje. Ten krok pobiera kilka lat dziennych świec dla instrumentów już wycenionych — tylko cena, ponieważ fundamenty nie są jeszcze przechowywane z datą złożenia, a użycie dzisiejszego wyniku do „przewidywania" przeszłego zwrotu byłoby błędem antycypacji. Żadna predykcja nie jest jeszcze pokazywana — ten krok tylko zbiera dane.',
+    'Prawdziwy model predykcyjny potrzebuje rzetelnego backtestu, a ten potrzebuje głębszej historii cen niż ta aplikacja normalnie przechowuje. Ten krok pobiera kilka lat dziennych świec dla instrumentów już wycenionych — tylko cena, ponieważ fundamenty nie są jeszcze przechowywane z datą złożenia, a użycie dzisiejszego wyniku do „przewidywania" przeszłego zwrotu byłoby błędem antycypacji. Zobacz „Backtest" poniżej, co model robi z tymi danymi.',
   'prediction.backfill': 'Pobierz historię cen',
   'prediction.running': 'Pobieranie…',
   'prediction.alreadyRunning': 'Pobieranie jest już w toku.',
   'prediction.backfillResult': '{updated} zaktualizowanych, {failed} błędów, {barsAdded} nowych świec zapisanych.',
+  'backtest.title': 'Backtest',
+  'backtest.description':
+    'Prosty model techniczny oparty tylko na cenie (momentum, średnie kroczące, zrealizowana zmienność), trenowany od nowa przy każdym uruchomieniu i oceniany wyłącznie na danych po okresie treningowym — nigdy predykcja dla pojedynczego instrumentu, tylko własna historyczna skuteczność modelu.',
+  'backtest.run': 'Uruchom backtest',
+  'backtest.running': 'W trakcie…',
+  'backtest.disclaimer':
+    'To jedna historyczna ocena, nie dowód na realną przewagę w handlu. Model widzi tylko cenę — brak fundamentów, wiadomości, osądu — a wyniki z przeszłości niczego nie gwarantują na przyszłość.',
+  'backtest.instrumentsUsed': 'Wykorzystane instrumenty',
+  'backtest.trainPeriod': 'Okres treningowy (próbki)',
+  'backtest.testPeriod': 'Okres testowy (próbki)',
+  'backtest.singleClassWarning':
+    'Okres treningowy poruszał się tylko w jednym kierunku (np. nieprzerwany trend wzrostowy) — nie udało się dopasować użytecznego modelu, więc nie podano skuteczności.',
+  'backtest.testAccuracy': 'Skuteczność na okresie testowym',
+  'backtest.avgReturnUp': 'Śr. zrealizowany zwrot — przewidywany wzrost',
+  'backtest.avgReturnDown': 'Śr. zrealizowany zwrot — przewidywany spadek',
+  'backtest.lowSampleWarning': 'Okres testowy ma zbyt mało próbek, by ufać tej wartości skuteczności.',
 
   'factors.title': 'Ekspozycja czynnikowa (model czteroczynnikowy Carharta)',
   'factors.description':

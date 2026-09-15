@@ -8372,3 +8372,57 @@ independent "recommendation" surface for an agent to consume beyond
 what Discovery already discloses. If Hermes needs to act, it acts inside
 the investor's own Personal Policy — this app stays read-only and
 descriptive, same posture as everywhere else.
+
+## Decision 3u.66 — Wiring up the backtest report, the deliberate framing decision Decision 3u.23 deferred (2026-09-16)
+
+Direct follow-up to the "philosophy evolving" exchange: the user asked
+for a real prediction module first. `POST /api/prediction/backtest` has
+existed, fully working and tested, since Decision 3u.23 (2026-09-03) —
+`instruments_used`/train-test sample counts and date ranges/`test_accuracy`/
+`avg_return_predicted_{up,down}`/`low_sample_warning`/`single_class_warning`
+— but no frontend code ever called it (confirmed by grep before writing
+anything: zero references in `client.ts` or any component). That commit's
+own words: *"presenting a number like this responsibly needs its own
+framing decision, a separate conversation from building the number
+itself."* This is that conversation, finally had.
+
+**The real choice, put to the user explicitly before coding**: an
+aggregate report of the model's own historical performance (what it
+already does, just never shown), or a per-instrument "predicted up/down"
+label on Discovery candidates/positions. Chose the aggregate report.
+Reasoning laid out for the user: the model's real, live-measured result
+(`test_accuracy: 0.542` — barely above chance — over exactly one walk-
+forward test period, even though the predicted-up/predicted-down buckets'
+average *realized* returns are genuinely separated by ~15 points) does
+not support showing a confident-looking label next to a specific ticker
+without it reading as advice this app has spent the whole session
+explicitly refusing to give anywhere except Discovery's narrow, disclosed
+verdict exception — and even that exception is a mechanical score-band
+mapping, not a statistical model with barely-above-chance accuracy.
+
+**Built**: `BacktestPanel.tsx`, next to the existing `PredictionBackfillButton`
+in `DiscoveryPanel.tsx` — a "Run backtest" button, the real metrics
+(instruments used, train/test periods and sample counts, accuracy, the
+two buckets' average realized returns), the two existing warnings
+surfaced as actual warning notices (never silently dropped), and a
+**permanent, non-dismissible disclaimer** every time a report renders —
+same convention as Tax Prep's own permanent disclaimer (Decision 3u.60):
+"one historical evaluation, not proof of a real trading edge... past
+results say nothing certain about the future." Reworded
+`prediction.description` (the phase-1 backfill button's own text), which
+used to end with the now-false "No prediction is shown yet — this is
+data collection only" — it now points at "Backtest" below instead.
+
+No backend change at all — `run_backtest`/`BacktestReport` were already
+correct and already tested (Decision 3u.23's 7 model tests). Purely a
+frontend addition: new `BacktestReport` type, `api.runBacktest()`, the
+component, 3 locales (770 keys each, parity verified). `tsc -b`/`oxlint`
+clean (same two pre-existing warnings); existing `test_prediction_api.py`
+(8 tests) still passing, confirming the reused endpoint is unaffected.
+
+**Still deliberately not built**: any per-instrument prediction label,
+anywhere. If that's ever revisited, it needs either a materially better-
+validated model (more than one test period, ideally out-of-sample across
+different market regimes) or an extremely careful framing that a ~54%
+accuracy figure does not currently support — not a decision to make
+implicitly by shipping a UI element.

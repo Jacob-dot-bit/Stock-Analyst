@@ -684,13 +684,29 @@ export const en: Catalogue = {
   'discovery.finviz.scanningNotice':
     'Scan in progress — free-tier providers can take several minutes. Don\'t close this page.',
 
-  'prediction.title': 'Prediction (phase 1: price history)',
+  'prediction.title': 'Price history',
   'prediction.description':
-    'A real predictive model needs a proper backtest, which needs deeper price history than this app normally keeps. This step pulls several years of daily bars for the instruments already priced — price only, since fundamentals aren\'t stored with a dated history yet and using today\'s score to "predict" a past return would be lookahead bias. No prediction is shown yet — this is data collection only.',
+    'A real predictive model needs a proper backtest, which needs deeper price history than this app normally keeps. This step pulls several years of daily bars for the instruments already priced — price only, since fundamentals aren\'t stored with a dated history yet and using today\'s score to "predict" a past return would be lookahead bias. See "Backtest" below for what the model does with this data.',
   'prediction.backfill': 'Backfill price history',
   'prediction.running': 'Backfilling…',
   'prediction.alreadyRunning': 'A backfill is already running.',
   'prediction.backfillResult': '{updated} updated, {failed} failed, {barsAdded} new bars stored.',
+  'backtest.title': 'Backtest',
+  'backtest.description':
+    'A simple, price-only technical model (momentum, moving averages, realized volatility), trained fresh on every run and evaluated strictly on data after its training period ends — never a per-instrument prediction, only the model\'s own historical accuracy.',
+  'backtest.run': 'Run backtest',
+  'backtest.running': 'Running…',
+  'backtest.disclaimer':
+    'This is one historical evaluation, not proof of a real trading edge. The model sees price only — no fundamentals, no news, no judgment — and past results say nothing certain about the future.',
+  'backtest.instrumentsUsed': 'Instruments used',
+  'backtest.trainPeriod': 'Training period (samples)',
+  'backtest.testPeriod': 'Test period (samples)',
+  'backtest.singleClassWarning':
+    'The training period moved in only one direction (e.g. an uninterrupted uptrend) — no meaningful model could be fit, so no accuracy is reported.',
+  'backtest.testAccuracy': 'Accuracy on the test period',
+  'backtest.avgReturnUp': 'Avg. realized return — predicted up',
+  'backtest.avgReturnDown': 'Avg. realized return — predicted down',
+  'backtest.lowSampleWarning': 'The test period has too few samples to trust this accuracy figure.',
 
   'factors.title': 'Factor exposure (Carhart four-factor model)',
   'factors.description':

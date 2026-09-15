@@ -756,6 +756,30 @@ export interface PredictionBackfillStatus {
   report: PredictionBackfillReport | null
 }
 
+/** Phase 2: an honest, unrounded report of a walk-forward-validated
+ * logistic regression over the price-only feature set — never a
+ * per-instrument prediction, only the model's own historical accuracy on
+ * a held-out, strictly-later test period (see DEVLOG "Decision 3u.23").
+ * Recomputed live on every call, nothing persisted. */
+export interface BacktestReport {
+  instruments_used: number
+  train_samples: number
+  test_samples: number
+  train_start: string | null
+  train_end: string | null
+  test_start: string | null
+  test_end: string | null
+  test_accuracy: number | null
+  avg_return_predicted_up: number | null
+  avg_return_predicted_down: number | null
+  /** True when `test_samples` is too small to trust `test_accuracy` —
+   * must always be shown alongside it, never silently dropped. */
+  low_sample_warning: boolean
+  /** True when the training period had only one label class (e.g. a pure
+   * uptrend) — no classifier could be fit, so every metric above is `null`. */
+  single_class_warning: boolean
+}
+
 export interface FactorImportResult {
   imported: number
   already_present: number

@@ -2,6 +2,7 @@ import type {
   AllocationRow,
   AttentionItem,
   BackfillIsinsResult,
+  BacktestReport,
   Backup,
   BreakdownDimension,
   BreakdownItem,
@@ -450,6 +451,8 @@ export const api = {
 
   getPredictionBackfillStatus: () =>
     request<PredictionBackfillStatus>('/api/prediction/backfill-history/status'),
+
+  runBacktest: () => request<BacktestReport>('/api/prediction/backtest', { method: 'POST' }),
 
   importFactorData: () => request<FactorImportResult>('/api/factors/import', { method: 'POST' }),
 

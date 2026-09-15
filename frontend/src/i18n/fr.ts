@@ -687,13 +687,29 @@ export const fr: Catalogue = {
   'discovery.finviz.scanningNotice':
     'Scan en cours — les fournisseurs gratuits peuvent nécessiter plusieurs minutes. Ne ferme pas cette page.',
 
-  'prediction.title': "Prédiction (phase 1 : historique de prix)",
+  'prediction.title': 'Historique de prix',
   'prediction.description':
-    "Un vrai modèle prédictif a besoin d'un vrai backtest, qui a besoin d'un historique de prix plus profond que ce que l'app garde normalement. Cette étape récupère plusieurs années de bougies journalières pour les instruments déjà cotés — prix uniquement, car les fondamentaux ne sont pas encore stockés avec une date de dépôt, et utiliser le score d'aujourd'hui pour « prédire » un rendement passé serait un biais de anticipation. Aucune prédiction n'est encore affichée — cette étape ne fait que collecter des données.",
+    "Un vrai modèle prédictif a besoin d'un vrai backtest, qui a besoin d'un historique de prix plus profond que ce que l'app garde normalement. Cette étape récupère plusieurs années de bougies journalières pour les instruments déjà cotés — prix uniquement, car les fondamentaux ne sont pas encore stockés avec une date de dépôt, et utiliser le score d'aujourd'hui pour « prédire » un rendement passé serait un biais de anticipation. Voir « Backtest » ci-dessous pour ce que le modèle fait de ces données.",
   'prediction.backfill': "Récupérer l'historique de prix",
   'prediction.running': 'Récupération…',
   'prediction.alreadyRunning': 'Une récupération est déjà en cours.',
   'prediction.backfillResult': '{updated} mis à jour, {failed} échecs, {barsAdded} nouvelles bougies stockées.',
+  'backtest.title': 'Backtest',
+  'backtest.description':
+    "Un modèle technique simple, basé uniquement sur le prix (momentum, moyennes mobiles, volatilité réalisée), réentraîné à chaque exécution et évalué strictement sur des données postérieures à sa période d'entraînement — jamais une prédiction par titre, seulement la performance historique du modèle lui-même.",
+  'backtest.run': 'Lancer le backtest',
+  'backtest.running': 'En cours…',
+  'backtest.disclaimer':
+    "Ceci est une seule évaluation historique, pas la preuve d'un avantage réel en trading. Le modèle ne voit que le prix — aucun fondamental, aucune actualité, aucun jugement — et les résultats passés ne garantissent rien sur l'avenir.",
+  'backtest.instrumentsUsed': 'Instruments utilisés',
+  'backtest.trainPeriod': "Période d'entraînement (échantillons)",
+  'backtest.testPeriod': 'Période de test (échantillons)',
+  'backtest.singleClassWarning':
+    "La période d'entraînement n'a évolué que dans une seule direction (ex. une tendance haussière ininterrompue) — aucun modèle utile n'a pu être ajusté, donc aucune précision n'est indiquée.",
+  'backtest.testAccuracy': 'Précision sur la période de test',
+  'backtest.avgReturnUp': 'Rendement réalisé moyen — hausse prédite',
+  'backtest.avgReturnDown': 'Rendement réalisé moyen — baisse prédite',
+  'backtest.lowSampleWarning': 'La période de test a trop peu d’échantillons pour faire confiance à cette précision.',
 
   'factors.title': 'Exposition factorielle (modèle à 4 facteurs de Carhart)',
   'factors.description':
