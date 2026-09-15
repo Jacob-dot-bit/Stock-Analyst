@@ -70,6 +70,13 @@ def main() -> None:
         "lots_by_instrument": lots_by_instrument,
         "dividends_summary": _get("/api/dividends/summary"),
         "tax_summaries_by_year": tax_summaries,
+        # The user's own stated rules — every configured limit (satisfied or
+        # not), not just current breaches, so a consumer can tell "within
+        # bounds" from "no rule set" rather than assuming the latter. See
+        # DEVLOG "Decision 3u.65".
+        "personal_policy": _get("/api/portfolio/policy"),
+        "personal_policy_limits": _get("/api/portfolio/policy/limits"),
+        "personal_policy_gaps": _get("/api/portfolio/policy/gaps"),
     }
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)

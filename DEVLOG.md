@@ -8318,3 +8318,57 @@ No backend change means no new tests needed beyond the existing coverage
 **Still not built**: instrument type, cap, dividend yield, debt,
 minimum-history-length, and the "not a recommendation" disclaimer rework
 — unchanged from 3u.63's list.
+
+## Decision 3u.65 — Personal Policy exported to Hermes, closing the AI-piloting gap found by asking the question directly (2026-09-16)
+
+User asked, exploratory: "un investisseur qui voudrait être piloté par
+IA, il aurait besoin de quoi sur notre site ?" Answered without building
+anything first (this app has no trade-execution capability at all, and
+never will unless that's a deliberate future scope change — XTB's own
+API is gone, see the README's "Read this first"): the two real gaps are
+an agent-facing consolidated data surface, and a decision about whether
+an agent should invent its own recommendations or stay strictly inside
+the investor's *own* stated rules. Recommended the latter — reusing
+Personal Policy (Decision 3u.59) rather than adding a new recommendation
+engine that would contradict this app's whole "never tell the user what
+to do" posture everywhere except Discovery's narrow, disclosed exception.
+User agreed to pursue this direction.
+
+**Found by re-reading `scripts/export_for_hermes.py` (Decision 3u.61-era,
+commit `c08d67c5`) before writing anything**: the Hermes export already
+exists and already bundles portfolio/breakdown/allocation/attention/
+data-health/lots/dividends/tax — a real, working "agent-facing snapshot"
+that answers half of what was just discussed. But it never included
+Personal Policy or its gaps — the one piece that would let an agent
+reason about the investor's *own* constraints rather than just seeing
+raw numbers. Also found: that feature's own introducing commit
+(`49d1df3`) claimed to add docs for both tax prep *and* Hermes export in
+its message, but its actual diff only ever documented tax prep — the
+Hermes export has had zero DEVLOG/ARCHITECTURE.md coverage since it
+shipped. Both gaps closed together.
+
+**Change**: `export_for_hermes.py` gains three more `_get()` calls —
+`personal_policy`, `personal_policy_limits` (every configured limit,
+satisfied or not — deliberately not just `/policy/gaps`'s breaches-only
+view, since an agent needs to know "within bounds" is different from "no
+rule set"), and `personal_policy_gaps`. Same pattern as every existing
+field: calls the app's own endpoint, no logic duplicated, `None` on
+failure rather than crashing the whole export. No backend change — all
+three endpoints already existed (Decision 3u.59).
+
+Verified live against the real backend on the dedicated host: all three
+endpoints return real data (a configured policy, 4 real limits, 2 real
+breaches). No new data-sensitivity concern — the export already carries
+every position's real broker symbol via the existing `portfolio` field;
+this only repeats the same already-flowing identifiers in a new field,
+into the same already-authorized destination (Hermes' own read-only
+bind mount, requested by the user in Decision-adjacent Hermes work,
+never a public or shared surface).
+
+**Not built, explicitly out of scope per the user's own agreed
+direction**: any execution/trading capability, any endpoint that lets
+Hermes *write* to this app rather than only read, and any new
+independent "recommendation" surface for an agent to consume beyond
+what Discovery already discloses. If Hermes needs to act, it acts inside
+the investor's own Personal Policy — this app stays read-only and
+descriptive, same posture as everywhere else.
