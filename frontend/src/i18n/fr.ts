@@ -661,6 +661,9 @@ export const fr: Catalogue = {
   'discovery.dataQualityFilterOption': 'N’afficher que les candidats aux données fiables',
   'discovery.dataQualityFilterHint':
     'Nécessite un score calculé, un cours récent et correctement mappé, et aucune vérification de corporate action en attente.',
+  'discovery.marketSectorFilterLabel': 'Pays et secteur',
+  'discovery.marketSectorFilterHint':
+    'Appliqué au classement S&P 500 et aux scans Finviz ci-dessous — les candidats choisis à la main plus haut n’ont pas encore de filtre pays/secteur. Les options reflètent ce qui est actuellement chargé.',
   'discovery.rankByValue': 'Classer par Value',
   'discovery.rankByGrowth': 'Classer par Growth',
   'discovery.valueScore': 'Value',

@@ -8277,3 +8277,44 @@ still named in the memory note as the fuller vision, none scoped yet.
 Cap/dividend-yield/debt in particular need new derived metrics (this app
 only stores raw filed XBRL figures today, not ratios) — a real backend
 chantier of its own, not a filter-UI addition.
+
+## Decision 3u.64 — Discovery country/sector filters, no backend change needed (2026-09-15)
+
+Continuing the same slice-by-slice build of the fuller Pépites-filters
+vision (memory `stock-analyst-roadmap-2026-09.md` item 5): market/pays
+and secteur next, user-requested by name.
+
+**Zero backend work, unlike 3u.63's data-quality gate**: `Instrument.country`/
+`.sector` were already columns, already populated (`country` from
+`get_or_create_instrument`'s broker-symbol-suffix resolution — every
+instrument gets one, not just S&P 500 imports; `sector` from the S&P 500
+import's own bundled data), and already exposed on `InstrumentOut` since
+before this session. Purely a frontend addition: two `<select>`s, options
+derived from whatever's actually loaded (`[...new Set(...)].sort()` over
+the combined S&P 500 + Finviz candidate list) rather than a hardcoded
+taxonomy, so a filter never offers a choice that would show an empty
+list. Same "unknown excluded, never a false match" rule as every other
+filter here.
+
+Reused the existing `breakdown.dimension.country`/`.sector` i18n keys
+(Country/Sector, already used by the allocation-breakdown and personal-
+policy dimension pickers) for the field labels, rather than adding
+duplicate `filters.market`/`filters.sector` keys — "Country" not "Market"
+matches what the field actually is and what the rest of the app already
+calls it. Kept scoped to `DiscoveryPanel` (same as verdict/data-quality),
+even though `country`/`sector` also exist on `ScreenerTable`'s
+`ScreenerCandidate.instrument` and so *could* have been lifted to
+`Screener.tsx` like the price filter — the hint says so explicitly,
+matching the verdict filter's own disclosed-scope convention, rather than
+silently doing nothing for the Candidates list above.
+
+Live-verified against the real portfolio: real S&P 500 data shows 11 GICS
+sectors plus `null` (a handful of imported symbols never resolved
+fundamentals) and a single "US" market (expected — it's a US index; the
+Finviz preset scans are the path that would surface other countries).
+No backend change means no new tests needed beyond the existing coverage
+— `tsc -b`/`oxlint` clean, i18n catalogues at parity (757 keys each).
+
+**Still not built**: instrument type, cap, dividend yield, debt,
+minimum-history-length, and the "not a recommendation" disclaimer rework
+— unchanged from 3u.63's list.

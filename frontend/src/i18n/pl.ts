@@ -669,6 +669,9 @@ export const pl: Catalogue = {
   'discovery.dataQualityFilterOption': 'Pokazuj tylko kandydatów z wiarygodnymi danymi',
   'discovery.dataQualityFilterHint':
     'Wymaga obliczonego wyniku, aktualnej i poprawnie zmapowanej ceny oraz braku oczekującej weryfikacji zdarzenia korporacyjnego.',
+  'discovery.marketSectorFilterLabel': 'Kraj i sektor',
+  'discovery.marketSectorFilterHint':
+    'Stosowany do rankingu S&P 500 i skanów Finviz poniżej — ręcznie wybrani kandydaci powyżej nie mają jeszcze filtra kraju/sektora. Opcje odzwierciedlają aktualnie wczytane dane.',
   'discovery.rankByValue': 'Sortuj wg Value',
   'discovery.rankByGrowth': 'Sortuj wg Growth',
   'discovery.valueScore': 'Value',

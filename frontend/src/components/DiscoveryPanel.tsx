@@ -53,6 +53,13 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   // correctly mapped price, and no unresolved corporate-action candidate.
   // See DEVLOG "Step 3u.62"'s addendum.
   const [dataQualityOnly, setDataQualityOnly] = useState(false)
+  // `country`/`sector` also exist on `ScreenerCandidate.instrument`, so
+  // these two *could* be lifted to `Screener.tsx` like the price filter —
+  // kept local for now (same scope as verdict/data quality) since their
+  // option lists are derived from Discovery's own data, not Candidates'.
+  // See DEVLOG "Decision 3u.64".
+  const [marketFilter, setMarketFilter] = useState('all')
+  const [sectorFilter, setSectorFilter] = useState('all')
 
   async function loadCandidates(nextRankBy: RankBy) {
     setError(null)
@@ -171,6 +178,26 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
     return c.composite_score !== null && c.instrument.price_status === 'fresh' && !c.corporate_action_pending
   }
 
+  function matchesMarketFilter(c: DiscoveryCandidate): boolean {
+    if (marketFilter === 'all') return true
+    // Same "unknown excluded, never a false match" convention as every
+    // other filter here: no country on record can't be confirmed to
+    // match a specific one asked for.
+    return c.instrument.country === marketFilter
+  }
+
+  function matchesSectorFilter(c: DiscoveryCandidate): boolean {
+    if (sectorFilter === 'all') return true
+    return c.instrument.sector === sectorFilter
+  }
+
+  // Option lists reflect what's actually loaded right now (S&P 500 +
+  // Finviz combined) rather than a fixed taxonomy — a filter never offers
+  // a choice that would just show an empty list.
+  const allLoadedCandidates = [...(candidates ?? []), ...Object.values(finvizResults).flatMap((v) => v ?? [])]
+  const availableMarkets = [...new Set(allLoadedCandidates.map((c) => c.instrument.country).filter((v): v is string => v !== null))].sort()
+  const availableSectors = [...new Set(allLoadedCandidates.map((c) => c.instrument.sector).filter((v): v is string => v !== null))].sort()
+
   function candidateRow(c: DiscoveryCandidate, showScores: boolean) {
     return (
       <tr key={c.instrument.id}>
@@ -244,6 +271,37 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.marketSectorFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.marketSectorFilterHint')}
+        </p>
+        <div className="form-row">
+          <div className="field">
+            <label htmlFor="discovery-market-filter">{t('breakdown.dimension.country')}</label>
+            <select id="discovery-market-filter" value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)}>
+              <option value="all">{t('filters.all')}</option>
+              {availableMarkets.map((market) => (
+                <option key={market} value={market}>
+                  {market}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="discovery-sector-filter">{t('breakdown.dimension.sector')}</label>
+            <select id="discovery-sector-filter" value={sectorFilter} onChange={(e) => setSectorFilter(e.target.value)}>
+              <option value="all">{t('filters.all')}</option>
+              {availableSectors.map((sector) => (
+                <option key={sector} value={sector}>
+                  {sector}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.2rem' }}>
         <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.sp500.title')}</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           {t('discovery.sp500.description')}
@@ -292,6 +350,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   .filter(withinPriceRange)
                   .filter(matchesVerdictFilter)
                   .filter(matchesDataQualityFilter)
+                  .filter(matchesMarketFilter)
+                  .filter(matchesSectorFilter)
                   .map((c) => candidateRow(c, true))}
               </tbody>
             </table>
@@ -333,6 +393,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
             .filter(withinPriceRange)
             .filter(matchesVerdictFilter)
             .filter(matchesDataQualityFilter)
+            .filter(matchesMarketFilter)
+            .filter(matchesSectorFilter)
           return (
             <div key={preset} style={{ marginTop: '0.6rem' }}>
               <div className="muted" style={{ fontSize: '0.82rem' }}>
