@@ -4,10 +4,8 @@ import { api } from '../api/client'
 import type { Portfolio as PortfolioData, PositionSignal, Score } from '../api/types'
 import { AllocationTargets } from '../components/AllocationTargets'
 import { AttentionCard } from '../components/AttentionCard'
-import { FactorExposures } from '../components/FactorExposures'
 import { OnboardingChecklist } from '../components/OnboardingChecklist'
 import { PersonalPolicyPanel } from '../components/PersonalPolicyPanel'
-import { PortfolioBreakdown } from '../components/PortfolioBreakdown'
 import { PositionsTable } from '../components/PositionsTable'
 import { RefreshPanel } from '../components/RefreshPanel'
 import { ValueHistoryChart } from '../components/ValueHistoryChart'
@@ -108,13 +106,9 @@ export function Portfolio() {
 
       {data && data.totals.market_value !== null && <ValueHistoryChart />}
 
-      {data && data.totals.market_value !== null && <PortfolioBreakdown />}
-
       {data && data.totals.market_value !== null && <AllocationTargets />}
 
       {data && data.totals.market_value !== null && <PersonalPolicyPanel />}
-
-      {data && data.totals.market_value !== null && <FactorExposures />}
 
       <RefreshPanel onRefreshed={() => void load()} onLivePortfolio={applyLivePortfolio} />
 

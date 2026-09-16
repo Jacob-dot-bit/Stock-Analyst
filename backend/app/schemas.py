@@ -791,6 +791,67 @@ class ValueHistoryOut(BaseModel):
     benchmark_name: str | None = None
 
 
+class PositionConcentrationOut(BaseModel):
+    """One held position's share of total portfolio value — the
+    unconditional, always-visible counterpart to Personal Policy's `line`
+    limit (`/policy/gaps` only reports a *breach* of a *configured* line
+    limit). See DEVLOG "Decision 3u.67"."""
+
+    instrument_id: int
+    symbol: str
+    name: str | None
+    category: str | None
+    value: float
+    weight_percent: float
+
+
+class DeclaredValuationSourceOut(BaseModel):
+    #: `Instrument.not_priceable_reason` — "p2p_aggregate" | "employee_savings_fund".
+    reason: str
+    provider_name: str
+    value: float
+    weight_percent: float
+    positions_count: int
+    freshest_as_of: date | None
+    stalest_as_of: date | None
+    #: True when any position in this source is stale per
+    #: `DECLARED_VALUE_FRESHNESS_DAYS` — see `_declared_valuation_note`.
+    has_stale: bool
+
+
+class LiquidityOut(BaseModel):
+    """Share of the portfolio priced from a periodically-declared broker
+    statement rather than a live market quote — the unconditional
+    counterpart to Personal Policy's `declared_valuation` limit. Excludes
+    structurally non-priceable residuals (corporate-action leftovers): that
+    is a data-trust fact already covered by `/data-health`, not a liquidity
+    fact. See DEVLOG "Decision 3u.67"."""
+
+    total_declared_value: float
+    total_declared_weight_percent: float
+    sources: list[DeclaredValuationSourceOut]
+
+
+class DrawdownOut(BaseModel):
+    """Largest peak-to-trough decline in real historical portfolio value —
+    from the same `Lot`-replay series `/value-history` already returns.
+    Nowhere else in this codebase computes this. See DEVLOG "Decision
+    3u.67"."""
+
+    insufficient_history: bool
+    max_drawdown_pct: float | None
+    peak_date: str | None
+    peak_value: float | None
+    trough_date: str | None
+    trough_value: float | None
+    #: None when `insufficient_history`. Otherwise: did `value` reach back
+    #: to >= `peak_value` at any point strictly after the trough? A real
+    #: historical fact ("it did recover, on this date") — not "is it at
+    #: that peak right now," which can differ if it has since dropped again.
+    recovered: bool | None
+    recovered_date: str | None
+
+
 class ImportPreviewOut(BaseModel):
     """What `POST /api/imports/xtb/preview` would do, without persisting anything.
 

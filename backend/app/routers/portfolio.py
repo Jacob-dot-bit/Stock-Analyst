@@ -37,7 +37,7 @@ from app.models import (
     WatchlistItem,
 )
 from app.prices.fx_service import get_rate as get_fx_rate
-from app.prices.history_service import compute_value_history
+from app.prices.history_service import compute_max_drawdown, compute_value_history
 from app.prices.provider_usage import record_usage
 from app.prices.quote_service import fetch_live_quotes, get_quote_progress
 from app.prices.service import FRESH_WINDOW_DAYS, price_status as _price_status
@@ -58,9 +58,12 @@ from app.schemas import (
     DataHealthRowOut,
     DataHealthSummaryOut,
     DataHealthValuationOut,
+    DeclaredValuationSourceOut,
+    DrawdownOut,
     EnrichSectorsOut,
     IsinIn,
     InstrumentOut,
+    LiquidityOut,
     LotOut,
     ManualPositionIn,
     MessageOut,
@@ -72,6 +75,7 @@ from app.schemas import (
     PersonalPolicyOut,
     PortfolioOut,
     PortfolioTotals,
+    PositionConcentrationOut,
     PositionOut,
     PositionSignalOut,
     QuoteStatusOut,
@@ -836,6 +840,111 @@ def get_personal_policy_gaps(db: Session = Depends(get_db)) -> list[PersonalPoli
             )
 
     return gaps
+
+
+@router.get("/risk/concentration", response_model=list[PositionConcentrationOut])
+def get_risk_concentration(
+    limit: int = Query(10, ge=1, le=100), db: Session = Depends(get_db)
+) -> list[PositionConcentrationOut]:
+    """Every held position's share of total portfolio value, largest first,
+    capped at `limit` — the unconditional, always-visible counterpart to
+    Personal Policy's `line` limit (`/policy/gaps` only reports a *breach*
+    of a *configured* line limit; this reports the top N regardless of
+    whether any limit exists). See DEVLOG "Decision 3u.67".
+    """
+    positions, figures, total_value = _positions_figures_and_total(db)
+    if not total_value:
+        return []
+
+    rows = []
+    for p in positions:
+        value, *_ = figures[p.id]
+        if value is None:
+            continue
+        rows.append(
+            PositionConcentrationOut(
+                instrument_id=p.instrument.id,
+                symbol=p.instrument.broker_symbol,
+                name=p.instrument.name,
+                category=p.instrument.category,
+                value=round(value, 2),
+                weight_percent=round(value / total_value * 100, 2),
+            )
+        )
+    rows.sort(key=lambda r: r.weight_percent, reverse=True)
+    return rows[:limit]
+
+
+@router.get("/risk/liquidity", response_model=LiquidityOut)
+def get_risk_liquidity(db: Session = Depends(get_db)) -> LiquidityOut:
+    """Share of the portfolio priced from a periodically-declared broker
+    statement rather than a live market quote (Mintos Core P2P, Amundi
+    ESR), broken down by source and freshness — the unconditional
+    counterpart to Personal Policy's `declared_valuation` limit
+    (`/policy/gaps` only reports this when a limit is configured, and only
+    the aggregate percentage). Deliberately excludes structurally
+    non-priceable residuals (corporate-action leftovers): that is a
+    data-trust fact already covered by `/data-health`, not a liquidity
+    fact. See DEVLOG "Decision 3u.67".
+    """
+    positions, figures, total_value = _positions_figures_and_total(db)
+    if not total_value:
+        return LiquidityOut(total_declared_value=0.0, total_declared_weight_percent=0.0, sources=[])
+
+    by_reason: dict[str, list[tuple[Position, float]]] = defaultdict(list)
+    for p in positions:
+        value, *_ = figures[p.id]
+        reason = p.instrument.not_priceable_reason
+        if value is not None and reason in DECLARED_VALUE_FRESHNESS_DAYS:
+            by_reason[reason].append((p, value))
+
+    sources = []
+    total_declared = 0.0
+    for reason, rows in by_reason.items():
+        source_value = sum(v for _, v in rows)
+        total_declared += source_value
+        as_of_dates = [p.value_as_of for p, _ in rows if p.value_as_of is not None]
+        has_stale = any(_declared_valuation_note(p.instrument, p.value_as_of)[0] == "stale" for p, _ in rows)
+        sources.append(
+            DeclaredValuationSourceOut(
+                reason=reason,
+                provider_name=DECLARED_VALUE_PROVIDER_NAME[reason],
+                value=round(source_value, 2),
+                weight_percent=round(source_value / total_value * 100, 2),
+                positions_count=len(rows),
+                freshest_as_of=max(as_of_dates) if as_of_dates else None,
+                stalest_as_of=min(as_of_dates) if as_of_dates else None,
+                has_stale=has_stale,
+            )
+        )
+    sources.sort(key=lambda s: s.weight_percent, reverse=True)
+    return LiquidityOut(
+        total_declared_value=round(total_declared, 2),
+        total_declared_weight_percent=round(total_declared / total_value * 100, 2),
+        sources=sources,
+    )
+
+
+@router.get("/risk/drawdown", response_model=DrawdownOut)
+def get_risk_drawdown(db: Session = Depends(get_db)) -> DrawdownOut:
+    """Largest peak-to-trough decline in real historical portfolio value —
+    the same `Lot`-replay series `/value-history` already returns
+    (`compute_value_history`), never a new data source. See DEVLOG
+    "Decision 3u.67".
+    """
+    settings = get_settings()
+    result = compute_value_history(db, settings.base_currency, date.today())
+    dd = compute_max_drawdown(result.points)
+    return DrawdownOut(
+        insufficient_history=dd.insufficient_history,
+        max_drawdown_pct=dd.max_drawdown_pct,
+        peak_date=dd.peak_date.isoformat() if dd.peak_date else None,
+        peak_value=dd.peak_value,
+        trough_date=dd.trough_date.isoformat() if dd.trough_date else None,
+        trough_value=dd.trough_value,
+        recovered=dd.recovered,
+        recovered_date=dd.recovered_date.isoformat() if dd.recovered_date else None,
+    )
 
 
 @router.get("/attention", response_model=list[AttentionItemOut])

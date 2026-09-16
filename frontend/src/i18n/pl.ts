@@ -15,6 +15,7 @@ export const pl: Catalogue = {
   'nav.watchlist': 'Obserwowane',
   'nav.gems': 'Perełki',
   'nav.taxPrep': 'Przygotowanie podatkowe',
+  'nav.risk': 'Ryzyko',
   'alerts.tooltip': {
     one: '{count} pozycja z watchlisty osiągnęła cenę docelową',
     few: '{count} pozycje z watchlisty osiągnęły cenę docelową',
@@ -892,6 +893,30 @@ export const pl: Catalogue = {
     'Wykryto wypłatę na kwotę {amount}. Obowiązujące zasady podatkowe (wiek planu, warunki wyjścia) nie są obliczane automatycznie przez to narzędzie — sprawdź je samodzielnie lub z doradcą podatkowym.',
   'taxPrep.unmatchedSales': '{count} sprzedaż(y) bez obliczonego zysku (uzgodnienie partii niedostępne).',
   'taxPrep.notApplicable': 'Nie wykryto żadnej istotnej podatkowo operacji w tej kopercie w tym roku.',
+
+  // --- Ryzyko portfela (DEVLOG "Decision 3u.67") ------------------------------
+  'risk.title': 'Ryzyko portfela',
+  'risk.subtitle': 'Na co Twój portfel jest faktycznie narażony — niezależnie od skonfigurowanych limitów.',
+  'risk.disclaimer':
+    'Poniższe fakty opisują bieżącą ekspozycję portfela — nie są to limity ani rekomendacje kupna/sprzedaży.',
+  'concentration.title': 'Koncentracja pozycji',
+  'concentration.empty': 'Za mało wycenionych pozycji, aby obliczyć koncentrację.',
+  'concentration.value': 'Wartość',
+  'liquidity.title': 'Wyceny deklarowane',
+  'liquidity.subtitle': 'Część portfela wyceniana na podstawie wyciągu brokera, a nie ceny rynkowej.',
+  'liquidity.total': 'Suma wycen deklarowanych',
+  'liquidity.empty': 'Brak pozycji z wyceną deklarowaną.',
+  'liquidity.source': 'Źródło',
+  'liquidity.positionsCount': 'Pozycje',
+  'drawdown.title': 'Maksymalne historyczne obsunięcie',
+  'drawdown.maxDrawdown': 'Maksymalne obsunięcie',
+  'drawdown.peak': 'Szczyt',
+  'drawdown.trough': 'Dołek',
+  'drawdown.recovery': 'Odzyskanie',
+  'drawdown.recoveredOn': 'Ponownie osiągnął poprzedni szczyt {date}',
+  'drawdown.notRecovered': 'Jeszcze nieodzyskane',
+  'drawdown.noneObserved': 'Brak spadku w dostępnej historii.',
+  'drawdown.insufficientHistory': 'Za mało historii, aby obliczyć maksymalne obsunięcie.',
 
   // --- Kopia zapasowa --------------------------------------------------------
   'backup.title': 'Kopia zapasowa',

@@ -418,6 +418,57 @@ export interface ValueHistory {
   benchmark_name: string | null
 }
 
+/** One held position's share of total portfolio value — the unconditional,
+ * always-visible counterpart to Personal Policy's `line` limit
+ * (`/policy/gaps` only reports a *breach* of a *configured* line limit).
+ * See DEVLOG "Decision 3u.67". */
+export interface PositionConcentration {
+  instrument_id: number
+  symbol: string
+  name: string | null
+  category: string | null
+  value: number
+  weight_percent: number
+}
+
+export interface DeclaredValuationSource {
+  /** `Instrument.not_priceable_reason` — 'p2p_aggregate' | 'employee_savings_fund'. */
+  reason: string
+  provider_name: string
+  value: number
+  weight_percent: number
+  positions_count: number
+  freshest_as_of: string | null
+  stalest_as_of: string | null
+  has_stale: boolean
+}
+
+/** Share of the portfolio priced from a periodically-declared broker
+ * statement rather than a live market quote — the unconditional
+ * counterpart to Personal Policy's `declared_valuation` limit. Excludes
+ * corporate-action residuals (that's a data-trust fact for Data Health,
+ * not a liquidity fact). See DEVLOG "Decision 3u.67". */
+export interface Liquidity {
+  total_declared_value: number
+  total_declared_weight_percent: number
+  sources: DeclaredValuationSource[]
+}
+
+/** Largest peak-to-trough decline in real historical portfolio value.
+ * `recovered` means the series reached back to >= the pre-drawdown peak at
+ * some point after the trough — a historical fact, not "is it at that peak
+ * right now" (which can differ if it has since dropped again). */
+export interface Drawdown {
+  insufficient_history: boolean
+  max_drawdown_pct: number | null
+  peak_date: string | null
+  peak_value: number | null
+  trough_date: string | null
+  trough_value: number | null
+  recovered: boolean | null
+  recovered_date: string | null
+}
+
 export type TxType =
   | 'BUY'
   | 'SELL'

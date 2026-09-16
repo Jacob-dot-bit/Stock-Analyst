@@ -15,6 +15,7 @@ export const en: Catalogue = {
   'nav.watchlist': 'Watchlist',
   'nav.gems': 'Hidden gems',
   'nav.taxPrep': 'Tax prep',
+  'nav.risk': 'Risk',
   'alerts.tooltip': {
     one: '{count} watchlist item at or below its target price',
     other: '{count} watchlist items at or below their target price',
@@ -879,6 +880,30 @@ export const en: Catalogue = {
     'A withdrawal of {amount} was detected. The applicable tax rules (plan age, exit conditions) are not computed automatically by this tool — check them yourself or with a tax advisor.',
   'taxPrep.unmatchedSales': '{count} sale(s) with no computed gain (lot reconciliation unavailable).',
   'taxPrep.notApplicable': 'No tax-relevant operation detected in this wrapper for this year.',
+
+  // --- Portfolio risk (DEVLOG "Decision 3u.67") -------------------------------
+  'risk.title': 'Portfolio risk',
+  'risk.subtitle': "What your portfolio is actually exposed to — independent of any limit you've configured.",
+  'risk.disclaimer':
+    "These facts describe your portfolio's current exposure — not a limit, and not a buy/sell recommendation.",
+  'concentration.title': 'Position concentration',
+  'concentration.empty': 'Not enough valued positions to compute concentration.',
+  'concentration.value': 'Value',
+  'liquidity.title': 'Declared valuations',
+  'liquidity.subtitle': 'Share of the portfolio valued from a broker statement rather than a live market price.',
+  'liquidity.total': 'Total declared valuations',
+  'liquidity.empty': 'No declared-valuation positions.',
+  'liquidity.source': 'Source',
+  'liquidity.positionsCount': 'Positions',
+  'drawdown.title': 'Historical maximum drawdown',
+  'drawdown.maxDrawdown': 'Max drawdown',
+  'drawdown.peak': 'Peak',
+  'drawdown.trough': 'Trough',
+  'drawdown.recovery': 'Recovery',
+  'drawdown.recoveredOn': 'Reached its prior peak again on {date}',
+  'drawdown.notRecovered': 'Not yet recovered',
+  'drawdown.noneObserved': 'No decline observed in the available history.',
+  'drawdown.insufficientHistory': 'Not enough history to compute a max drawdown.',
 
   // --- Backup ----------------------------------------------------------------
   'backup.title': 'Backup',

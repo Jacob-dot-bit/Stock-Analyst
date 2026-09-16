@@ -8,6 +8,7 @@ export const fr: Catalogue = {
   'nav.watchlist': 'Watchlist',
   'nav.gems': 'Pépites',
   'nav.taxPrep': 'Préparation fiscale',
+  'nav.risk': 'Risques',
   'alerts.tooltip': {
     one: '{count} élément de la watchlist a atteint son prix cible',
     other: '{count} éléments de la watchlist ont atteint leur prix cible',
@@ -884,6 +885,31 @@ export const fr: Catalogue = {
     'Un retrait de {amount} a été détecté. La fiscalité applicable dépend de règles (ancienneté du plan, conditions de sortie) que cet outil ne calcule pas automatiquement — à vérifier vous-même ou avec un conseil fiscal.',
   'taxPrep.unmatchedSales': '{count} vente(s) sans plus-value calculée (rapprochement des lots non disponible).',
   'taxPrep.notApplicable': "Aucune opération fiscalement pertinente détectée dans cette enveloppe pour cette année.",
+
+  // --- Risques du portefeuille (DEVLOG "Decision 3u.67") --------------------
+  'risk.title': 'Risques du portefeuille',
+  'risk.subtitle':
+    'Ce que votre portefeuille est réellement exposé — indépendamment de toute limite que vous auriez configurée.',
+  'risk.disclaimer':
+    "Ces éléments décrivent l'exposition actuelle de votre portefeuille — ce ne sont ni des limites, ni des recommandations d'achat ou de vente.",
+  'concentration.title': 'Concentration par ligne',
+  'concentration.empty': 'Pas assez de positions valorisées pour calculer une concentration.',
+  'concentration.value': 'Valeur',
+  'liquidity.title': 'Valorisations déclarées',
+  'liquidity.subtitle': "Part du portefeuille valorisée à partir d'un relevé du courtier plutôt que d'un cours de marché.",
+  'liquidity.total': 'Total valorisations déclarées',
+  'liquidity.empty': 'Aucune position à valorisation déclarée.',
+  'liquidity.source': 'Source',
+  'liquidity.positionsCount': 'Positions',
+  'drawdown.title': 'Baisse maximale historique',
+  'drawdown.maxDrawdown': 'Baisse maximale',
+  'drawdown.peak': 'Sommet',
+  'drawdown.trough': 'Point bas',
+  'drawdown.recovery': 'Récupération',
+  'drawdown.recoveredOn': 'A retrouvé son sommet précédent le {date}',
+  'drawdown.notRecovered': 'Pas encore récupérée',
+  'drawdown.noneObserved': "Aucune baisse observée sur l'historique disponible.",
+  'drawdown.insufficientHistory': 'Historique insuffisant pour calculer une baisse maximale.',
 
   // --- Sauvegarde ----------------------------------------------------------
   'backup.title': 'Sauvegarde',

@@ -318,3 +318,73 @@ def _precompute_shadow_quantities(
         quantities[lot.id] = lot_cost_base / bench_price_base
 
     return quantities
+
+
+#: Minimum number of distinct priced days before a drawdown figure is
+#: reported at all (~6 trading weeks) — below this, a peak/trough pair would
+#: be noise dressed up as a fact, same "insufficient" posture as other views
+#: rather than a confident-looking number off a handful of days.
+MIN_DRAWDOWN_POINTS = 30
+
+
+@dataclass
+class DrawdownResult:
+    insufficient_history: bool
+    max_drawdown_pct: float | None
+    peak_date: date | None
+    peak_value: float | None
+    trough_date: date | None
+    trough_value: float | None
+    #: None when `insufficient_history`. See `DrawdownOut`'s own docstring
+    #: (`app/schemas.py`) for what "recovered" means and doesn't mean.
+    recovered: bool | None
+    recovered_date: date | None
+
+
+def compute_max_drawdown(points: list[ValueHistoryPoint]) -> DrawdownResult:
+    """Largest peak-to-trough decline in `value`, over the days that could
+    actually be priced (`value is not None`) — a gap day is skipped, never
+    treated as a 0 or as a break in the running peak. Nowhere else in this
+    codebase computes this. See DEVLOG "Decision 3u.67"."""
+    priced = [(p.day, p.value) for p in points if p.value is not None]
+    if len(priced) < MIN_DRAWDOWN_POINTS:
+        return DrawdownResult(True, None, None, None, None, None, None, None)
+
+    run_peak_day, run_peak_value = priced[0]
+    max_dd = 0.0
+    dd_peak_day = dd_peak_value = dd_trough_day = dd_trough_value = None
+
+    for day, value in priced[1:]:
+        if value > run_peak_value:
+            run_peak_day, run_peak_value = day, value
+            continue
+        dd = (run_peak_value - value) / run_peak_value if run_peak_value else 0.0
+        if dd > max_dd:
+            max_dd = dd
+            dd_peak_day, dd_peak_value = run_peak_day, run_peak_value
+            dd_trough_day, dd_trough_value = day, value
+
+    if dd_peak_day is None:
+        # The series never declined from its own running peak — the honest
+        # "nothing to report" case, not a null.
+        first_day, first_value = priced[0]
+        return DrawdownResult(
+            False, 0.0, first_day, round(first_value, 2), first_day, round(first_value, 2), True, first_day
+        )
+
+    recovered, recovered_day = False, None
+    for day, value in priced:
+        if day > dd_trough_day and value >= dd_peak_value:
+            recovered, recovered_day = True, day
+            break
+
+    return DrawdownResult(
+        False,
+        round(max_dd * 100, 2),
+        dd_peak_day,
+        round(dd_peak_value, 2),
+        dd_trough_day,
+        round(dd_trough_value, 2),
+        recovered,
+        recovered_day,
+    )

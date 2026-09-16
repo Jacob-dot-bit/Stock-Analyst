@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine
@@ -13,7 +13,7 @@ from app.config import Settings
 from app.db import Base
 from app.models import CorporateAction, CorporateActionType, FxRate, Instrument, Lot, LotType, PriceBar, Source
 from app.prices import history_service
-from app.prices.history_service import compute_value_history
+from app.prices.history_service import MIN_DRAWDOWN_POINTS, ValueHistoryPoint, compute_max_drawdown, compute_value_history
 
 
 @pytest.fixture
@@ -401,3 +401,103 @@ class TestSplitAdjustment:
         # exactly as the provider gave it — no 10x correction on top.
         assert by_day[date(2026, 1, 1)].value == pytest.approx(10 * 130.0)
         assert by_day[date(2026, 1, 3)].value == pytest.approx(10 * 131.0)
+
+
+def _series(values: list[float | None], start: date = date(2026, 1, 1)) -> list[ValueHistoryPoint]:
+    """A `ValueHistoryPoint` list, one per day starting `start` — `invested`
+    is irrelevant to drawdown, left `None` throughout."""
+    return [
+        ValueHistoryPoint(day=start + timedelta(days=i), value=v, invested=None) for i, v in enumerate(values)
+    ]
+
+
+class TestComputeMaxDrawdown:
+    def test_below_minimum_points_is_insufficient(self):
+        result = compute_max_drawdown(_series([100.0] * (MIN_DRAWDOWN_POINTS - 1)))
+
+        assert result.insufficient_history is True
+        assert result.max_drawdown_pct is None
+        assert result.peak_date is None
+        assert result.recovered is None
+
+    def test_monotonically_increasing_series_has_no_drawdown(self):
+        values = [100.0 + i for i in range(35)]
+
+        result = compute_max_drawdown(_series(values))
+
+        assert result.insufficient_history is False
+        assert result.max_drawdown_pct == 0.0
+        assert result.peak_date == result.trough_date == date(2026, 1, 1)
+        assert result.peak_value == result.trough_value == 100.0
+        assert result.recovered is True
+        assert result.recovered_date == date(2026, 1, 1)
+
+    def test_a_peak_trough_and_later_recovery_is_the_largest_drawdown_reported(self):
+        # Rise to a peak (day 9, 109) → deep decline to a trough (day 14, 85,
+        # -22.02%) → partial recovery back to exactly the peak (day 19, 109)
+        # → a new, higher peak (day 24, 114) → a shallower second decline
+        # (day 29, 104, -8.77%) that must NOT be reported over the first,
+        # deeper one.
+        values = (
+            [100.0 + i for i in range(10)]  # days 0-9: 100..109 (peak)
+            + [105.0, 100.0, 95.0, 90.0, 85.0]  # days 10-14: decline to trough
+            + [90.0, 95.0, 100.0, 105.0, 109.0]  # days 15-19: recovers to the peak
+            + [110.0, 111.0, 112.0, 113.0, 114.0]  # days 20-24: new, higher peak
+            + [112.0, 110.0, 108.0, 106.0, 104.0]  # days 25-29: smaller decline
+        )
+
+        result = compute_max_drawdown(_series(values))
+
+        assert result.insufficient_history is False
+        assert result.peak_date == date(2026, 1, 10)  # day index 9
+        assert result.peak_value == 109.0
+        assert result.trough_date == date(2026, 1, 15)  # day index 14
+        assert result.trough_value == 85.0
+        assert result.max_drawdown_pct == pytest.approx(22.02, abs=0.01)
+        assert result.recovered is True
+        assert result.recovered_date == date(2026, 1, 20)  # day index 19, first day back to 109
+
+    def test_a_drawdown_with_no_recovery(self):
+        values = (
+            [100.0 + i for i in range(10)]  # days 0-9: 100..109 (peak)
+            + [105.0, 100.0, 95.0, 90.0, 85.0]  # days 10-14: decline to trough
+            + [90.0] * 20  # days 15-34: stays well below the peak, never recovers
+        )
+
+        result = compute_max_drawdown(_series(values))
+
+        assert result.trough_value == 85.0
+        assert result.max_drawdown_pct == pytest.approx(22.02, abs=0.01)
+        assert result.recovered is False
+        assert result.recovered_date is None
+
+    def test_none_gaps_are_skipped_not_treated_as_zero_or_a_peak_break(self):
+        # A `None` sitting between two rising values must never read as a
+        # 0-value trough — that would fabricate a ~100% drawdown out of
+        # missing data, not a real decline.
+        values = [100.0 + i for i in range(20)] + [None] + [120.0 + i for i in range(10)]
+
+        result = compute_max_drawdown(_series(values))
+
+        assert result.insufficient_history is False  # 30 priced days remain
+        assert result.max_drawdown_pct == 0.0
+        assert result.recovered is True
+
+    def test_the_largest_of_two_drawdowns_wins_not_the_first_or_most_recent(self):
+        # A shallow decline first, then a deeper one later — the deeper,
+        # more recent one must win, confirming this isn't just "first
+        # decline found."
+        values = (
+            [100.0 + i for i in range(10)]  # days 0-9: 100..109
+            + [107.0, 105.0, 103.0, 101.0, 100.0]  # days 10-14: shallow dip (-8.26%)
+            + [102.0, 104.0, 106.0, 108.0, 110.0]  # days 15-19: new peak (110)
+            + [100.0, 90.0, 80.0, 70.0, 60.0]  # days 20-24: deep decline (-45.45%)
+            + [65.0] * 10  # days 25-34: pad past MIN_DRAWDOWN_POINTS, no recovery
+        )
+
+        result = compute_max_drawdown(_series(values))
+
+        assert result.peak_value == 110.0
+        assert result.trough_value == 60.0
+        assert result.max_drawdown_pct == pytest.approx(45.45, abs=0.01)
+        assert result.recovered is False

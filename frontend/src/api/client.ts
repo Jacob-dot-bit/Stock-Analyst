@@ -19,6 +19,7 @@ import type {
   DiscoveryRefreshResult,
   DividendDetailRow,
   DividendSummaryRow,
+  Drawdown,
   EnrichSectorsResult,
   FactorImportResult,
   FactorLoadings,
@@ -29,6 +30,7 @@ import type {
   ImportPreview,
   Instrument,
   InstrumentCommentary,
+  Liquidity,
   Lot,
   NewsSentiment,
   OnboardingStatus,
@@ -40,6 +42,7 @@ import type {
   PersonalPolicyLimitDraft,
   Portfolio,
   Position,
+  PositionConcentration,
   PositionSignal,
   PredictionBackfillReport,
   PredictionBackfillStatus,
@@ -188,6 +191,13 @@ export const api = {
   getOnboardingStatus: () => request<OnboardingStatus>('/api/portfolio/onboarding'),
 
   getValueHistory: () => request<ValueHistory>('/api/portfolio/value-history'),
+
+  getRiskConcentration: (limit = 10) =>
+    request<PositionConcentration[]>(`/api/portfolio/risk/concentration?limit=${limit}`),
+
+  getRiskLiquidity: () => request<Liquidity>('/api/portfolio/risk/liquidity'),
+
+  getRiskDrawdown: () => request<Drawdown>('/api/portfolio/risk/drawdown'),
 
   getLots: (instrumentId: number) =>
     request<Lot[]>(`/api/portfolio/lots?instrument_id=${instrumentId}`),

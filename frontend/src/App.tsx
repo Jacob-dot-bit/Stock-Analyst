@@ -4,6 +4,7 @@ import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { useI18n } from './i18n'
 import { Dividends } from './pages/Dividends'
 import { Portfolio } from './pages/Portfolio'
+import { Risques } from './pages/Risques'
 import { Screener } from './pages/Screener'
 import Settings from './pages/Settings'
 import { TaxPrep } from './pages/TaxPrep'
@@ -23,6 +24,7 @@ export default function App() {
           <NavLink to="/watchlist">{t('nav.watchlist')}</NavLink>
           <NavLink to="/gems">{t('nav.gems')}</NavLink>
           <NavLink to="/tax-prep">{t('nav.taxPrep')}</NavLink>
+          <NavLink to="/risk">{t('nav.risk')}</NavLink>
           <NavLink to="/settings">{t('settings.title')}</NavLink>
         </nav>
         <AlertsBell />
@@ -39,6 +41,7 @@ export default function App() {
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/gems" element={<Screener />} />
           <Route path="/tax-prep" element={<TaxPrep />} />
+          <Route path="/risk" element={<Risques />} />
         </Routes>
       </main>
 
