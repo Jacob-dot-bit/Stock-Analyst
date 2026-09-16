@@ -57,6 +57,7 @@ frontend/src/
 | `CorporateAction` | `corporate_actions` | A confirmed stock split or reverse split. Never mutates `PriceBar`/`Lot` — read-time adjustment only, see "Stock splits" below. |
 | `PersonalPolicy` | `personal_policy` | Singleton: the user's own, self-declared objective/horizon/liquidity/risk-tolerance — every field optional, never inferred or scored. See "Personal policy" below. |
 | `PersonalPolicyLimit` | `personal_policy_limits` | One personal concentration rule (dimension + target + min/max %). `(dimension, target)` UNIQUE. |
+| `JournalEntry` | `journal_entries` | A user-written decision — `thesis`, optional `instrument_id` (nullable, no cascade delete), `entry_date` (set once, never edited), optional `review_date`/`outcome_note`. See "Decision journal" below. |
 
 ## API endpoints
 
@@ -156,6 +157,13 @@ frontend/src/
 - `GET  /years` — every calendar year with at least one dated transaction.
 - `GET  /summary?year=` — one row per account with tax-relevant activity that year: dividends/withholding (delegates to `dividends/service.py::dividend_summary`, never recomputed), interest, realized gains/losses (kept separate, never netted), fees, deposits, withdrawals, and `OTHER`-typed flows shown verbatim. **No tax rate is ever applied and no liability is ever computed** — a reconciliation aid, not a tax calculator. See "Annual tax-year reconciliation" below and DEVLOG "Decision 3u.60".
 - `GET  /summary.csv` — same data as a CSV download.
+
+### `/api/journal` (`routers/journal.py`)
+- `POST ""` — write a decision (`thesis` required, optional `broker_symbol` and `review_date`). `entry_date` is always server-set to today, never accepted from the client. See "Decision journal" below and DEVLOG "Decision 3u.68".
+- `GET  ""` — every entry, newest `entry_date` first.
+- `PATCH /{id}` — edit the original decision: `thesis`/`review_date` only.
+- `PATCH /{id}/outcome` — set `outcome_note` alone, a separate later moment from editing the original decision.
+- `DELETE /{id}` — remove an entry (never the underlying `Instrument`).
 
 ### `/api/backup` (`routers/backup.py`)
 - `POST ""` — create a timestamped copy of the live database in `backups/`; prunes beyond the 10 most recent.
@@ -466,6 +474,26 @@ same series `/value-history` already returns — no new data source). A
 permanent, non-dismissible disclaimer states the Policy-vs-Risk split
 directly, so this distinction doesn't get lost or re-duplicated later.
 See DEVLOG "Decision 3u.67".
+
+**Decision journal.** `pages/Journal.tsx`, route `/journal` — the user's
+own written reasoning behind a trade (or a general/macro note), never
+computed or scored, same posture as `WatchlistItem.note`/`PersonalPolicy`.
+Tied to an `Instrument` optionally, never to a specific `Lot`/trade fill
+— a deliberate choice: this lets an entry be written before any trade
+exists (the thesis, arguably the most valuable moment to capture it),
+survives lots being closed/sold without going stale, and lets a
+general/macro entry stand with no instrument at all. `entry_date` is set
+once server-side at creation and never editable afterward — a historical
+fact. Editing the original decision (`thesis`/`review_date`) and adding
+an `outcome_note` later are two separate `PATCH` endpoints and two
+separate UI actions on purpose — conceptually different moments, never
+bundled into one form. An entry with a past `review_date` and no
+`outcome_note` yet gets a descriptive "due for review" tag — a fact, not
+a reminder push (no scheduled notification exists). The thesis field is
+this app's first `<textarea>` — every other free-text field elsewhere is
+single-line — deliberate, since a thesis is genuinely multi-sentence by
+nature and is the one thing this feature exists to capture. See DEVLOG
+"Decision 3u.68".
 
 **Getting-started checklist.** `GET /api/portfolio/onboarding`
 (`routers/portfolio.py::get_onboarding_status`) backs a dismissible

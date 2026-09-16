@@ -8531,3 +8531,86 @@ posture as everywhere else (Decision 3u.65's own closing line). Line-item
 color-coded "risk tiers" were considered and rejected for
 `PositionConcentration` — a color implies a verdict this page explicitly
 avoids everywhere else.
+
+## Decision 3u.68 — Decision journal: instrument-optional, never per-trade (2026-09-16)
+
+The chantier DEVLOG "Decision 3u.58" named and deferred (2026-09-10):
+*"a decision journal (per-trade rationale/thesis/review-date log)"* — one
+line, never scoped further anywhere else in the codebase. Picked up right
+after Risques du portefeuille, on the user's "on y va."
+
+Asked directly what an entry should be tied to, since "per-trade" is
+ambiguous between three real shapes with different implications: tied to
+a specific `Lot` (fragile once that lot closes), tied to an instrument
+(survives lots being closed/sold, can be written *before* a trade even
+happens), or untied entirely. The user chose **an instrument, optional** —
+not a specific `Lot`. This means the actual "thesis" — arguably the most
+valuable moment to capture it — can be written before any trade exists,
+and a general/macro entry with no instrument at all is a first-class case,
+not an edge case.
+
+**Backend**: new standalone `routers/journal.py` (plain CRUD, no derived
+computation, so unlike Risques there's no private-helper reuse forcing it
+into another module) — `POST/GET /api/journal`, `PATCH
+/api/journal/{id}`, `PATCH /api/journal/{id}/outcome`, `DELETE
+/api/journal/{id}`. New model `JournalEntry` (`instrument_id` nullable,
+no cascade delete — same `Lot`-style FK-survival guarantee), new Alembic
+migration `75e668ef8794`. `entry_date` is set server-side to today and
+never accepted from the client, not even on `PATCH` — a historical fact
+about when the decision was actually written, never silently rewritten.
+
+**Deliberate refinement over the approved plan**: the plan's
+`JournalEntryUpdateIn` had `thesis`/`review_date`/`outcome_note` all
+independently optional on one `PATCH`. Implemented instead as **two
+separate endpoints** — editing the original decision
+(`thesis`/`review_date`, mirrors `WatchlistItemUpdateIn`'s "the edit form
+submits everything it owns" convention) and adding an outcome
+(`outcome_note` alone) — because the plan itself already framed these as
+two conceptually different moments (the decision vs. a later reflection
+on it), and this codebase has no precedent for `exclude_unset`-style
+partial updates that a single merged endpoint would have needed.
+
+**Frontend**: new `pages/Journal.tsx` at route `/journal`, nav entry after
+Risk. `AddJournalEntryForm.tsx` reuses the exact debounced-symbol-search
+pattern `AddToWatchlistForm.tsx` already established. The thesis field is
+a `<textarea>` — **the first multi-line free-text field in this entire
+app** (every other free-text field, `WatchlistItem.note` included, is a
+single-line `<input>`). Deliberate: a thesis is the one thing this
+feature exists to capture, genuinely multi-sentence by nature — forcing
+it into a single-line input would hurt the feature's actual point.
+Entries render as cards, newest `entry_date` first; an entry with a past
+`review_date` and no `outcome_note` yet gets a descriptive `tag
+confidence-review` "Due for review" badge — a fact, not a nudge to act.
+Edit (thesis/review date) and "add/edit outcome" are two separate inline
+actions, matching the backend's own two-endpoint split; delete has no
+confirmation dialog, same as every other list in this app.
+
+Tests: `test_journal_api.py` (new, 16 tests) — symbol vs. no-symbol
+creation, blank/missing thesis rejected, `entry_date` immutable even if
+the client sends one, newest-first ordering, the two `PATCH` endpoints
+independently, and the FK-survival regression guard (deleting the
+referenced `Instrument` does not cascade-delete the journal entry). Full
+backend suite: **1050 passed** (2 known pre-existing unrelated flaky
+tests excluded from the count, same as every prior chantier this
+session). `tsc -b`/`oxlint` clean (same 2 pre-existing warnings as
+baseline, nothing new); i18n catalogues at parity (816 keys × 3 locales).
+
+**Live-verified against the real running app**: created one entry with a
+symbol (AAPL.US) and one without (a "General" entry) via the actual UI —
+both appeared immediately, `entry_date` on both read **16/09/2026**,
+matching today. Set `review_date` to 2026-09-01 (in the past) on the
+General entry — the "Due for review" tag rendered correctly, and stayed
+absent from the AAPL entry, which has no `review_date`. Added an
+`outcome_note` to the AAPL entry ("Sold half the position after a 12%
+rally...") without touching its `thesis` — reloaded the page and both the
+original thesis and the outcome persisted correctly, independently.
+Deleted the AAPL entry via the API and confirmed directly against the
+database that instrument id 10 (AAPL.US) was untouched — still resolvable,
+not orphaned. Both throwaway verification entries were removed from the
+real database afterward, leaving the journal empty as it was before this
+chantier.
+
+**Deliberately not built**: no scheduled reminder/notification for
+`review_date` — it's a descriptive "due" fact surfaced on the page, not a
+push. No per-entry link to a specific `Lot`/trade fill, per the
+instrument-optional decision above.
