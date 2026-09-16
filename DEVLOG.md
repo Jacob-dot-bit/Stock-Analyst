@@ -8614,3 +8614,114 @@ chantier.
 `review_date` — it's a descriptive "due" fact surfaced on the page, not a
 push. No per-entry link to a specific `Lot`/trade fill, per the
 instrument-optional decision above.
+
+## Decision 3u.69 — Beginner UX audit: Transactions/Dividendes, and a codebase-wide color-as-verdict sweep (2026-09-17)
+
+Continuing the beginner-comprehension initiative (Portfolio and Position-
+detail screens were audited and fixed earlier — Decisions 3u.37/3u.38):
+picked up Transactions/Dividendes, the next screens in the priority order
+set back in Decision 3u.37. Three parallel audits (Transactions.tsx,
+Dividends.tsx, and a codebase-wide grep for the known bug pattern — a
+status reusing the app's green/red gain/loss tokens, `var(--positive)`/
+`var(--negative)`, for something that isn't a gain or loss) found real
+instances in both screens plus 7 more across the app once checked
+everywhere, per the standing lesson from Decision 3u.38 ("once one
+component has a color-as-verdict bug, grep for the same pattern across the
+rest of the codebase").
+
+**Transactions**: `signClass(tx.amount)` on the "Montant" column colored
+every row by raw cash-flow sign regardless of `tx.type` — a `BUY`/
+`WITHDRAWAL`/`FEE` rendered red, a `DEPOSIT`/`SELL`/`DIVIDEND` rendered
+green, misreadable as a loss/gain when only `CLOSED_TRADE` rows are an
+actual realized gain/loss. Fixed by scoping the color to
+`tx.type === 'CLOSED_TRADE'` only. Also added a tooltip to "Effet titre"
+mirroring the one "Devise & frais" already had — an asymmetry that had
+gone unnoticed.
+
+**Dividends**: the "Rapprochement" tag colored `'matched'` green
+(`.tag.resolved`) — a purely technical "the app auto-matched this row"
+fact, not a financial outcome — switched to `.tag.confidence-confirmed`
+(blue), the same class Corporate Actions already uses for "confirmed by
+the app's own matching." `withholding_tax` was colored red via
+`signClass` in three places even though it's structurally always ≤ 0, a
+routine deduction, not a variable outcome — removed. Also: `unmatched_tax`
+detail rows were reusing the "Net" column to show the bare orphan tax
+amount under the same header as every other row's real net figure — now
+shown as `—`, matching how "Gross" already reads for those rows.
+
+**Codebase-wide sweep, 7 more instances found, all fixed or explicitly
+justified**: `Settings.tsx`'s provider "enabled" badge (green → blue,
+`--accent`) and "cooling-down"/quota-near-limit notes (red → amber,
+`--warning` — a temporary, recoverable state, not a broken one);
+`MappingCell.tsx`'s "verified" symbol-mapping tag and
+`AllocationTargets.tsx`'s "within target" tag (both green → blue,
+`.tag.confidence-confirmed`) — a configured target being met shouldn't
+read as an implicit "good job," same no-verdict discipline already
+applied to Personal Policy gaps. Three more were checked and left
+unchanged, each with a one-line comment recording why: `Settings.tsx`'s
+API-key test result (a genuine live pass/fail, same justified class as
+`PriceStatusBadge`), `AttentionCard.tsx`'s "missing" severity (checked its
+real triggers in `routers/portfolio.py` — `price_error`/
+`unresolved_instruments`, genuine data-correctness gaps, same class as
+`DataHealthPanel`'s `action_required`), and `OnboardingChecklist.tsx`'s
+done checkmark (a near-universal completion convention, no realistic
+misread risk).
+
+**Watchlist/Pépites**: the grep came back clean — no misuse of the color
+tokens there. The full vocabulary/disclosure audit for those two screens
+is still un-started and stays queued as the next pass, per this project's
+own "one screen at a time, verify before generalizing" rule.
+
+Live-verified against the real running app: a `Buy`/`Deposit`/`Withdrawal`
+row's Montant is now plain white (`rgb(232, 234, 237)`) regardless of
+sign — a real -177.60€ `Buy` and a real -200.00€ reversed `Deposit` both
+render uncolored — while `Closed position` rows still color correctly by
+their real P&L (green `rgb(95, 211, 154)` / red `rgb(255, 138, 128)`,
+confirmed on real rows). Dividends' "Automatic" reconciliation tag now
+renders `rgb(122, 165, 255)` (accent blue) instead of the previous green.
+Settings' provider "Enabled" badges render the same blue. The mapping
+"verified" tag and allocation "within target" tag on the Portfolio page
+both render `.tag.confidence-confirmed`'s blue background
+(`rgb(30, 42, 68)`). `tsc -b`/`oxlint` clean (same 2 pre-existing
+warnings, nothing new); i18n at parity (819 keys × 3 locales).
+
+## Decision 3u.70 — Real bug: dividend summary was summing different currencies together (2026-09-17)
+
+Found while auditing Dividends for Decision 3u.69, not a UX/wording issue:
+`dividend_summary()` grouped only by `(year, account)` and summed raw
+`Transaction.amount`, with **no currency dimension at all**. Confirmed
+live against the real database before writing any fix — the "My Trades"
+account holds dividend/withholding rows in EUR, USD, CHF, GBP and SEK, and
+the 2025 summary row was silently adding
+`20.91 EUR + 55.98 USD + 3.23 CHF + 1.84 GBP` into one reported "82.3," as
+if 1 EUR equaled 1 USD equaled 1 CHF. This fed both the year-by-account
+table and the page's hero cards.
+
+Fixed by adding `currency` (via the existing `_currency_for()` helper,
+already used in `dividend_detail` but never called in `dividend_summary`)
+as a third grouping key alongside year and account — no conversion logic
+added, this app never implicitly converts currency anywhere else either.
+`DividendSummaryRow`/`DividendSummaryRowOut` gained a `currency` field;
+the summary CSV export gained a `currency` column. Frontend: the
+year-by-account table gained a "Devise" column (row key now
+`year-account-currency`); the hero cards, which used to blindly sum
+`heroRows` across every account *and* currency for the latest year, now
+render one line per currency present ("6.72 CHF + 21.06 EUR + 18.07 USD")
+instead of a single blended number, falling back to today's plain single
+figure when only one currency is present (the common case — PEA is always
+EUR-only). "Comptes analysés" now counts distinct accounts rather than
+distinct summary rows, since one account can now produce several rows.
+
+New test `test_currencies_are_never_summed_together` in
+`TestSummaryAggregation`, using the exact real-world shape (two
+instruments in different currencies, same account, same year) — asserts
+two separate summary rows, values never mixed. Full backend suite:
+**1050 passed** (1 pre-existing unrelated flaky test excluded, same as
+every prior chantier this session).
+
+**Live-verified against the real portfolio**: the 2026 summary table now
+shows four separate rows for that year (`PEA/EUR`, `My Trades/USD`,
+`My Trades/EUR`, `My Trades/CHF`) where it used to show two blended ones;
+the 2025 hero "Dividendes 2025 — brut" no longer shows a single "82.3" but
+correctly separates EUR/USD/CHF/GBP. A real, previously-wrong number is
+now correct for the first time since this page shipped (Decision 3u.28).

@@ -148,7 +148,9 @@ frontend/src/
 - `POST /backfill-accounts` — one-off recovery of `account` from `raw` for rows imported before it was a real column — see "Getting-started checklist"'s sibling note, DEVLOG "Decision 3u.28".
 
 ### `/api/dividends` (`routers/dividends.py`)
-- `GET  /summary` — gross/withholding/net by calendar year and account.
+- `GET  /summary` — gross/withholding/net by calendar year, account **and
+  currency** — never summed across currencies (see DEVLOG "Decision
+  3u.70": a single account can hold instruments in several currencies).
 - `GET  /detail` — every dividend payment (reconciled with its withholding tax where attributable), filterable by year/account/instrument.
 - `GET  /summary.csv`, `GET /detail.csv` — same data as CSV downloads.
 - Descriptive only — never computes a tax liability. See "Dividends by year and account" below and DEVLOG "Decision 3u.28".
@@ -534,8 +536,12 @@ this one sentence is exempted and nothing else is.
 **Dividends by year and account.** `dividends/service.py` answers the
 question the Transactions page's own lifetime summary couldn't: what was
 received and withheld, split by account (PEA and a brokerage account have
-completely different French tax treatment) and calendar year (what a
-declaration needs). Descriptive only — no tax liability is ever computed.
+completely different French tax treatment), calendar year (what a
+declaration needs), **and currency** — `dividend_summary` never sums
+across currencies (a real bug until DEVLOG "Decision 3u.70": a single
+account can hold instruments in several currencies, e.g. this app's own
+"My Trades" account pays dividends in EUR, USD, CHF, GBP and SEK).
+Descriptive only — no tax liability is ever computed.
 
 The hard part is reconciliation, not aggregation: a dividend and its
 withholding tax are two independent `Transaction` rows (`DIVIDEND` and
