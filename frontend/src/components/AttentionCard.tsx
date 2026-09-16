@@ -66,6 +66,11 @@ export function AttentionCard() {
         </p>
       ) : (
         <ul className="attention-list">
+          {/* "missing" severity only ever fires for price_error/
+              unresolved_instruments (see routers/portfolio.py) — genuine
+              data-correctness gaps, not a categorical opinion, so the
+              --negative red is a justified exception here, same class as
+              DataHealthPanel's action_required. See DEVLOG "Decision 3u.69". */}
           {items.map((item, i) => (
             <li key={i} className={`attention-item ${item.severity}`}>
               {item.kind === 'unresolved_instruments' ? (

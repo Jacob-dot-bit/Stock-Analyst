@@ -482,6 +482,8 @@ export const pl: Catalogue = {
   'transactions.summary.effectCoverage':
     '({resolved} z {total} zamkniętych transakcji — pozostałe, głównie CFD, nie mają kursu przeliczeniowego do podziału)',
   'transactions.instrumentEffect': 'Efekt instrumentu',
+  'transactions.instrumentEffectTooltip':
+    'Ruch ceny samego instrumentu, po kursie z dnia otwarcia — jedna z dwóch części zrealizowanego zysku/straty. Widoczne tylko dla zamkniętych transakcji.',
   'transactions.currencyEffect': 'Waluta i opłaty',
   'transactions.currencyEffectTooltip':
     'Reszta zysku/straty po odjęciu ruchu ceny samego instrumentu (po kursie z dnia otwarcia) — głównie ruch kursu walutowego od tego czasu, plus prowizja/swap. Widoczne tylko dla zamkniętych transakcji, dla których eksport brokera zawierał oba kursy przeliczeniowe.',
@@ -844,6 +846,8 @@ export const pl: Catalogue = {
   'dividends.year': 'Rok',
   'dividends.account': 'Konto',
   'dividends.unknownAccount': 'Nieznane konto',
+  'dividends.currency': 'Waluta',
+  'dividends.unknownCurrency': 'Nieznana waluta',
   'dividends.exportSummaryCsv': 'Eksportuj (CSV, według konta i roku)',
   'dividends.detailTitle': 'Szczegóły wypłat',
   'dividends.detailEmpty': 'Brak wypłat dla tych filtrów.',

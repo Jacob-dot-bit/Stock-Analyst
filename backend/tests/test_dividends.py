@@ -271,6 +271,27 @@ class TestSummaryAggregation:
         assert summary[(2026, "My Trades")].gross == 30.0
         assert summary[(2025, "My Trades")].payment_count == 1
 
+    def test_currencies_are_never_summed_together(self, session):
+        """A real, live-found bug (DEVLOG "Decision 3u.70"): the same
+        account can hold instruments in several currencies (this app's own
+        portfolio pays "My Trades" dividends in EUR, USD, CHF, GBP and
+        SEK) — summing their raw amounts would silently treat 1 EUR as
+        equal to 1 USD. Each currency must get its own summary row."""
+        aapl = _instrument(session, "AAPL.US", currency="USD")
+        asml = _instrument(session, "ASML.AS", currency="EUR")
+        session.add_all(
+            [
+                Transaction(type=TxType.DIVIDEND, instrument_id=aapl.id, account="My Trades", executed_at=datetime(2025, 6, 1), amount=55.98),
+                Transaction(type=TxType.DIVIDEND, instrument_id=asml.id, account="My Trades", executed_at=datetime(2025, 6, 1), amount=20.91),
+            ]
+        )
+        session.commit()
+
+        summary = {(r.year, r.account, r.currency): r for r in dividend_summary(session)}
+        assert len(summary) == 2
+        assert summary[(2025, "My Trades", "USD")].gross == 55.98
+        assert summary[(2025, "My Trades", "EUR")].gross == 20.91
+
 
 @pytest.fixture
 def client():
@@ -315,7 +336,15 @@ class TestDividendsApi:
         )
         body = client.get("/api/dividends/summary").json()
         assert body == [
-            {"year": 2026, "account": "My Trades", "gross": 10.0, "withholding_tax": 0.0, "net": 10.0, "payment_count": 1}
+            {
+                "year": 2026,
+                "account": "My Trades",
+                "currency": "USD",
+                "gross": 10.0,
+                "withholding_tax": 0.0,
+                "net": 10.0,
+                "payment_count": 1,
+            }
         ]
 
     def test_detail_endpoint_filters_by_year_and_account(self, client):
@@ -341,7 +370,7 @@ class TestDividendsApi:
         response = client.get("/api/dividends/summary.csv")
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/csv")
-        assert "year,account,gross,withholding_tax,net,payment_count" in response.text
+        assert "year,account,currency,gross,withholding_tax,net,payment_count" in response.text
 
     def test_detail_csv_has_header_and_content_type(self, client):
         response = client.get("/api/dividends/detail.csv")

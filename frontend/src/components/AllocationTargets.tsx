@@ -135,7 +135,9 @@ export function AllocationTargets() {
                     )}
                   </td>
                   <td className="num">
-                    <span className={`tag ${row.state === 'within' ? 'resolved' : row.state === 'no_target' ? 'neutral' : 'unresolved'}`}>
+                    <span
+                      className={`tag ${row.state === 'within' ? 'confidence-confirmed' : row.state === 'no_target' ? 'neutral' : 'unresolved'}`}
+                    >
                       {t(`allocation.state.${row.state}`)}
                       {row.state !== 'within' && row.state !== 'no_target' ? ` (${formatNumber(row.gap_pct, 1)} pts)` : ''}
                     </span>

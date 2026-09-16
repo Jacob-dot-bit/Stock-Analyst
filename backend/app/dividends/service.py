@@ -100,6 +100,12 @@ class DividendDetailRow:
 class DividendSummaryRow:
     year: int
     account: str | None
+    #: The instrument's own currency (see `_currency_for`) — never merged
+    #: across currencies. An account holding instruments in more than one
+    #: currency (confirmed live: "My Trades" pays dividends in EUR, USD,
+    #: CHF, GBP and SEK) gets one summary row per (year, account, currency)
+    #: rather than one row silently adding unlike units together.
+    currency: str | None
     gross: float
     withholding_tax: float
     net: float
@@ -233,22 +239,28 @@ def dividend_detail(db: Session) -> list[DividendDetailRow]:
 
 
 def dividend_summary(db: Session) -> list[DividendSummaryRow]:
-    """Gross/withholding/net by calendar year and account, computed
-    directly from `DIVIDEND`/`TAX` transactions — never by summing
+    """Gross/withholding/net by calendar year, account and currency,
+    computed directly from `DIVIDEND`/`TAX` transactions — never by summing
     `dividend_detail`'s matched pairs, so a reconciliation miss can never
     silently shrink a year's real total. `payment_count` counts dividend
     payments only (a `TAX` row is a deduction against one, not a payment of
     its own).
+
+    Grouped by currency as well as (year, account) — never summed across
+    currencies. A single account can hold instruments in several
+    currencies (confirmed live on this app's own portfolio: "My Trades"
+    pays dividends in EUR, USD, CHF, GBP and SEK), and adding those raw
+    amounts together would silently treat 1 EUR as equal to 1 USD.
     """
     rows = _all_dividend_and_tax_rows(db)
 
-    totals: dict[tuple[int, str | None], dict[str, float]] = defaultdict(
+    totals: dict[tuple[int, str | None, str | None], dict[str, float]] = defaultdict(
         lambda: {"gross": 0.0, "withholding_tax": 0.0, "payment_count": 0}
     )
     for row in rows:
         if row.executed_at is None:
             continue
-        key = (row.executed_at.year, row.account)
+        key = (row.executed_at.year, row.account, _currency_for(row))
         if row.type == TxType.DIVIDEND:
             totals[key]["gross"] += row.amount or 0.0
             totals[key]["payment_count"] += 1
@@ -259,12 +271,13 @@ def dividend_summary(db: Session) -> list[DividendSummaryRow]:
         DividendSummaryRow(
             year=year,
             account=account,
+            currency=currency,
             gross=round(t["gross"], 2),
             withholding_tax=round(t["withholding_tax"], 2),
             net=round(t["gross"] + t["withholding_tax"], 2),
             payment_count=int(t["payment_count"]),
         )
-        for (year, account), t in totals.items()
+        for (year, account, currency), t in totals.items()
     ]
-    summary.sort(key=lambda r: (r.year, r.account or ""), reverse=True)
+    summary.sort(key=lambda r: (r.year, r.account or "", r.currency or ""), reverse=True)
     return summary

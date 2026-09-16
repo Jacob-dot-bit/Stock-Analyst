@@ -1262,6 +1262,7 @@ class DividendSummaryRowOut(BaseModel):
 
     year: int
     account: str | None
+    currency: str | None
     gross: float
     withholding_tax: float
     net: float

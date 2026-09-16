@@ -475,6 +475,8 @@ export const fr: Catalogue = {
   'transactions.summary.effectCoverage':
     '({resolved} sur {total} trades clôturés — les autres, surtout des CFD, n’ont pas de taux de conversion à répartir)',
   'transactions.instrumentEffect': 'Effet titre',
+  'transactions.instrumentEffectTooltip':
+    "Le mouvement du cours du titre lui-même, au taux de change du jour d'ouverture — un des deux volets du P&L réalisé. Affiché uniquement pour les trades clôturés.",
   'transactions.currencyEffect': 'Devise & frais',
   'transactions.currencyEffectTooltip':
     "Le reste du P&L une fois mis de côté le mouvement du cours du titre lui-même (au taux de change du jour d'ouverture) — surtout le mouvement du taux de change depuis, plus commission/swap. Affiché uniquement pour les trades clôturés dont l'export du courtier contenait les deux taux de conversion.",
@@ -836,6 +838,8 @@ export const fr: Catalogue = {
   'dividends.year': 'Année',
   'dividends.account': 'Compte',
   'dividends.unknownAccount': 'Compte inconnu',
+  'dividends.currency': 'Devise',
+  'dividends.unknownCurrency': 'Devise inconnue',
   'dividends.exportSummaryCsv': 'Exporter (CSV, par compte et par année)',
   'dividends.detailTitle': 'Détail des versements',
   'dividends.detailEmpty': 'Aucun versement pour ces filtres.',

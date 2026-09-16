@@ -104,7 +104,7 @@ export function MappingCell({ instrument, onUpdated }: Props) {
           real proof the mapping is right, as opposed to merely plausible. */}
       {instrument.verified_at && (
         <span
-          className="tag resolved"
+          className="tag confidence-confirmed"
           title={t('mapping.verifiedTooltip', {
             date: formatDate(instrument.verified_at),
             provider: instrument.verified_provider ?? '?',

@@ -72,9 +72,11 @@ def get_dividend_detail(
 def get_dividend_summary_csv(db: Session = Depends(get_db)) -> Response:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["year", "account", "gross", "withholding_tax", "net", "payment_count"])
+    writer.writerow(["year", "account", "currency", "gross", "withholding_tax", "net", "payment_count"])
     for row in dividend_summary(db):
-        writer.writerow([row.year, row.account or "", row.gross, row.withholding_tax, row.net, row.payment_count])
+        writer.writerow(
+            [row.year, row.account or "", row.currency or "", row.gross, row.withholding_tax, row.net, row.payment_count]
+        )
     return Response(
         content=buffer.getvalue(),
         media_type="text/csv",

@@ -530,6 +530,7 @@ export interface TransactionList {
 export interface DividendSummaryRow {
   year: number
   account: string | null
+  currency: string | null
   gross: number
   withholding_tax: number
   net: number

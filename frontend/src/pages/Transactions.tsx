@@ -255,7 +255,9 @@ export function Transactions() {
                     {!hidden.has('account') && <th>{t('transactions.account')}</th>}
                     {!hidden.has('amount') && <th className="num">{t('transactions.amount')}</th>}
                     {!hidden.has('instrumentEffect') && (
-                      <th className="num">{t('transactions.instrumentEffect')}</th>
+                      <th className="num" title={t('transactions.instrumentEffectTooltip')}>
+                        {t('transactions.instrumentEffect')}
+                      </th>
                     )}
                     {!hidden.has('currencyEffect') && (
                       <th className="num" title={t('transactions.currencyEffectTooltip')}>
@@ -343,7 +345,7 @@ export function Transactions() {
                         {!hidden.has('instrument') && <td>{tx.instrument?.broker_symbol ?? '—'}</td>}
                         {!hidden.has('account') && <td>{tx.account ?? '—'}</td>}
                         {!hidden.has('amount') && (
-                          <td className={`num ${signClass(tx.amount)}`}>
+                          <td className={`num ${tx.type === 'CLOSED_TRADE' ? signClass(tx.amount) : ''}`}>
                             {tx.amount === null ? '—' : formatNumber(tx.amount)}
                             {tx.currency ? ` ${tx.currency}` : ''}
                           </td>

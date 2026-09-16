@@ -474,6 +474,8 @@ export const en: Catalogue = {
   'transactions.summary.effectCoverage':
     '({resolved} of {total} closed trades — the rest, mostly CFDs, have no conversion-rate data to split)',
   'transactions.instrumentEffect': 'Instrument effect',
+  'transactions.instrumentEffectTooltip':
+    'The instrument’s own price move, at the exchange rate when the trade opened — one of the two halves of the realized P&L. Only shown for closed trades.',
   'transactions.currencyEffect': 'Currency & fees',
   'transactions.currencyEffectTooltip':
     'The rest of the P&L once the instrument’s own price move (at the exchange rate when the trade opened) is set aside — mostly the exchange-rate move since then, plus commission/swap. Only shown for closed trades where the broker export included both conversion rates.',
@@ -832,6 +834,8 @@ export const en: Catalogue = {
   'dividends.year': 'Year',
   'dividends.account': 'Account',
   'dividends.unknownAccount': 'Unknown account',
+  'dividends.currency': 'Currency',
+  'dividends.unknownCurrency': 'Unknown currency',
   'dividends.exportSummaryCsv': 'Export (CSV, by account and year)',
   'dividends.detailTitle': 'Payment detail',
   'dividends.detailEmpty': 'No payments for these filters.',

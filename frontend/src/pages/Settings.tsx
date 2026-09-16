@@ -354,7 +354,7 @@ export default function Settings() {
         }
 
         .status-badge.enabled {
-          background-color: var(--positive);
+          background-color: var(--accent);
           color: white;
         }
 
@@ -363,8 +363,11 @@ export default function Settings() {
           color: var(--text);
         }
 
+        /* A temporary, recoverable rate-limit — not a broken state, so
+           amber (same treatment Corporate Actions gives a rate-limited
+           source), never the gain/loss red. See DEVLOG "Decision 3u.69". */
         .status-badge.cooling-down {
-          background-color: var(--negative);
+          background-color: var(--warning);
           color: white;
         }
 
@@ -376,8 +379,10 @@ export default function Settings() {
           font-size: 0.78rem;
         }
 
+        /* Approaching a quota is a warning-shaped fact, not a failure —
+           never the gain/loss red. See DEVLOG "Decision 3u.69". */
         .quota-note.near-limit {
-          color: var(--negative);
+          color: var(--warning);
           font-weight: 600;
         }
 
@@ -427,6 +432,10 @@ export default function Settings() {
           font-size: 0.82rem;
         }
 
+        /* A genuine live pass/fail of the pasted key against the real
+           provider, not a categorical opinion — same justified use of
+           --positive/--negative as PriceStatusBadge's fresh/error colors.
+           Deliberately left as-is. See DEVLOG "Decision 3u.69". */
         .test-result.valid {
           color: var(--positive);
         }

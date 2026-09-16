@@ -768,6 +768,10 @@ td.negative { color: var(--negative); }
   text-decoration: line-through;
 }
 
+/* A task-completion checkmark, not a financial figure — a near-universal
+   "done" convention with no realistic verdict-misread risk, unlike the
+   status/confidence tags elsewhere in this file. Deliberately left as-is.
+   See DEVLOG "Decision 3u.69". */
 .onboarding-item.done .onboarding-check { color: var(--positive); }
 
 .onboarding-why {

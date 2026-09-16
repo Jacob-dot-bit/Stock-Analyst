@@ -1,11 +1,36 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client'
 import type { DividendDetailRow, DividendSummaryRow } from '../api/types'
-import { signClass } from '../format'
 import { useI18n } from '../i18n'
 
 function accountLabel(account: string | null, t: (key: string) => string): string {
   return account ?? t('dividends.unknownAccount')
+}
+
+function currencyLabel(currency: string | null, t: (key: string) => string): string {
+  return currency ?? t('dividends.unknownCurrency')
+}
+
+/** One line per currency present in `rows` for the given field — never a
+ * single summed value once more than one currency is involved (see
+ * DEVLOG "Decision 3u.70": summing raw amounts across currencies silently
+ * treats 1 EUR as equal to 1 USD). Falls back to a bare number when only
+ * one currency is present, which is the common case. */
+function byCurrency(
+  rows: DividendSummaryRow[],
+  field: 'gross' | 'withholding_tax' | 'net',
+  t: (key: string) => string,
+  formatNumber: (value: number) => string,
+): string {
+  const totals = new Map<string | null, number>()
+  for (const row of rows) {
+    totals.set(row.currency, (totals.get(row.currency) ?? 0) + row[field])
+  }
+  const entries = [...totals.entries()].sort((a, b) => (a[0] ?? '').localeCompare(b[0] ?? ''))
+  if (entries.length <= 1) {
+    return formatNumber(entries[0]?.[1] ?? 0)
+  }
+  return entries.map(([currency, value]) => `${formatNumber(value)} ${currencyLabel(currency, t)}`).join(' + ')
 }
 
 /**
@@ -56,15 +81,8 @@ export function Dividends() {
 
   const latestYear = years[0]
   const heroRows = (summary ?? []).filter((r) => r.year === latestYear)
-  const hero = heroRows.reduce(
-    (acc, r) => ({
-      gross: acc.gross + r.gross,
-      withholding: acc.withholding + r.withholding_tax,
-      net: acc.net + r.net,
-      payments: acc.payments + r.payment_count,
-    }),
-    { gross: 0, withholding: 0, net: 0, payments: 0 },
-  )
+  const heroPayments = heroRows.reduce((sum, r) => sum + r.payment_count, 0)
+  const heroAccountCount = new Set(heroRows.map((r) => r.account)).size
 
   return (
     <>
@@ -83,23 +101,23 @@ export function Dividends() {
         <div className="stat-grid" style={{ marginBottom: '1.1rem' }}>
           <div className="stat">
             <div className="label">{t('dividends.heroTitle', { year: latestYear })}</div>
-            <div className="value">{formatNumber(hero.gross)}</div>
+            <div className="value">{byCurrency(heroRows, 'gross', t, formatNumber)}</div>
           </div>
           <div className="stat">
             <div className="label">{t('dividends.withholding')}</div>
-            <div className={`value ${signClass(hero.withholding)}`}>{formatNumber(hero.withholding)}</div>
+            <div className="value">{byCurrency(heroRows, 'withholding_tax', t, formatNumber)}</div>
           </div>
           <div className="stat">
             <div className="label">{t('dividends.net')}</div>
-            <div className="value">{formatNumber(hero.net)}</div>
+            <div className="value">{byCurrency(heroRows, 'net', t, formatNumber)}</div>
           </div>
           <div className="stat">
             <div className="label">{t('dividends.paymentCount')}</div>
-            <div className="value">{hero.payments}</div>
+            <div className="value">{heroPayments}</div>
           </div>
           <div className="stat">
             <div className="label">{t('dividends.accountsAnalyzed')}</div>
-            <div className="value">{heroRows.length}</div>
+            <div className="value">{heroAccountCount}</div>
           </div>
         </div>
       )}
@@ -113,6 +131,7 @@ export function Dividends() {
                 <tr>
                   <th>{t('dividends.year')}</th>
                   <th>{t('dividends.account')}</th>
+                  <th>{t('dividends.currency')}</th>
                   <th className="num">{t('dividends.gross')}</th>
                   <th className="num">{t('dividends.withholding')}</th>
                   <th className="num">{t('dividends.net')}</th>
@@ -121,11 +140,12 @@ export function Dividends() {
               </thead>
               <tbody>
                 {summary.map((row) => (
-                  <tr key={`${row.year}-${row.account}`}>
+                  <tr key={`${row.year}-${row.account}-${row.currency}`}>
                     <td>{row.year}</td>
                     <td>{accountLabel(row.account, t)}</td>
+                    <td>{currencyLabel(row.currency, t)}</td>
                     <td className="num">{formatNumber(row.gross)}</td>
-                    <td className={`num ${signClass(row.withholding_tax)}`}>{formatNumber(row.withholding_tax)}</td>
+                    <td className="num">{formatNumber(row.withholding_tax)}</td>
                     <td className="num">{formatNumber(row.net)}</td>
                     <td className="num">{row.payment_count}</td>
                   </tr>
@@ -185,17 +205,17 @@ export function Dividends() {
                     <td>{row.instrument?.broker_symbol ?? '—'}</td>
                     <td>{accountLabel(row.account, t)}</td>
                     <td className="num">{row.gross !== null ? formatNumber(row.gross) : '—'}</td>
-                    <td className={`num ${row.withholding_tax !== null ? signClass(row.withholding_tax) : ''}`}>
-                      {row.withholding_tax !== null ? formatNumber(row.withholding_tax) : '—'}
+                    <td className="num">{row.withholding_tax !== null ? formatNumber(row.withholding_tax) : '—'}</td>
+                    <td className="num">
+                      {row.net !== null && row.reconciliation_status !== 'unmatched_tax' ? formatNumber(row.net) : '—'}
                     </td>
-                    <td className="num">{row.net !== null ? formatNumber(row.net) : '—'}</td>
                     <td>
                       <span
                         className={`tag ${
                           row.reconciliation_status === 'unmatched_tax'
                             ? 'unresolved'
                             : row.reconciliation_status === 'matched'
-                              ? 'resolved'
+                              ? 'confidence-confirmed'
                               : 'neutral'
                         }`}
                       >
