@@ -69,6 +69,9 @@ frontend/src/
 - `GET/PUT /policy` — the user's own, self-declared investment policy (objective/horizon/liquidity/risk tolerance) — every field optional, never inferred or scored. See "Personal policy" below.
 - `GET/POST /policy/limits`, `DELETE /policy/limits/{id}` — personal concentration rules (per line/sector/country/currency/category/declared-valuation).
 - `GET  /policy/gaps` — current portfolio vs. every configured limit, breaches only — descriptive, never a buy/sell suggestion.
+- `GET  /risk/concentration?limit=` — every held position's weight, largest first, capped at `limit` — the unconditional counterpart to Personal Policy's `line` limit. See "Portfolio risk page" below.
+- `GET  /risk/liquidity` — declared-valuation share (Mintos Core P2P / Amundi ESR) by source and freshness — the unconditional counterpart to Personal Policy's `declared_valuation` limit.
+- `GET  /risk/drawdown` — largest peak-to-trough decline in real historical value, from the same series `/value-history` returns.
 - `GET  /attention` — a short, ranked list of facts worth checking today (stale/error prices, unresolved symbols, allocation gaps), cache-only, purely descriptive — see "Attention card" below.
 - `GET  /data-health` — held (open) positions only, one row per instrument with its valuation source/freshness and corporate-action trust state resolved into one overall severity (v2) — the detailed, fix-it-console counterpart to `/attention`'s compact counts. See "Data health console (v2)" below.
 - `GET  /onboarding` — whether each first-run step (import, refresh, resolve unmapped symbols, fetch fundamentals, set an allocation target, start a watchlist) has been done at least once — see "Getting-started checklist" below.
@@ -442,6 +445,27 @@ Frontend: `PersonalPolicyPanel.tsx`, on the Portfolio page next to
 administration setting) — a consultation view, an edit form (`PUT`
 replaces the whole policy in one call), a limits table + add-row form,
 and a gaps list shown only once at least one limit is configured.
+
+**Portfolio risk page.** `pages/Risques.tsx`, route `/risk`, a dedicated
+top-level page answering a deliberately different question than Personal
+Policy: Policy is "did I breach the limit I chose?" (nothing shown
+without a configured limit); Risques is "what is my portfolio actually
+exposed to?" — unconditional facts, never gated behind a limit. Reunites
+two facets that also ship elsewhere in the app's history but are mounted
+only here: `PortfolioBreakdown.tsx` (category/currency/country/sector
+concentration, `GET /breakdown?by=`) and `FactorExposures.tsx` (Carhart
+four-factor exposure, `GET /api/factors`) — moved from the Portfolio page
+to this one, not duplicated. Three new panels, all reading from `/risk/*`
+(see the endpoint list above): `PositionConcentration.tsx` (top-N
+position weights), `Liquidity.tsx` (declared-valuation share by source —
+Mintos Core P2P / Amundi ESR — deliberately excluding corporate-action
+residuals, which is a `/data-health` concern, not a liquidity one), and
+`Drawdown.tsx` (largest historical peak-to-trough decline, from
+`compute_max_drawdown` in `prices/history_service.py`, computed over the
+same series `/value-history` already returns — no new data source). A
+permanent, non-dismissible disclaimer states the Policy-vs-Risk split
+directly, so this distinction doesn't get lost or re-duplicated later.
+See DEVLOG "Decision 3u.67".
 
 **Getting-started checklist.** `GET /api/portfolio/onboarding`
 (`routers/portfolio.py::get_onboarding_status`) backs a dismissible

@@ -8426,3 +8426,108 @@ validated model (more than one test period, ideally out-of-sample across
 different market regimes) or an extremely careful framing that a ~54%
 accuracy figure does not currently support — not a decision to make
 implicitly by shipping a UI element.
+
+## Decision 3u.67 — "Risques du portefeuille": unconditional exposure facts, split from Personal Policy (2026-09-16)
+
+Direct follow-up, same "philosophy evolving" conversation: after the
+prediction module, the next question was what an AI-piloted investor
+would still be missing from this site. Answered by re-reading, not
+guessing: Personal Policy (Decision 3u.59) already closes with an
+explicit named follow-up — *"a future full portfolio-risk view
+(sector/country/currency concentration beyond what a configured limit
+already checks, liquidity-by-asset-class, valuation-risk breakdown,
+historical drawdown)"* — this is that chantier, finally picked up.
+
+**Real finding before writing anything**: two of the facets that follow-up
+named are **already shipped**, mounted directly on `Portfolio.tsx` —
+`PortfolioBreakdown.tsx` (category/currency/country/sector concentration)
+and `FactorExposures.tsx` (Carhart four-factor exposure). Asked the user
+how to organize the new page given this; chose a **new dedicated page
+that reunites everything** — the two existing components moved (same
+code, new home, not duplicated), alongside three genuinely new facets.
+
+**Backend** — three new endpoints under `/api/portfolio/risk/`, all in
+`routers/portfolio.py` (same reasoning `/policy/gaps` already established:
+they need that module's private helpers, and there's no precedent here
+for importing another router's private helpers):
+
+- `GET /risk/concentration?limit=` — every held position's weight,
+  largest first, reusing `_positions_figures_and_total` exactly as
+  `/breakdown`/`/policy/gaps` already do. Real finding while designing
+  this: `PositionOut.weight_percent` already exists unconditionally on
+  plain `GET /api/portfolio` — added the dedicated endpoint anyway, for
+  the same single-purpose-GET granularity every other risk/policy fact in
+  this codebase already follows, and to decouple this page from
+  `PortfolioOut`'s much larger, irrelevant-here shape.
+- `GET /risk/liquidity` — declared-valuation share (Mintos Core P2P /
+  Amundi ESR), by source and freshness. Reuses
+  `_positions_figures_and_total` + `_declared_valuation_note` +
+  `DECLARED_VALUE_FRESHNESS_DAYS`/`DECLARED_VALUE_PROVIDER_NAME` — the
+  same pattern `/policy/gaps`'s own `declared_value` loop already uses,
+  just unconditional and split by source. Deliberately **excludes** the
+  third `not_priceable_reason` value in this codebase,
+  `"corporate_action"` (CVR/corporate-action residuals) — that's a
+  data-trust fact `/data-health` already owns, not a liquidity fact;
+  mixing the two would blur what each page is for. Not currently
+  exercised by the real portfolio (no held residual right now), but
+  covered by an explicit regression test (`test_risk_api.py`) so the
+  exclusion can't silently regress later.
+- `GET /risk/drawdown` — the genuinely new metric. New pure function
+  `compute_max_drawdown` in `prices/history_service.py`, next to
+  `compute_value_history` (no signature change to that function) —
+  computed from the exact same `Lot`-replay series `/value-history`
+  already returns, no new data source. `MIN_DRAWDOWN_POINTS = 30`
+  (~6 trading weeks) gates an honest `insufficient_history: true` below
+  that many priced days. Chose backend over client-side TypeScript
+  specifically because this project writes real pytest coverage for
+  every computation while explicitly accepting "no frontend test
+  framework" as a known gap — peak/trough/recovery edge cases (gaps,
+  monotonic series, no recovery, two candidate drawdowns) would otherwise
+  be the one computation with zero test coverage. "Recovered" means the
+  series reached back to the pre-drawdown peak at some point after the
+  trough — a real historical fact, never "is it at that peak right now."
+
+No migration, no model change — everything derives from existing columns.
+
+**Frontend**: new `pages/Risques.tsx` at route `/risk`, nav entry after
+Tax Prep. `Portfolio.tsx` loses its `PortfolioBreakdown`/`FactorExposures`
+imports and mount lines — nothing else on that page changes.
+`PositionConcentration.tsx`/`Liquidity.tsx`/`Drawdown.tsx` are new,
+self-contained (own fetch, `.card` wrapper), same convention as every
+other standalone panel on this page. A permanent, non-dismissible
+`notice info` disclaimer states the Policy-vs-Risk split in plain
+language: *"These facts describe your portfolio's current exposure — not
+a limit, and not a buy/sell recommendation."* Reused
+`breakdown.dimension.country`/`.sector` and `breakdown.category.*` i18n
+keys rather than duplicating them; reused `valuation.declaredStale` for
+Liquidity's per-source staleness note rather than inventing new wording.
+
+Tests: `test_risk_api.py` (new, 11 tests) — concentration ranking/limit/
+unpriced-exclusion with exact hand-computed weights, liquidity per-source
+grouping and the corporate-action-exclusion regression guard, stale-vs-
+fresh freshness flagging, and a drawdown endpoint smoke test.
+`compute_max_drawdown` itself gets 6 exhaustive pure-function unit tests
+in `test_history_service.py` (below-minimum, monotonic/no-decline,
+peak-trough-recovery, no-recovery, `None`-gap handling, largest-of-two-
+drawdowns) — every hand-computed expectation matched the implementation
+on the first run. Full backend suite: **1032 passed**. `tsc -b`/`oxlint`
+clean; i18n catalogues at parity (792 keys × 3 locales).
+
+**Live-verified against the real portfolio, end to end**: `/portfolio` no
+longer shows breakdown/factors; `/risk` shows all five sections with real
+numbers. Cross-checks, all exact matches: `PositionConcentration`'s top
+row (17,504.04€, 39.98%) against `GET /api/portfolio`'s own
+`weight_percent` for the same instrument; `Liquidity`'s total (70.94%)
+against `/policy/gaps`'s already-configured `declared_valuation` limit's
+`current_pct` (same real figure surfacing unconditionally now instead of
+only as a breach). Real drawdown: **34.75%**, peak 2025-08-28
+(11,636.57€) → trough 2025-09-08 (7,593.40€), recovered 2026-05-06 — a
+real, previously-invisible fact about this portfolio's actual volatility
+history, now visible for the first time anywhere in the app.
+
+**Deliberately not built**: nothing execution-related, nothing that lets
+Hermes or any agent *write* to this app — read-only and descriptive, same
+posture as everywhere else (Decision 3u.65's own closing line). Line-item
+color-coded "risk tiers" were considered and rejected for
+`PositionConcentration` — a color implies a verdict this page explicitly
+avoids everywhere else.
