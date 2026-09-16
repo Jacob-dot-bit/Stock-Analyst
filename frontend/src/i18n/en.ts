@@ -16,6 +16,7 @@ export const en: Catalogue = {
   'nav.gems': 'Hidden gems',
   'nav.taxPrep': 'Tax prep',
   'nav.risk': 'Risk',
+  'nav.journal': 'Journal',
   'alerts.tooltip': {
     one: '{count} watchlist item at or below its target price',
     other: '{count} watchlist items at or below their target price',
@@ -904,6 +905,23 @@ export const en: Catalogue = {
   'drawdown.notRecovered': 'Not yet recovered',
   'drawdown.noneObserved': 'No decline observed in the available history.',
   'drawdown.insufficientHistory': 'Not enough history to compute a max drawdown.',
+
+  // --- Decision journal (DEVLOG "Decision 3u.68") -----------------------------
+  'journal.title': 'Decision journal',
+  'journal.subtitle': 'Your own written reasoning behind a trade, or a general note — never computed or scored.',
+  'journal.empty': 'No journal entries yet.',
+  'journal.general': 'General',
+  'journal.entryDate': 'Written on',
+  'journal.reviewDate': 'Review by',
+  'journal.dueForReview': 'Due for review',
+  'journal.form.title': 'Write a decision',
+  'journal.form.subtitle': 'Record the reasoning now, while it is still fresh.',
+  'journal.form.symbol': 'Symbol (optional)',
+  'journal.form.thesis': 'Thesis',
+  'journal.form.reviewDate': 'Review date (optional)',
+  'journal.outcome.title': 'Outcome',
+  'journal.outcome.add': 'Add outcome',
+  'journal.outcome.save': 'Save outcome',
 
   // --- Backup ----------------------------------------------------------------
   'backup.title': 'Backup',

@@ -18,6 +18,7 @@ from app.routers import (
     factors,
     imports,
     insights,
+    journal,
     portfolio,
     prediction,
     prices,
@@ -97,6 +98,7 @@ app.include_router(dividends.router)
 app.include_router(backup.router)
 app.include_router(corporate_actions.router)
 app.include_router(tax.router)
+app.include_router(journal.router)
 
 
 @app.get("/api/health", tags=["system"])

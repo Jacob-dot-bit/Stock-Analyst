@@ -387,6 +387,40 @@ class WatchlistItem(Base):
     note: Mapped[str | None] = mapped_column(Text)
 
 
+class JournalEntry(Base):
+    """A user-written investment decision — the reasoning behind a trade
+    (or a general/macro note), optionally tied to one instrument. Never
+    computed or scored, same posture as `WatchlistItem.note`/
+    `PersonalPolicy`. See DEVLOG "Decision 3u.68"."""
+
+    __tablename__ = "journal_entries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    #: Nullable — an entry can stand alone (a general/macro note) or tie
+    #: to a specific holding. No cascade delete, same convention as
+    #: `Lot.instrument_id`: losing the entry's context must never silently
+    #: delete real history.
+    instrument_id: Mapped[int | None] = mapped_column(ForeignKey("instruments.id"), index=True)
+    instrument: Mapped[Instrument | None] = relationship()
+
+    #: The decision's own reasoning — required, this is the entry's whole
+    #: point.
+    thesis: Mapped[str] = mapped_column(Text)
+    #: When the decision was made — set once at creation, never edited
+    #: afterward (a historical fact, same "never silently rewritten"
+    #: principle DEVLOG itself follows, applied here to user data).
+    entry_date: Mapped[date] = mapped_column(Date, default=date.today)
+    #: Optional — "revisit this by/on." Drives the "due for review" tag
+    #: in the UI; no scheduled reminder/notification in v1.
+    review_date: Mapped[date | None] = mapped_column(Date)
+    #: Filled in later, once there's something to say about how the
+    #: decision played out — nullable, editable independently of `thesis`.
+    outcome_note: Mapped[str | None] = mapped_column(Text)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
 class ScreenerCandidate(Base):
     """A hand-picked candidate to screen for hidden gems — ranked by the same
     composite score as held/watched instruments, but excluded from the

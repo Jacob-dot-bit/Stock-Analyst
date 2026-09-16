@@ -30,6 +30,7 @@ import type {
   ImportPreview,
   Instrument,
   InstrumentCommentary,
+  JournalEntry,
   Liquidity,
   Lot,
   NewsSentiment,
@@ -415,6 +416,31 @@ export const api = {
   deleteWatchlistItem: (id: number) => request<void>(`/api/watchlist/${id}`, { method: 'DELETE' }),
 
   getWatchlistScores: () => request<Score[]>('/api/watchlist/scores'),
+
+  getJournalEntries: () => request<JournalEntry[]>('/api/journal'),
+
+  addJournalEntry: (payload: { broker_symbol?: string | null; thesis: string; review_date?: string | null }) =>
+    request<JournalEntry>('/api/journal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  updateJournalEntry: (id: number, payload: { thesis: string; review_date: string | null }) =>
+    request<JournalEntry>(`/api/journal/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  updateJournalEntryOutcome: (id: number, payload: { outcome_note: string | null }) =>
+    request<JournalEntry>(`/api/journal/${id}/outcome`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  deleteJournalEntry: (id: number) => request<void>(`/api/journal/${id}`, { method: 'DELETE' }),
 
   getWatchlistSignals: () => request<WatchlistSignal[]>('/api/watchlist/signals'),
 

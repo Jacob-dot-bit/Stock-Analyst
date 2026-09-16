@@ -9,6 +9,7 @@ export const fr: Catalogue = {
   'nav.gems': 'Pépites',
   'nav.taxPrep': 'Préparation fiscale',
   'nav.risk': 'Risques',
+  'nav.journal': 'Journal',
   'alerts.tooltip': {
     one: '{count} élément de la watchlist a atteint son prix cible',
     other: '{count} éléments de la watchlist ont atteint leur prix cible',
@@ -910,6 +911,23 @@ export const fr: Catalogue = {
   'drawdown.notRecovered': 'Pas encore récupérée',
   'drawdown.noneObserved': "Aucune baisse observée sur l'historique disponible.",
   'drawdown.insufficientHistory': 'Historique insuffisant pour calculer une baisse maximale.',
+
+  // --- Journal de décisions (DEVLOG "Decision 3u.68") -----------------------
+  'journal.title': 'Journal de décisions',
+  'journal.subtitle': "Votre propre raisonnement écrit derrière une décision, ou une note générale — jamais calculé ni noté.",
+  'journal.empty': 'Aucune entrée dans le journal pour le moment.',
+  'journal.general': 'Générale',
+  'journal.entryDate': 'Écrite le',
+  'journal.reviewDate': 'À revoir le',
+  'journal.dueForReview': 'À revoir',
+  'journal.form.title': 'Écrire une décision',
+  'journal.form.subtitle': "Notez le raisonnement maintenant, tant qu'il est encore frais.",
+  'journal.form.symbol': 'Symbole (optionnel)',
+  'journal.form.thesis': 'Thèse',
+  'journal.form.reviewDate': 'Date de revue (optionnelle)',
+  'journal.outcome.title': 'Résultat',
+  'journal.outcome.add': 'Ajouter un résultat',
+  'journal.outcome.save': 'Enregistrer le résultat',
 
   // --- Sauvegarde ----------------------------------------------------------
   'backup.title': 'Sauvegarde',

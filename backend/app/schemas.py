@@ -933,6 +933,41 @@ class WatchlistItemOut(BaseModel):
     duplicate_warning: str | None = None
 
 
+class JournalEntryIn(BaseModel):
+    #: Optional — reuses `get_or_create_instrument` exactly as
+    #: `WatchlistItemIn.broker_symbol` does, so typing/picking a symbol
+    #: works the same way it does everywhere else in this app.
+    broker_symbol: str | None = Field(default=None, max_length=40)
+    thesis: str = Field(min_length=1)
+    review_date: date | None = None
+
+
+class JournalEntryUpdateIn(BaseModel):
+    #: The original decision, edited as one unit — same "the edit form
+    #: always submits every field it owns" convention as
+    #: `WatchlistItemUpdateIn`. `entry_date` is deliberately not editable
+    #: here: it's a historical fact, set once at creation. `outcome_note`
+    #: is a separate, later moment (reflection, not the original
+    #: decision) — edited via its own endpoint below, never bundled here.
+    thesis: str = Field(min_length=1)
+    review_date: date | None = None
+
+
+class JournalEntryOutcomeIn(BaseModel):
+    outcome_note: str | None = None
+
+
+class JournalEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    instrument: InstrumentOut | None
+    thesis: str
+    entry_date: date
+    review_date: date | None
+    outcome_note: str | None
+
+
 class ScreenerCandidateIn(BaseModel):
     broker_symbol: str = Field(min_length=1, max_length=40)
     currency: str | None = None

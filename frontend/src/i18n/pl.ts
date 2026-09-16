@@ -16,6 +16,7 @@ export const pl: Catalogue = {
   'nav.gems': 'Perełki',
   'nav.taxPrep': 'Przygotowanie podatkowe',
   'nav.risk': 'Ryzyko',
+  'nav.journal': 'Dziennik',
   'alerts.tooltip': {
     one: '{count} pozycja z watchlisty osiągnęła cenę docelową',
     few: '{count} pozycje z watchlisty osiągnęły cenę docelową',
@@ -917,6 +918,23 @@ export const pl: Catalogue = {
   'drawdown.notRecovered': 'Jeszcze nieodzyskane',
   'drawdown.noneObserved': 'Brak spadku w dostępnej historii.',
   'drawdown.insufficientHistory': 'Za mało historii, aby obliczyć maksymalne obsunięcie.',
+
+  // --- Dziennik decyzji (DEVLOG "Decision 3u.68") -----------------------------
+  'journal.title': 'Dziennik decyzji',
+  'journal.subtitle': 'Twoje własne pisemne uzasadnienie decyzji lub ogólna notatka — nigdy nie obliczane ani nie oceniane.',
+  'journal.empty': 'Brak wpisów w dzienniku.',
+  'journal.general': 'Ogólny',
+  'journal.entryDate': 'Napisano',
+  'journal.reviewDate': 'Przegląd do',
+  'journal.dueForReview': 'Do przeglądu',
+  'journal.form.title': 'Zapisz decyzję',
+  'journal.form.subtitle': 'Zapisz uzasadnienie teraz, dopóki jest jeszcze świeże.',
+  'journal.form.symbol': 'Symbol (opcjonalnie)',
+  'journal.form.thesis': 'Uzasadnienie',
+  'journal.form.reviewDate': 'Data przeglądu (opcjonalnie)',
+  'journal.outcome.title': 'Wynik',
+  'journal.outcome.add': 'Dodaj wynik',
+  'journal.outcome.save': 'Zapisz wynik',
 
   // --- Kopia zapasowa --------------------------------------------------------
   'backup.title': 'Kopia zapasowa',

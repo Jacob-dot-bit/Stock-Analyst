@@ -679,6 +679,19 @@ export interface WatchlistItem {
   duplicate_warning: string | null
 }
 
+/** A user-written investment decision — the reasoning behind a trade (or a
+ * general/macro note), optionally tied to one instrument. Never computed
+ * or scored. `entry_date` is set once at creation and never editable
+ * afterward. See DEVLOG "Decision 3u.68". */
+export interface JournalEntry {
+  id: number
+  instrument: Instrument | null
+  thesis: string
+  entry_date: string
+  review_date: string | null
+  outcome_note: string | null
+}
+
 export interface ScreenerCandidate {
   id: number
   instrument: Instrument
