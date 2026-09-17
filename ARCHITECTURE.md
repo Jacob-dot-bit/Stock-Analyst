@@ -80,6 +80,7 @@ frontend/src/
 - `GET  /value-history` — real historical value, replaying actual buys/sells (`prices/history_service.py`).
 - `POST /enrich-sectors` — one-off sector/industry lookup for held instruments.
 - `POST /backfill-isins` — one-off ISIN lookup for every held/watchlisted/screened instrument with a `name` but no `isin` yet (`symbols/duplicates.py::backfill_isins`).
+- `POST /backfill-figis` — same "batch, resumable" shape, resolving a canonical OpenFIGI share-class identity instead — see "FIGI canonical identity" below. See DEVLOG "Decision 3u.76".
 - `GET  /symbol-search?q=` — company-name autocomplete (FMP, US-only free tier).
 - `POST /refresh-live` — budgeted live-quote round, returns the whole portfolio recomputed.
 - `GET  /refresh-live/status` — progress of a live-quote round in flight.
@@ -309,6 +310,50 @@ can legitimately come back with no ISIN (confirmed live: `Celsius Holdings`
 has none on Wikidata; re-running the backfill later can still pick up a
 transient miss, same "click again" pattern as the price/fundamentals
 refresh buttons).
+
+**FIGI canonical identity** (`symbols/duplicates.py`,
+`providers/openfigi.py`). ISIN duplicate detection above still misses a
+case: an instrument added by hand with no `name` at all never gets an
+ISIN either, and a plain ticker match is exactly what `get_or_create_
+instrument` (the single chokepoint every import path funnels through)
+already relies on — it never catches the same real company held under
+one broker symbol and later watchlisted under a different one. OpenFIGI
+was evaluated once before and rejected (DEVLOG "Decision 2c.3") for a
+*different* need — resolving an ISIN for Frankfurt pricing, which it
+can't do, since it returns FIGIs, not ISINs. The need here supersedes
+that: OpenFIGI's **share-class FIGI** (`shareClassFIGI` in its response)
+is identical across every exchange listing of the same real security —
+e.g. `NKE.US` and `NKE.L` share one even though their plain, per-listing
+`figi` differs — making it exactly the cross-reference key this gap
+needs, independent of the ISIN question 2c.3 was actually about.
+
+`backfill_figis` — same "batch, resumable, click again" shape as
+`backfill_isins`/`backfill_dividend_concept` — resolves `Instrument.
+figi`/`share_class_figi` via `providers/openfigi.py::map_instruments`
+(ISIN preferred when known, else root ticker + currency), gated on
+`figi_checked_at IS NULL` ("have we tried," not "did we find a value" —
+same reasoning as `dividend_checked_at`, Decision 3u.74). Scoped to
+held/watchlisted/screened unconditionally, plus Discovery-sourced
+instruments only once already evaluated (`verified_at` set) — the same
+cost gate `backfill_dividend_concept` established, since querying
+OpenFIGI for Discovery's whole raw pool before a candidate has even been
+scored once would be a real quota burn. `find_figi_duplicates` is
+read-only and cache-only (never calls OpenFIGI itself): every pair of
+*tracked* instruments — deliberately **not** bare Discovery rows, matching
+`DiscoveryCandidate`'s own "never shown to the user directly" invariant —
+sharing a `share_class_figi`. Surfaced in `GET /data-health` as
+`figi_duplicates`, additive to the existing per-position rows; a pure
+fact, like `find_tracked_duplicate`, never merged or blocked.
+
+A live run against this app's own portfolio caught two real bugs no
+unit test had (both fixed, see DEVLOG "Decision 3u.76" for the full
+account): a bare ISIN lookup returns one row *per exchange/vendor feed*
+for the same security (275 rows for Apple's ISIN alone) — row count
+alone is not an ambiguity signal, only disagreement on `shareClassFIGI`
+is; and OpenFIGI's unauthenticated 25 req/min limit is easy to hit
+backfilling a real portfolio, so `map_instruments` distinguishes a
+`FIGI_LOOKUP_FAILED` HTTP/network failure from a genuine `None`
+non-match — only the latter is safe to record as permanently checked.
 
 **Position/watchlist signals** (`routers/portfolio.py::_position_signal`,
 `scoring/service.py::score_band`). A user request for an "Acheter/Vendre/

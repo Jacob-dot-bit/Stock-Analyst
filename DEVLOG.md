@@ -9051,3 +9051,94 @@ candidate scored between 55.5 and 89.5.
 **This closes the "Pépites filters" backlog item completely, including
 the three previously-unscoped dimensions** — nothing named in the
 2026-09-08 backlog list remains unaddressed.
+
+## Decision 3u.76 — Canonical instrument identity via OpenFIGI, and two real bugs found running the backfill for real (2026-09-17)
+
+The "new data sources" architecture proposal (2026-09-07) named a
+canonical-identity layer as its recommended starting point. Picked up to
+address a real, already-documented gap: `get_or_create_instrument` (the
+single chokepoint every import path funnels through) keys **only** on
+exact `broker_symbol` — never ISIN or anything else — so the same real
+company held under one broker symbol and later watchlisted under a
+different one silently becomes two unrelated `Instrument` rows today. A
+real duplicate-ISIN case is already on record (Decision 3u.16, 4 rows
+one company), and the existing reactive warning
+(`symbols/duplicates.py::check_for_duplicate`) only fires at add time
+when a company name happens to be supplied.
+
+**Supersedes, not contradicts, Decision 2c.3.** OpenFIGI was evaluated
+and rejected once before, for a *different* need (resolving an ISIN for
+Frankfurt pricing — OpenFIGI returns FIGIs, not ISINs, so it didn't fill
+that gap). Today's need is different: a stable cross-reference to
+recognise the same real-world instrument under two different broker
+symbols, for which FIGI itself — specifically OpenFIGI's *share-class*
+FIGI, identical across every exchange listing of the same security — is
+exactly the right key.
+
+**Shipped**: `Instrument.figi`/`share_class_figi`/`figi_checked_at`
+(migration `0873d0d3f871`); new `providers/openfigi.py` (keyless, works
+unauthenticated); `symbols/duplicates.py::backfill_figis` (same "batch,
+resumable" shape as `backfill_isins`/`backfill_dividend_concept`, scoped
+to held/watchlisted/screened plus already-evaluated Discovery rows) and
+`find_figi_duplicates` (cache-only, read-only, scoped to tracked
+instruments — never Discovery's raw, unpromoted pool); `POST
+/backfill-figis`; `DataHealthOut.figi_duplicates`, additive; a
+`BackfillFigisButton` on Watchlist/Screener; a new Data Health section,
+hidden when empty. Detection only, same as every other identity check in
+this app — never merges or blocks.
+
+**Running the real backfill against the real portfolio surfaced two
+genuine bugs, neither caught by the first round of tests:**
+
+**Bug 1 — a bare ISIN lookup was misread as "ambiguous."** The first
+live call resolved **0 of 20**. OpenFIGI's real response for a single
+ISIN returns *one row per exchange/vendor feed* — Apple's ISIN
+(`US0378331005`) came back with **275 rows**, all but a handful sharing
+one `shareClassFIGI`. `map_instruments`'s ambiguity check
+(`len(data) != 1`) treated any multi-row response as unresolvable,
+which is true for almost every real security. Fixed: `_resolve_match`
+now drops rows with no `shareClassFIGI` (a handful of synthetic
+CFD-style tickers, e.g. `AAPLGBX` on exchange `X1`, that OpenFIGI can't
+assign one to) and is ambiguous only if the remaining rows *disagree* on
+`shareClassFIGI` — genuinely different securities, not just different
+listings of the same one. After the fix, the same batch resolved
+**20/20**.
+
+**Bug 2 — a rate-limited request was recorded as a permanent
+non-match.** Backfilling the full queue hit OpenFIGI's unauthenticated
+25 req/min limit partway through; the last 6 batches (110 instruments)
+all came back **0 resolved**, confirmed live via a direct probe against
+`api.openfigi.com` returning `429 Too many requests`. The existing code
+treated any non-200/network failure the same as a genuine "OpenFIGI
+answered, no match" and set `figi_checked_at` regardless — exactly the
+bug class Decision 3u.74 already fixed once for dividends, reintroduced
+here on a new signal. Fixed: `map_instruments` now returns a distinct
+`FIGI_LOOKUP_FAILED` sentinel for HTTP/network failures, and
+`backfill_figis` skips marking those instruments checked, leaving them
+eligible for the next call.
+
+**Data hygiene**: backed up the live database (`POST /api/backup`)
+before touching anything, then reset `figi_checked_at` to `NULL` for the
+130 instruments mis-marked by the two bugs above (the very first batch,
+pre-Bug-1-fix, plus the six rate-limited batches) — confirmed first that
+none of the 130 had a `figi` already stored, so nothing real was
+discarded.
+
+**Live-verified end to end after both fixes**: re-ran the backfill to
+completion — **390 checked, 349 resolved** (~89.5% resolution rate on
+this portfolio's tracked instruments). Spot-checked `AAPL.US` against
+the live OpenFIGI API directly: `figi=BBG000B9XRY4`,
+`share_class_figi=BBG001S5N8V8` — matches exactly. `figi_duplicates` is
+empty for this portfolio (no genuine same-company-different-symbol case
+exists in it today); confirmed live in the browser that the new Data
+Health section correctly stays hidden rather than rendering an empty
+list — the synthetic case is covered in the test suite instead
+(`test_symbol_duplicates.py::TestFindFigiDuplicates`).
+
+Full backend suite: **1095 passed**. New/updated tests:
+`test_openfigi.py` (multi-row-same-share-class resolves; noise rows with
+no `shareClassFIGI` ignored; genuine disagreement still ambiguous; HTTP/
+network failure returns `FIGI_LOOKUP_FAILED`, not `None`);
+`test_symbol_duplicates.py` (a transient lookup failure is never marked
+checked and stays eligible for retry, distinct from the existing
+genuine-non-match-is-permanent test).
