@@ -64,6 +64,15 @@ class InstrumentScore:
     instrument_id: int
     composite: float | None
     pillars: list[PillarScore] = field(default_factory=list)
+    #: Three fields for Discovery/Pépites screening filters — informational
+    #: only, never fed back into `composite`. `debt_ratio` is read out of
+    #: the Value pillar's own already-computed `debt_to_equity` metric
+    #: (never recomputed); `market_cap` and `price_history_years` are new,
+    #: unscored derivations over the same per-instrument data this
+    #: function already loads. See DEVLOG "Decision 3u.72".
+    market_cap: float | None = None
+    debt_ratio: float | None = None
+    price_history_years: float | None = None
 
 
 def score_band(composite: float | None) -> str:
@@ -242,6 +251,18 @@ def _finalise_composite(pillars: list[PillarScore], pillar_configs: dict[str, Pi
     return _weighted_average(scored)
 
 
+def _metric_value(pillars: list[PillarScore], pillar_name: str, metric_name: str) -> float | None:
+    """The raw (unscored) `.value` of one already-computed metric, e.g. the
+    Value pillar's `debt_to_equity` ratio — never recomputed, and `None`
+    when the pillar/metric isn't configured or was dropped for missing
+    data, same as everywhere else in this app."""
+    pillar = next((p for p in pillars if p.name == pillar_name), None)
+    if pillar is None:
+        return None
+    metric = next((m for m in pillar.metrics if m.name == metric_name), None)
+    return metric.value if metric else None
+
+
 def _representative_currency(concepts: dict[str, list[AnnualValue]]) -> str | None:
     """One filing's figures all share one reporting currency in practice (it
     is one 10-K/20-F). Any concept's latest value is representative."""
@@ -345,6 +366,15 @@ def compute_scores(db: Session, instruments: list[Instrument], config: ScoringCo
             for name, pillar_cfg in config.pillars.items()
         ]
         composite = _finalise_composite(pillars, config.pillars)
-        results.append(InstrumentScore(instrument_id=instrument.id, composite=composite, pillars=pillars))
+        results.append(
+            InstrumentScore(
+                instrument_id=instrument.id,
+                composite=composite,
+                pillars=pillars,
+                market_cap=metrics.market_cap(concepts, price, price_currency, fx_rate),
+                debt_ratio=_metric_value(pillars, "value", "debt_to_equity"),
+                price_history_years=round(len(closes) / 252, 1) if closes else None,
+            )
+        )
 
     return results

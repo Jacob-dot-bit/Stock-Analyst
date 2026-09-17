@@ -175,6 +175,9 @@ def ranked_candidates(db: Session, rank_by: str, limit: int, config: ScoringConf
                 "value_score": value,
                 "growth_score": growth,
                 "recommendation": recommendation_from_composite(score.composite),
+                "market_cap": score.market_cap,
+                "debt_ratio": score.debt_ratio,
+                "price_history_years": score.price_history_years,
                 "_rank_value": rank_value,
             }
         )

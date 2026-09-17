@@ -1040,6 +1040,18 @@ class DiscoveryCandidateOut(BaseModel):
     #: `corporate_actions/service.py::list_outstanding_candidates`. Powers
     #: the data-quality filter's "no pending corporate action" condition.
     corporate_action_pending: bool = False
+    #: Price × diluted shares outstanding — an approximation, informational
+    #: only, never fed into `composite_score`. `None` when the fundamentals
+    #: needed (diluted shares) or a price aren't available.
+    market_cap: float | None = None
+    #: Debt-to-equity — the same raw ratio already computed for the Value
+    #: pillar's `debt_to_equity` metric, just surfaced here too. `None` when
+    #: the underlying fundamentals aren't available.
+    debt_ratio: float | None = None
+    #: Roughly how many years of cached daily price history exist for this
+    #: instrument (`len(price bars) / 252`) — a data-sufficiency fact, not a
+    #: score. `None` when there's no priced history at all.
+    price_history_years: float | None = None
 
 
 class DiscoveryFinvizOut(BaseModel):

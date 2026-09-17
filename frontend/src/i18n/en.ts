@@ -452,6 +452,10 @@ export const en: Catalogue = {
   'filters.search': 'Search',
   'filters.priceMin': 'Min price',
   'filters.priceMax': 'Max price',
+  'filters.capMin': 'Min market cap',
+  'filters.capMax': 'Max market cap',
+  'filters.debtMax': 'Max debt/equity',
+  'filters.historyMin': 'Min history (years)',
   'table.columns': 'Columns',
 
   // --- Transactions ----------------------------------------------------------
@@ -670,12 +674,23 @@ export const en: Catalogue = {
   'discovery.marketSectorFilterLabel': 'Country and sector',
   'discovery.marketSectorFilterHint':
     'Applied to the S&P 500 ranking and Finviz scans below — the hand-picked candidates above have no country/sector filter yet. Options reflect what is currently loaded.',
+  'discovery.marketCapFilterLabel': 'Market cap',
+  'discovery.marketCapFilterHint':
+    "Applied to the S&P 500 ranking and Finviz scans below — the hand-picked candidates above have no computed market cap. An approximation (weighted-average diluted shares × price), good enough to filter with, not for accounting use.",
+  'discovery.debtRatioFilterLabel': 'Debt',
+  'discovery.debtRatioFilterHint':
+    'Debt-to-equity ratio, already computed for the Value pillar — long-term debt only. Applied to the S&P 500 ranking and Finviz scans below, not the hand-picked candidates above.',
+  'discovery.historyFilterLabel': 'Minimum price history',
+  'discovery.historyFilterHint':
+    "Roughly how many years of cached price history exist for the instrument — a data-sufficiency requirement, not a judgment of the company itself. Applied to the S&P 500 ranking and Finviz scans below.",
   'discovery.rankByValue': 'Rank by Value',
   'discovery.rankByGrowth': 'Rank by Growth',
   'discovery.valueScore': 'Value',
   'discovery.valueScoreTooltip': 'One pillar of the composite score — not a standalone rating.',
   'discovery.growthScore': 'Growth',
   'discovery.growthScoreTooltip': 'One pillar of the composite score — not a standalone rating.',
+  'discovery.marketCap': 'Market cap',
+  'discovery.debtRatio': 'Debt/equity',
   'discovery.importResult': '{imported} imported, {alreadyPresent} already present.',
   'discovery.refreshResultMore': '{evaluated} evaluated, {remaining} remaining — click again to continue.',
   'discovery.refreshResultDone': '{evaluated} evaluated, none remaining.',

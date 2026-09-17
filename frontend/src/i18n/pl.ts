@@ -460,6 +460,10 @@ export const pl: Catalogue = {
   'filters.search': 'Szukaj',
   'filters.priceMin': 'Cena min.',
   'filters.priceMax': 'Cena maks.',
+  'filters.capMin': 'Kapitalizacja min.',
+  'filters.capMax': 'Kapitalizacja maks.',
+  'filters.debtMax': 'Dług/kapitał własny maks.',
+  'filters.historyMin': 'Historia min. (lata)',
   'table.columns': 'Kolumny',
 
   // --- Transakcje --------------------------------------------------------------
@@ -681,12 +685,23 @@ export const pl: Catalogue = {
   'discovery.marketSectorFilterLabel': 'Kraj i sektor',
   'discovery.marketSectorFilterHint':
     'Stosowany do rankingu S&P 500 i skanów Finviz poniżej — ręcznie wybrani kandydaci powyżej nie mają jeszcze filtra kraju/sektora. Opcje odzwierciedlają aktualnie wczytane dane.',
+  'discovery.marketCapFilterLabel': 'Kapitalizacja',
+  'discovery.marketCapFilterHint':
+    'Stosowany do rankingu S&P 500 i skanów Finviz poniżej — ręcznie wybrani kandydaci powyżej nie mają obliczonej kapitalizacji. Przybliżenie (średnia ważona rozwodnionych akcji × cena), wystarczające do filtrowania, nie do celów księgowych.',
+  'discovery.debtRatioFilterLabel': 'Zadłużenie',
+  'discovery.debtRatioFilterHint':
+    'Wskaźnik dług/kapitał własny, już obliczony dla filaru Value — tylko dług długoterminowy. Stosowany do rankingu S&P 500 i skanów Finviz poniżej, nie do ręcznie wybranych kandydatów powyżej.',
+  'discovery.historyFilterLabel': 'Minimalna historia cen',
+  'discovery.historyFilterHint':
+    'Przybliżona liczba lat historii cen w pamięci podręcznej dla tego instrumentu — wymóg wystarczalności danych, nie ocena samej spółki. Stosowany do rankingu S&P 500 i skanów Finviz poniżej.',
   'discovery.rankByValue': 'Sortuj wg Value',
   'discovery.rankByGrowth': 'Sortuj wg Growth',
   'discovery.valueScore': 'Value',
   'discovery.valueScoreTooltip': 'Jeden z filarów wyniku łącznego — nie samodzielna ocena.',
   'discovery.growthScore': 'Growth',
   'discovery.growthScoreTooltip': 'Jeden z filarów wyniku łącznego — nie samodzielna ocena.',
+  'discovery.marketCap': 'Kapitalizacja',
+  'discovery.debtRatio': 'Dług/kapitał',
   'discovery.importResult': '{imported} zaimportowanych, {alreadyPresent} już obecnych.',
   'discovery.refreshResultMore': '{evaluated} ocenionych, {remaining} pozostało — kliknij ponownie, aby kontynuować.',
   'discovery.refreshResultDone': '{evaluated} ocenionych, nic nie pozostało.',

@@ -151,6 +151,78 @@ class TestFullyResolvedInstrument:
             assert pillar.score is not None
 
 
+class TestDiscoveryFilterFields:
+    """`market_cap`/`debt_ratio`/`price_history_years` — informational
+    fields for the Pépites screening filters, never fed into `composite`.
+    See DEVLOG "Decision 3u.72"."""
+
+    def test_fully_resolved_stock_gets_all_three(self, db, config):
+        stock = Instrument(broker_symbol="AAPL.US", category="STOCK", currency="USD", country="US")
+        db.add(stock)
+        db.flush()
+        figures = [
+            ("shares_diluted", 2023, 100.0), ("shares_diluted", 2024, 100.0),
+            ("equity", 2023, 2000.0), ("equity", 2024, 2100.0),
+            ("debt_long_term", 2023, 800.0), ("debt_long_term", 2024, 700.0),
+        ]
+        for concept, fy, value in figures:
+            db.add(
+                Fundamental(
+                    instrument_id=stock.id, concept=concept, fiscal_year=fy,
+                    period_end=date(fy, 12, 31), value=value, currency="USD", tag="x",
+                )
+            )
+        _closes(db, stock.id, 260, start=100.0, step=0.2)
+        db.commit()
+
+        score = compute_scores(db, [stock], config)[0]
+
+        # Last close is 100.0 + 259*0.2 = 151.8; shares_diluted latest = 100.0.
+        assert score.market_cap == pytest.approx(15180.0)
+        # debt_long_term(2024)/equity(2024) = 700.0/2100.0.
+        assert score.debt_ratio == pytest.approx(700.0 / 2100.0)
+        assert score.price_history_years == pytest.approx(260 / 252, abs=0.05)
+
+    def test_etf_with_no_fundamentals_gets_history_but_not_cap_or_debt(self, db, config):
+        etf = Instrument(broker_symbol="SPY.US", category="ETF", currency="USD", country="US")
+        db.add(etf)
+        db.flush()
+        _closes(db, etf.id, 260, start=400.0, step=0.1)
+        db.commit()
+
+        score = compute_scores(db, [etf], config)[0]
+
+        assert score.market_cap is None
+        assert score.debt_ratio is None
+        assert score.price_history_years == pytest.approx(260 / 252, abs=0.05)
+
+    def test_stock_with_no_price_history_gets_debt_but_not_cap_or_history(self, db, config):
+        stock = Instrument(broker_symbol="AAPL.US", category="STOCK", currency="USD", country="US")
+        db.add(stock)
+        db.flush()
+        figures = [
+            ("shares_diluted", 2024, 100.0),
+            ("equity", 2024, 2100.0),
+            ("debt_long_term", 2024, 700.0),
+        ]
+        for concept, fy, value in figures:
+            db.add(
+                Fundamental(
+                    instrument_id=stock.id, concept=concept, fiscal_year=fy,
+                    period_end=date(fy, 12, 31), value=value, currency="USD", tag="x",
+                )
+            )
+        db.commit()
+        # No PriceBar rows at all: no current price -> market_cap needs one,
+        # but debt_ratio doesn't.
+
+        score = compute_scores(db, [stock], config)[0]
+
+        assert score.market_cap is None
+        assert score.debt_ratio == pytest.approx(700.0 / 2100.0)
+        assert score.price_history_years is None
+
+
 def _lot(instrument_id, quantity, open_price, opened_at, closed_at=None):
     return Lot(
         instrument_id=instrument_id,

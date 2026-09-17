@@ -144,6 +144,9 @@ def fake_scores(pillars_by_id: dict[int, dict]):
                         PillarScore(name="value", score=fields.get("value"), weight_used=30.0),
                         PillarScore(name="growth", score=fields.get("growth"), weight_used=25.0),
                     ],
+                    market_cap=fields.get("market_cap"),
+                    debt_ratio=fields.get("debt_ratio"),
+                    price_history_years=fields.get("price_history_years"),
                 )
             )
         return results
@@ -345,6 +348,37 @@ class TestCandidates:
         response = client.get("/api/discovery/candidates?rank_by=value")
 
         assert response.json() == []
+
+    def test_market_cap_debt_ratio_and_price_history_flow_through(self, client, monkeypatch):
+        """New Pépites screening fields — informational, never affect
+        ranking. See DEVLOG "Decision 3u.72"."""
+        a = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")
+        _seed([a])
+        _seed([DiscoveryCandidate(instrument_id=a.id, source="sp500")])
+        monkeypatch.setattr(
+            "app.discovery.service.compute_scores",
+            fake_scores({a.id: {"value": 50, "market_cap": 1_500_000_000.0, "debt_ratio": 0.42, "price_history_years": 3.5}}),
+        )
+
+        response = client.get("/api/discovery/candidates?rank_by=value")
+
+        body = response.json()[0]
+        assert body["market_cap"] == pytest.approx(1_500_000_000.0)
+        assert body["debt_ratio"] == pytest.approx(0.42)
+        assert body["price_history_years"] == pytest.approx(3.5)
+
+    def test_market_cap_debt_ratio_and_price_history_default_to_null(self, client, monkeypatch):
+        a = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")
+        _seed([a])
+        _seed([DiscoveryCandidate(instrument_id=a.id, source="sp500")])
+        monkeypatch.setattr("app.discovery.service.compute_scores", fake_scores({a.id: {"value": 50}}))
+
+        response = client.get("/api/discovery/candidates?rank_by=value")
+
+        body = response.json()[0]
+        assert body["market_cap"] is None
+        assert body["debt_ratio"] is None
+        assert body["price_history_years"] is None
 
 
 class TestRefreshBatch:

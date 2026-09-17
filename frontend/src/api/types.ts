@@ -734,6 +734,15 @@ export interface DiscoveryCandidate {
    * instrument — powers the data-quality filter's "no pending corporate
    * action" condition. */
   corporate_action_pending: boolean
+  /** Price × diluted shares outstanding — an approximation, informational
+   * only, never fed into `composite_score`. See DEVLOG "Decision 3u.72". */
+  market_cap: number | null
+  /** Debt-to-equity — the same raw ratio already computed for the Value
+   * pillar's own metric, just surfaced here too. */
+  debt_ratio: number | null
+  /** Roughly how many years of cached daily price history exist for this
+   * instrument — a data-sufficiency fact, not a score. */
+  price_history_years: number | null
 }
 
 export interface DiscoveryFinvizResult {

@@ -81,6 +81,9 @@ def _to_out(db: Session, row: dict, pending_ids: set[int]) -> DiscoveryCandidate
         price_source=source,
         recommendation=row["recommendation"],
         corporate_action_pending=instrument.id in pending_ids,
+        market_cap=row["market_cap"],
+        debt_ratio=row["debt_ratio"],
+        price_history_years=row["price_history_years"],
     )
 
 
@@ -154,6 +157,9 @@ def finviz_scan(
                     price_source=price_source,
                     recommendation=recommendation_from_composite(composite),
                     corporate_action_pending=instrument.id in pending_ids,
+                    market_cap=score.market_cap if score else None,
+                    debt_ratio=score.debt_ratio if score else None,
+                    price_history_years=score.price_history_years if score else None,
                 )
             )
         except Exception:

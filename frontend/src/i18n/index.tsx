@@ -16,6 +16,9 @@ interface I18nValue {
   setLocale: (locale: Locale) => void
   t: (key: string, params?: TranslateParams) => string
   formatNumber: (value: number | null | undefined, digits?: number) => string
+  /** "1.5 B" style — for a figure too large to read digit-by-digit (market
+   * cap). Never use for anything `formatNumber` already covers. */
+  formatCompactNumber: (value: number | null | undefined) => string
   formatSignedPercent: (value: number | null | undefined) => string
   formatDate: (value: string | null | undefined) => string
 }
@@ -78,6 +81,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       upToFour: new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }),
       // Whole numbers (e.g. a 0-100 score) — no forced decimals, unlike `two`.
       upToZero: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+      compact: new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }),
       date: new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }),
     }),
     [locale],
@@ -96,6 +100,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       setLocale: setLocaleState,
       t,
       formatNumber,
+      formatCompactNumber: (input) => {
+        if (input === null || input === undefined) return '—'
+        return numberFormats.compact.format(input)
+      },
       formatSignedPercent: (input) => {
         if (input === null || input === undefined) return '—'
         return `${input > 0 ? '+' : ''}${numberFormats.two.format(input)} %`

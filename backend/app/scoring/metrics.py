@@ -150,6 +150,25 @@ def fcf_yield(
     return _ok(fcf / market_cap, cfg)
 
 
+def market_cap(
+    concepts: dict[str, list[AnnualValue]], price: float | None, price_currency: str, fx_rate: float | None
+) -> float | None:
+    """Price × diluted shares outstanding — an approximation (weighted-
+    average diluted shares, not a point-in-time count), good enough for a
+    screening filter. Deliberately not a scored metric: this is
+    informational only, never meant to influence the composite score, so
+    it returns a plain value rather than a `MetricResult`/`score_linear`
+    pair the way every other function in this file does. See DEVLOG
+    "Decision 3u.72"."""
+    shares = _latest(concepts, "shares_diluted")
+    if shares is None or shares.value <= 0 or price is None:
+        return None
+    price_conv = _price_in(shares.currency, price, price_currency, fx_rate)
+    if price_conv is None:
+        return None
+    return price_conv * shares.value
+
+
 def debt_to_equity(concepts: dict[str, list[AnnualValue]], cfg: MetricConfig) -> MetricResult:
     debt = _latest(concepts, "debt_long_term")
     equity = _latest(concepts, "equity")

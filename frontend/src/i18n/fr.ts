@@ -453,6 +453,10 @@ export const fr: Catalogue = {
   'filters.search': 'Recherche',
   'filters.priceMin': 'Prix min.',
   'filters.priceMax': 'Prix max.',
+  'filters.capMin': 'Capitalisation min.',
+  'filters.capMax': 'Capitalisation max.',
+  'filters.debtMax': 'Dette/capitaux propres max.',
+  'filters.historyMin': 'Historique min. (années)',
   'table.columns': 'Colonnes',
 
   // --- Transactions ----------------------------------------------------------
@@ -673,12 +677,23 @@ export const fr: Catalogue = {
   'discovery.marketSectorFilterLabel': 'Pays et secteur',
   'discovery.marketSectorFilterHint':
     'Appliqué au classement S&P 500 et aux scans Finviz ci-dessous — les candidats choisis à la main plus haut n’ont pas encore de filtre pays/secteur. Les options reflètent ce qui est actuellement chargé.',
+  'discovery.marketCapFilterLabel': 'Capitalisation',
+  'discovery.marketCapFilterHint':
+    'Appliqué au classement S&P 500 et aux scans Finviz ci-dessous — les candidats choisis à la main plus haut n’ont pas de capitalisation calculée. Approximation (actions diluées moyennes pondérées × cours), suffisante pour filtrer, pas pour un usage comptable.',
+  'discovery.debtRatioFilterLabel': 'Endettement',
+  'discovery.debtRatioFilterHint':
+    'Ratio dette/capitaux propres, déjà calculé pour le pilier Value — n’exclut que la dette à long terme. Appliqué au classement S&P 500 et aux scans Finviz ci-dessous, pas aux candidats choisis à la main plus haut.',
+  'discovery.historyFilterLabel': 'Historique de prix minimal',
+  'discovery.historyFilterHint':
+    'Nombre approximatif d’années de cours en cache pour cet instrument — une exigence de suffisance des données, pas un critère de qualité de l’entreprise. Appliqué au classement S&P 500 et aux scans Finviz ci-dessous.',
   'discovery.rankByValue': 'Classer par Value',
   'discovery.rankByGrowth': 'Classer par Growth',
   'discovery.valueScore': 'Value',
   'discovery.valueScoreTooltip': 'Un des piliers du score composite — pas une note autonome.',
   'discovery.growthScore': 'Growth',
   'discovery.growthScoreTooltip': 'Un des piliers du score composite — pas une note autonome.',
+  'discovery.marketCap': 'Capitalisation',
+  'discovery.debtRatio': 'Dette/CP',
   'discovery.importResult': '{imported} importés, {alreadyPresent} déjà présents.',
   'discovery.refreshResultMore': '{evaluated} évalués, {remaining} restants — clique à nouveau pour continuer.',
   'discovery.refreshResultDone': '{evaluated} évalués, aucun restant.',

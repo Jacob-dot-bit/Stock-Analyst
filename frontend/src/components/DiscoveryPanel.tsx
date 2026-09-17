@@ -35,7 +35,7 @@ type VerdictFilter = 'all' | 'buy' | 'hold' | 'sell'
  * "Decision 3u.21".
  */
 export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
-  const { t, formatNumber } = useI18n()
+  const { t, formatNumber, formatCompactNumber } = useI18n()
   const [rankBy, setRankBy] = useState<RankBy>('value')
   const [candidates, setCandidates] = useState<DiscoveryCandidate[] | null>(null)
   const [importNotice, setImportNotice] = useState<string | null>(null)
@@ -61,6 +61,14 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   // See DEVLOG "Decision 3u.64".
   const [marketFilter, setMarketFilter] = useState('all')
   const [sectorFilter, setSectorFilter] = useState('all')
+  // Same local-to-this-panel scope as verdict/data-quality/market/sector —
+  // `market_cap`/`debt_ratio`/`price_history_years` only exist on
+  // `DiscoveryCandidate`, not `ScreenerCandidate`. See DEVLOG
+  // "Decision 3u.72".
+  const [capMin, setCapMin] = useState('')
+  const [capMax, setCapMax] = useState('')
+  const [debtMax, setDebtMax] = useState('')
+  const [historyMin, setHistoryMin] = useState('')
 
   async function loadCandidates(nextRankBy: RankBy) {
     setError(null)
@@ -192,6 +200,36 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
     return c.instrument.sector === sectorFilter
   }
 
+  const minCap = capMin.trim() === '' ? null : Number(capMin)
+  const maxCap = capMax.trim() === '' ? null : Number(capMax)
+
+  function withinCapRange(c: DiscoveryCandidate): boolean {
+    if (minCap === null && maxCap === null) return true
+    // Same "unknown excluded, never a false match" convention as the
+    // price filter: a candidate with no computable market cap can't be
+    // confirmed to be within a range that was actually asked for.
+    if (c.market_cap === null) return false
+    if (minCap !== null && c.market_cap < minCap) return false
+    if (maxCap !== null && c.market_cap > maxCap) return false
+    return true
+  }
+
+  const maxDebt = debtMax.trim() === '' ? null : Number(debtMax)
+
+  function withinDebtLimit(c: DiscoveryCandidate): boolean {
+    if (maxDebt === null) return true
+    if (c.debt_ratio === null) return false
+    return c.debt_ratio <= maxDebt
+  }
+
+  const minHistory = historyMin.trim() === '' ? null : Number(historyMin)
+
+  function withinHistoryMin(c: DiscoveryCandidate): boolean {
+    if (minHistory === null) return true
+    if (c.price_history_years === null) return false
+    return c.price_history_years >= minHistory
+  }
+
   // Option lists reflect what's actually loaded right now (S&P 500 +
   // Finviz combined) rather than a fixed taxonomy — a filter never offers
   // a choice that would just show an empty list.
@@ -215,6 +253,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
           <>
             <td className="num">{c.value_score !== null ? formatNumber(c.value_score, 0) : '—'}</td>
             <td className="num">{c.growth_score !== null ? formatNumber(c.growth_score, 0) : '—'}</td>
+            <td className="num">{c.market_cap !== null ? formatCompactNumber(c.market_cap) : '—'}</td>
+            <td className="num">{c.debt_ratio !== null ? formatNumber(c.debt_ratio) : '—'}</td>
           </>
         )}
         <td>
@@ -303,6 +343,45 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.marketCapFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.marketCapFilterHint')}
+        </p>
+        <div className="form-row">
+          <div className="field">
+            <label htmlFor="discovery-cap-min">{t('filters.capMin')}</label>
+            <input id="discovery-cap-min" value={capMin} onChange={(e) => setCapMin(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="discovery-cap-max">{t('filters.capMax')}</label>
+            <input id="discovery-cap-max" value={capMax} onChange={(e) => setCapMax(e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.debtRatioFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.debtRatioFilterHint')}
+        </p>
+        <div className="field">
+          <label htmlFor="discovery-debt-max">{t('filters.debtMax')}</label>
+          <input id="discovery-debt-max" value={debtMax} onChange={(e) => setDebtMax(e.target.value)} />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.historyFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.historyFilterHint')}
+        </p>
+        <div className="field">
+          <label htmlFor="discovery-history-min">{t('filters.historyMin')}</label>
+          <input id="discovery-history-min" value={historyMin} onChange={(e) => setHistoryMin(e.target.value)} />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.2rem' }}>
         <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.sp500.title')}</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           {t('discovery.sp500.description')}
@@ -346,6 +425,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   <th className="num" title={t('discovery.growthScoreTooltip')}>
                     {t('discovery.growthScore')}
                   </th>
+                  <th className="num">{t('discovery.marketCap')}</th>
+                  <th className="num">{t('discovery.debtRatio')}</th>
                   <th>{t('discovery.recommendationColumn')}</th>
                   <th />
                 </tr>
@@ -357,6 +438,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   .filter(matchesDataQualityFilter)
                   .filter(matchesMarketFilter)
                   .filter(matchesSectorFilter)
+                  .filter(withinCapRange)
+                  .filter(withinDebtLimit)
+                  .filter(withinHistoryMin)
                   .map((c) => candidateRow(c, true))}
               </tbody>
             </table>
@@ -400,6 +484,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
             .filter(matchesDataQualityFilter)
             .filter(matchesMarketFilter)
             .filter(matchesSectorFilter)
+            .filter(withinCapRange)
+            .filter(withinDebtLimit)
+            .filter(withinHistoryMin)
           return (
             <div key={preset} style={{ marginTop: '0.6rem' }}>
               <div className="muted" style={{ fontSize: '0.82rem' }}>
