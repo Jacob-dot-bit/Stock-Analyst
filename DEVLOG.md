@@ -8794,3 +8794,80 @@ hovered this session; re-check once either exists.
 sequence** — all five screens named in the 2026-09-07 priority order
 (Portfolio, Position-detail, Transactions, Dividendes, Watchlist, Pépites)
 are now audited and fixed.
+
+## Decision 3u.72 — Pépites filters: market cap, debt ratio, minimum price history (2026-09-17)
+
+Picked up the "Pépites filters" backlog item's remaining dimensions.
+Decisions 3u.62-3u.64 (2026-09-15) had already shipped verdict/data-
+quality/country/sector and explicitly deferred capitalisation/dividend
+yield/debt/minimum-history, on the strength of a 2026-09-08 roadmap note
+claiming they all "need new derived metrics — this app only stores raw
+filed XBRL figures today, not ratios... a real backend chantier."
+
+**That claim was checked against the actual code before trusting it
+again, and it was only true for one of the four.** `fcf_yield`
+(`scoring/metrics.py`) already computes `market_cap = price ×
+shares_diluted` as a throwaway intermediate on every scoring pass;
+`debt_to_equity` is a real, active, weight-20 Value-pillar metric
+(`scoring.yaml`) computed for every Discovery candidate on every request
+already — its raw ratio just never left `InstrumentScore.pillars[].
+metrics[].value`. Minimum price history needed no derived metric at all,
+just `len(closes)` over `PriceBar` rows already cached and already loaded
+for the Technical pillar. Only dividend yield genuinely needs new data (a
+new XBRL concept tag, fetched via the existing `fetch_fundamentals`
+pipeline) — deferred, on its own, to a later chantier; the other three
+shipped now.
+
+**Backend**: `scoring/metrics.py` gained a small `market_cap()` function
+extracted from `fcf_yield`'s existing inline logic, deliberately *not*
+wrapped in the scored `MetricResult` machinery (a plain `float | None`) —
+this is informational only and must never influence the composite score.
+`InstrumentScore` (`scoring/service.py`) gained `market_cap`/`debt_ratio`/
+`price_history_years`, computed inline in `compute_scores`'s existing
+per-instrument loop from data it already assembles — zero new queries.
+`debt_ratio` is read straight out of the Value pillar's already-computed
+`debt_to_equity` metric (`_metric_value` helper), never recomputed.
+Additive-only to the dataclass: every other caller of `compute_scores`
+(`routers/scoring.py`, position signals) is unaffected. `discovery/
+service.py` and `routers/discovery.py` (both the S&P 500 and Finviz
+paths) pass the three fields through to `DiscoveryCandidateOut`.
+
+**Frontend**: three new filters in `DiscoveryPanel.tsx`, same established
+pattern as verdict/data-quality/country/sector (local state, `.filter()`
+chained at both call sites, "unknown excluded, never a false match,"
+explicit "doesn't apply to the hand-picked Candidates above" hint) —
+market cap as a min/max range (mirrors the shared price filter), debt
+ratio as a max-only input ("endettement" is a ceiling concept in
+practice), minimum price history as a min-only input in years. New
+`formatCompactNumber` in `i18n/index.tsx` (`Intl.NumberFormat` with
+`notation: 'compact'`) renders a market cap as "5.6B" instead of a
+13-digit number, locale-aware for free. New Market cap/Debt-to-equity
+columns in the S&P 500 table (mirroring Value/Growth); minimum history
+stays filter-only, no column — a data-sufficiency gate like the existing
+data-quality checkbox, not a decision-relevant number worth displaying.
+
+Tests: `test_scoring_service.py` — three new cases (a fully-resolved
+stock gets all three fields; an ETF with no fundamentals gets history but
+not cap/debt; a stock with fundamentals but no price bars gets debt but
+not cap/history) confirming the "missing data → `None`, never guessed"
+rule holds for the new fields too. `test_discovery_api.py` — two new
+cases confirming the fields flow through `GET /api/candidates` and default
+to `null`. Full backend suite: **1056 passed** (1 pre-existing unrelated
+flaky test excluded — it happened to pass this run). `tsc -b`/`oxlint`
+clean; i18n at parity (836 keys × 3 locales).
+
+**Live-verified against the real S&P 500 candidates already evaluated in
+this portfolio's Discovery data**: spot-checked ACGL.US (Arch Capital
+Group) at **$36.5B** market cap — matches its real-world order of
+magnitude, confirming the price×shares_diluted computation isn't a
+units bug. Applied each filter on the real `/gems` page: the debt-ratio
+filter (max 0.05) narrowed 20 S&P 500 candidates to 5, all genuinely
+≤0.05; the history filter (min 4 years) narrowed to 9; the market-cap
+filter (min 10B) narrowed to 11, all genuinely ≥10B. One real snag hit
+and resolved during this verification, not a code bug: Vite's HMR had
+left the page's mounted component in a stale state after the earlier
+edits, so a filter change had no visible effect until a hard page reload
+— a fresh mount picked up the new code immediately and every filter
+worked first try afterward. Table columns render the new compact
+formatting correctly ("5.6B", "43.3B") rather than raw 11-13 digit
+numbers.
