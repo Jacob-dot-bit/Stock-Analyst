@@ -8871,3 +8871,72 @@ edits, so a filter change had no visible effect until a hard page reload
 worked first try afterward. Table columns render the new compact
 formatting correctly ("5.6B", "43.3B") rather than raw 11-13 digit
 numbers.
+
+## Decision 3u.73 — Pépites filters: dividend yield estimate, closing the backlog item (2026-09-17)
+
+The one piece Decision 3u.72 deferred: Discovery candidates aren't held,
+so the existing scored `dividend_yield` metric (lot-replay of
+`Transaction` rows) returns `None` for essentially all of them. Fixed by
+adding a `dividend_per_share` XBRL concept
+(`CommonStockDividendsPerShareDeclared`/`CashPaid` for EDGAR,
+`ifrs-full:DividendsPaidPerShare` for ESEF) to the existing fetch
+pipeline — zero new HTTP requests, EDGAR's company-facts call already
+returns every concept — and deriving a new, deliberately separate,
+unscored `dividend_yield_estimate` field from it (`scoring/metrics.py`),
+never folded into the scored Value-pillar metric: the two measure
+genuinely different things (this account's realized yield vs. a
+company-level filed estimate) and conflating them under one name would
+be a real, hard-to-notice correctness problem, plus it would reopen the
+deliberate ETF exclusion the scored metric's own test guards.
+
+**A real gap found during design, not implementation**: `refresh_batch`
+never revisits an already-evaluated candidate (`verified_at IS NOT
+NULL` permanently excludes it), so every Discovery candidate already in
+this app's database would have shown `dividend_yield_estimate: null`
+forever. New `backfill_dividend_concept` (`discovery/service.py`) plus
+`POST /api/discovery/backfill-dividends` — same batched, "click again to
+continue" convention as `/refresh`, targets specifically the instruments
+missing this one concept, `force=True` to bypass the normal "already
+fresh today" skip.
+
+**A real, honest live-verification story.** The first backfill attempt
+against the real running app processed 20 real candidates and saved
+**zero** dividend figures — including for IBM, a well-known payer.
+Investigated live rather than assumed broken: fetched IBM's actual EDGAR
+company-facts payload directly and ran it through this app's own
+`_normalise()` in isolation — it extracted correct, sane real figures
+(6.55, 6.59, 6.63, 6.67, 6.71 $/share for 2021-2025, matching IBM's real
+dividend history). So the code was right; something else wasn't. Traced
+it to `GET /api/health` reporting `"edgar": false` on the live host —
+`SEC_USER_AGENT` was present in `.env` but **empty**, so `EdgarProvider.
+is_enabled()` (`bool("")` is falsy) had disabled EDGAR entirely, for
+every fetch, not just this one. Pre-existing, unrelated to this change —
+not something to silently patch: setting a real `SEC_USER_AGENT` needs a
+real contact string per SEC's fair-use policy, the user's own choice, not
+something to invent. Flagged it and asked; the user set it and asked for
+a backend restart. Once EDGAR came back (`"edgar": true`), the exact same
+already-committed code worked correctly on the very next real request —
+no code change was needed once the environment was actually fixed. A
+useful general lesson: when a fetch-based feature produces uniformly-zero
+results across many real, known-good inputs, check whether the provider
+itself is reachable *before* suspecting the newly-written logic.
+
+**Live-verified with real EDGAR data after the fix**: 6 backfill batches
+processed ~130 of this app's 547 real Discovery candidates; 66 now carry
+real filed dividend figures, 291 remain (genuinely un-checked, not
+failures — the endpoint is resumable, same "click again" pattern as
+`/refresh`). Every value spot-checked against the raw filed figure
+matches exactly: Albemarle (ALB.US) 1.43% = $1.62/share ÷ $113.45; Wynn
+Resorts (WYNN.US) 0.29% = $0.25/share ÷ $86.71; Uber (UBER.US) exactly
+0% (never paid a dividend, a real `0.0` fact, not a missing one).
+Applied the new minimum-yield filter live on the real `/gems` page with
+a real mixed set (Arch Capital 5.15%, Arthur J. Gallagher 1.05%, AIG
+2.30%, Allstate 1.56%, Altria 5.96%) — a 3% threshold correctly narrowed
+20 rows to exactly 2 (Arch Capital, Altria), both genuinely ≥3%. The
+"Backfill dividend data" button and its evaluated/remaining notice work
+in the real UI. Full backend suite: **1059 passed** (including the one
+previously-flaky test, which happened to pass this run).
+
+**This closes the "Pépites filters" backlog item completely** — all
+four dimensions named as deferred back on 2026-09-08 (capitalisation,
+dividend yield, endettement, historique minimal) are now shipped.
