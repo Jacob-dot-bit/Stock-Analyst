@@ -142,6 +142,96 @@ class TestTagMerging:
         assert _normalise(payload, "1").latest("revenue").value == 111
 
 
+def dividend_fact(year: int, start: str, end: str, value: float, form: str = "10-K") -> dict:
+    return {"fy": year, "fp": "FY", "form": form, "start": start, "end": end, "val": value}
+
+
+class TestDividendAggregation:
+    """Dividends-per-share don't reliably follow the "one fact per year"
+    pattern every other concept does — confirmed live against Bank of
+    America's real 10-K filings (DEVLOG "Decision 3u.74"): four separate
+    quarterly facts, each individually tagged `fp == "FY"`."""
+
+    def test_quarterly_fragments_are_summed_not_latest_wins(self):
+        """The exact shape found live for Bank of America: four same-year
+        facts, none spanning more than one quarter. Taking "the latest"
+        the way every other concept's tags are merged would silently keep
+        only Q4's own $0.28 instead of the real $1.08 annual total."""
+        payload = {
+            "entityName": "Test",
+            "facts": {
+                "us-gaap": {
+                    "CommonStockDividendsPerShareDeclared": {
+                        "units": {
+                            "USD/shares": [
+                                dividend_fact(2025, "2025-01-01", "2025-03-31", 0.26),
+                                dividend_fact(2025, "2025-04-01", "2025-06-30", 0.26),
+                                dividend_fact(2025, "2025-07-01", "2025-09-30", 0.28),
+                                dividend_fact(2025, "2025-10-01", "2025-12-31", 0.28),
+                            ]
+                        }
+                    }
+                }
+            },
+        }
+        from app.providers.edgar import _normalise
+
+        fundamentals = _normalise(payload, "1")
+
+        assert fundamentals.latest("dividend_per_share").value == pytest.approx(1.08)
+
+    def test_a_genuine_single_annual_fact_is_used_as_is(self):
+        """The common case (confirmed live for IBM, Albemarle, Oracle...):
+        one fact per year already spanning the whole year — must not be
+        altered by the new sum-fragments logic."""
+        payload = {
+            "entityName": "Test",
+            "facts": {
+                "us-gaap": {
+                    "CommonStockDividendsPerShareDeclared": {
+                        "units": {"USD/shares": [dividend_fact(2025, "2025-01-01", "2025-12-31", 1.62)]}
+                    }
+                }
+            },
+        }
+        from app.providers.edgar import _normalise
+
+        assert _normalise(payload, "1").latest("dividend_per_share").value == pytest.approx(1.62)
+
+    def test_a_later_filing_restating_the_same_quarter_is_deduped_not_double_counted(self):
+        """A 10-K/A amendment re-reports the same Q1 with a corrected
+        value — same (start, end), must replace, not add to, the original."""
+        payload = {
+            "entityName": "Test",
+            "facts": {
+                "us-gaap": {
+                    "CommonStockDividendsPerShareDeclared": {
+                        "units": {
+                            "USD/shares": [
+                                dividend_fact(2025, "2025-01-01", "2025-03-31", 0.20),
+                                dividend_fact(2025, "2025-04-01", "2025-06-30", 0.20),
+                                # Restatement of Q1, same period, corrected value.
+                                dividend_fact(2025, "2025-01-01", "2025-03-31", 0.22, form="10-K/A"),
+                            ]
+                        }
+                    }
+                }
+            },
+        }
+        from app.providers.edgar import _normalise
+
+        assert _normalise(payload, "1").latest("dividend_per_share").value == pytest.approx(0.42)
+
+    def test_a_non_payer_with_no_dividend_tag_at_all_is_missing_not_zero(self):
+        payload = {"entityName": "Test", "facts": {"us-gaap": {}}}
+        from app.providers.edgar import _normalise
+
+        fundamentals = _normalise(payload, "1")
+
+        assert "dividend_per_share" not in fundamentals.concepts
+        assert "dividend_per_share" in fundamentals.missing
+
+
 class TestForeignFilers:
     def test_ifrs_taxonomy_is_read(self):
         """TotalEnergies files under IFRS, where revenue is "Revenue"."""

@@ -23,7 +23,6 @@ from app.ingest.service import get_or_create_instrument
 from app.main import app
 from app.models import (
     DiscoveryCandidate,
-    Fundamental,
     Instrument,
     Position,
     ProviderCorporateActionCandidate,
@@ -468,28 +467,22 @@ class TestBackfillDividendConcept:
     """One-off catch-up for candidates evaluated before the
     `dividend_per_share` concept existed — see DEVLOG "Decision 3u.73"."""
 
-    def test_only_revisits_already_evaluated_candidates_missing_the_concept(self, client, monkeypatch):
+    def test_only_revisits_already_evaluated_never_checked_candidates(self, client, monkeypatch):
         never_evaluated = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")
-        missing_concept = Instrument(
+        unchecked = Instrument(
             broker_symbol="BBB.US", category="STOCK", currency="USD", country="US", verified_at=datetime.now(UTC)
         )
-        already_has_it = Instrument(
+        already_checked = Instrument(
             broker_symbol="CCC.US", category="STOCK", currency="USD", country="US", verified_at=datetime.now(UTC)
         )
-        _seed([never_evaluated, missing_concept, already_has_it])
+        _seed([never_evaluated, unchecked, already_checked])
         _seed(
             [
                 DiscoveryCandidate(instrument_id=never_evaluated.id, source="sp500"),
-                DiscoveryCandidate(instrument_id=missing_concept.id, source="sp500"),
-                DiscoveryCandidate(instrument_id=already_has_it.id, source="sp500"),
-            ]
-        )
-        _seed(
-            [
-                Fundamental(
-                    instrument_id=already_has_it.id, concept="dividend_per_share", fiscal_year=2024,
-                    period_end=date(2024, 12, 31), value=1.0, currency="USD", tag="x",
-                )
+                DiscoveryCandidate(instrument_id=unchecked.id, source="sp500"),
+                DiscoveryCandidate(
+                    instrument_id=already_checked.id, source="sp500", dividend_checked_at=datetime.now(UTC)
+                ),
             ]
         )
         fundamentals = Fundamentals(
@@ -508,10 +501,33 @@ class TestBackfillDividendConcept:
         response = client.post("/api/discovery/backfill-dividends")
 
         assert response.status_code == 200
-        # Only `missing_concept` qualifies: never-evaluated is `refresh_batch`'s
-        # job, already-has-it needs no re-fetch. The fake actually returns
-        # data, so it's not missing anymore afterward either.
+        # Only `unchecked` qualifies: never-evaluated is `refresh_batch`'s
+        # job, already-checked was marked done in a prior call.
         assert response.json() == {"evaluated": 1, "remaining": 0}
+
+    def test_a_genuine_non_payer_is_marked_checked_and_never_retried(self, client, monkeypatch):
+        """The real bug found live (DEVLOG "Decision 3u.74"): a company
+        with no dividend XBRL tag at all was previously re-selected on
+        every single call forever, since "missing a Fundamental row" and
+        "never checked" aren't the same thing. `dividend_checked_at` is
+        set regardless of whether real data was found."""
+        non_payer = Instrument(
+            broker_symbol="AAA.US", category="STOCK", currency="USD", country="US", verified_at=datetime.now(UTC)
+        )
+        _seed([non_payer])
+        _seed([DiscoveryCandidate(instrument_id=non_payer.id, source="sp500")])
+        # `FakeEdgarProvider()` with no `fundamentals=` raises `SymbolNotFound`,
+        # same as a real filer with no dividend tag at all.
+        monkeypatch.setattr("app.routers.discovery.get_edgar_provider", lambda: FakeEdgarProvider())
+        monkeypatch.setattr("app.routers.discovery.get_esef_provider", lambda: FakeEsefProvider())
+
+        first = client.post("/api/discovery/backfill-dividends").json()
+        second = client.post("/api/discovery/backfill-dividends").json()
+
+        assert first == {"evaluated": 1, "remaining": 0}
+        # If this were still keyed on "has a Fundamental row", the second
+        # call would re-select the same non-payer forever.
+        assert second == {"evaluated": 0, "remaining": 0}
 
     def test_stops_at_the_batch_size_and_reports_the_rest_as_remaining(self, monkeypatch, tmp_path):
         engine = create_engine(

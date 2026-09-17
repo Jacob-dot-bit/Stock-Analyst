@@ -24,6 +24,7 @@ exactly as `GET /api/scoring/scores` already does. See DEVLOG
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -31,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from app.fundamentals.service import fetch_fundamentals
 from app.ingest.service import get_or_create_instrument
-from app.models import DiscoveryCandidate, Fundamental, Instrument, Position, ScreenerCandidate, WatchlistItem
+from app.models import DiscoveryCandidate, Instrument, Position, ScreenerCandidate, WatchlistItem
 from app.prices.service import refresh_many
 from app.providers.base import ProviderChain
 from app.providers.edgar import EdgarProvider
@@ -117,21 +118,23 @@ def refresh_batch(
     return {"evaluated": len(instruments), "remaining": remaining}
 
 
-def _missing_dividend_concept_query():
+def _unchecked_dividend_candidates_query():
     """Already-evaluated (`verified_at IS NOT NULL`) Discovery candidates
-    with no `dividend_per_share` `Fundamental` row yet — the real gap the
+    `backfill_dividend_concept` hasn't attempted yet
+    (`DiscoveryCandidate.dividend_checked_at IS NULL`) — the real gap the
     normal once-only `refresh_batch` flow can't close on its own, since it
     permanently excludes anything already evaluated. See DEVLOG
-    "Decision 3u.73"."""
+    "Decision 3u.73".
+
+    Deliberately keyed on "have we tried", not "did we find a value" —
+    checked live (Decision 3u.74): a genuine non-payer with no XBRL
+    dividend tag at all would otherwise never leave a "still missing"
+    batch keyed on `Fundamental` row presence, and get re-fetched forever
+    on every future click for no benefit."""
     return (
-        select(Instrument)
-        .join(DiscoveryCandidate, DiscoveryCandidate.instrument_id == Instrument.id)
-        .where(
-            Instrument.verified_at.is_not(None),
-            ~select(Fundamental.id)
-            .where(Fundamental.instrument_id == Instrument.id, Fundamental.concept == "dividend_per_share")
-            .exists(),
-        )
+        select(DiscoveryCandidate)
+        .join(Instrument, DiscoveryCandidate.instrument_id == Instrument.id)
+        .where(Instrument.verified_at.is_not(None), DiscoveryCandidate.dividend_checked_at.is_(None))
     )
 
 
@@ -150,16 +153,20 @@ def backfill_dividend_concept(
     `fetch_fundamentals`'s "already fresh today" skip — this batch is
     specifically instruments the normal flow would otherwise never
     revisit."""
-    instruments = list(db.execute(_missing_dividend_concept_query().limit(batch_size)).scalars())
+    candidates = list(db.execute(_unchecked_dividend_candidates_query().limit(batch_size)).scalars())
 
-    if instruments:
-        fetch_fundamentals(db, instruments, edgar, esef, force=True)
+    if candidates:
+        fetch_fundamentals(db, [c.instrument for c in candidates], edgar, esef, force=True)
+        now = datetime.now(UTC)
+        for candidate in candidates:
+            candidate.dividend_checked_at = now
+        db.commit()
 
     remaining = db.execute(
-        select(func.count()).select_from(_missing_dividend_concept_query().subquery())
+        select(func.count()).select_from(_unchecked_dividend_candidates_query().subquery())
     ).scalar_one()
 
-    return {"evaluated": len(instruments), "remaining": remaining}
+    return {"evaluated": len(candidates), "remaining": remaining}
 
 
 def pillar_score(score: InstrumentScore, name: str) -> float | None:

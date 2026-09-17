@@ -456,6 +456,13 @@ class DiscoveryCandidate(Base):
     #: undifferentiated pool.
     source: Mapped[str] = mapped_column(String(40))
     discovered_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    #: When `backfill_dividend_concept` last attempted this candidate,
+    #: regardless of whether a real `dividend_per_share` figure was found —
+    #: a genuine non-payer with no XBRL dividend tag at all would otherwise
+    #: never leave the "missing" batch and get re-fetched forever. Mirrors
+    #: `Instrument.verified_at`'s own "has been checked" role. See DEVLOG
+    #: "Decision 3u.74".
+    dividend_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class SymbolOverride(Base):

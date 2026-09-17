@@ -357,10 +357,14 @@ def _normalise(payload: dict, cik: str) -> Fundamentals:
     result = Fundamentals(cik=cik, company_name=str(payload.get("entityName") or ""))
 
     for concept in CONCEPT_TAGS:
+        # Dividends-per-share need the sum-same-year-fragments variant —
+        # see `_extract_dividend`'s own docstring. Every other concept
+        # keeps the plain "latest fact per year" merge.
+        extractor = _extract_dividend if concept == "dividend_per_share" else _extract
         # US GAAP first: when a filer publishes both, that is the primary taxonomy.
-        figures = _extract(gaap, CONCEPT_TAGS[concept])
+        figures = extractor(gaap, CONCEPT_TAGS[concept])
         if not figures:
-            figures = _extract(ifrs, IFRS_CONCEPT_TAGS.get(concept, ()))
+            figures = extractor(ifrs, IFRS_CONCEPT_TAGS.get(concept, ()))
 
         if figures:
             result.concepts[concept] = figures
@@ -426,3 +430,98 @@ def _extract(gaap: dict, tags: tuple[str, ...]) -> list[AnnualFigure]:
                 by_year[year] = figure
 
     return [by_year[year] for year in sorted(by_year)]
+
+
+#: Below this span (days), a `fp == "FY"` fact is treated as a sub-period
+#: fragment (e.g. one quarter) rather than the real annual total — see
+#: `_annual_dividend_total`'s docstring for why this exists at all.
+_FULL_YEAR_SPAN_DAYS = 330
+
+
+def _annual_dividend_total(entries: list[dict]) -> tuple[date, float] | None:
+    """`entries`: raw XBRL facts, all the same tag and fiscal year, all
+    already filtered to `form in ANNUAL_FORMS` and `fp == "FY"`.
+
+    Most concepts (`shares_diluted`, `revenue`, ...) file exactly one such
+    fact per year, so "the latest one" is safely the real annual figure.
+    Dividends-per-share don't reliably follow that pattern — confirmed
+    live against Bank of America's real 10-K filings (DEVLOG "Decision
+    3u.74"): four separate quarterly dividend facts, each individually
+    tagged `fp == "FY"`, none spanning more than one quarter. Taking "the
+    latest" the way `_extract` does for every other concept silently kept
+    only Q4's own $0.28 instead of the real ~$1.08 annual total.
+
+    Exact-duplicate periods (a later filing restating the same start/end)
+    are deduped first, keeping whichever appears last (a restatement).
+    Then: if any single remaining period already spans most of the year,
+    that's a genuine annual total — return it. Otherwise every remaining
+    entry is treated as a same-year sub-period fragment and summed.
+    """
+    by_period: dict[tuple[str | None, str], dict] = {}
+    for entry in entries:
+        by_period[(entry.get("start"), entry["end"])] = entry
+
+    parsed: list[tuple[date | None, date, float]] = []
+    for entry in by_period.values():
+        try:
+            end = datetime.strptime(str(entry["end"])[:10], "%Y-%m-%d").date()
+            start = (
+                datetime.strptime(str(entry["start"])[:10], "%Y-%m-%d").date() if entry.get("start") else None
+            )
+        except ValueError:
+            continue
+        parsed.append((start, end, float(entry["val"])))
+
+    if not parsed:
+        return None
+
+    full_year = [(s, e, v) for s, e, v in parsed if s is not None and (e - s).days >= _FULL_YEAR_SPAN_DAYS]
+    if full_year:
+        _, latest_end, value = max(full_year, key=lambda t: t[1])
+        return latest_end, value
+
+    return max(e for _, e, _ in parsed), sum(v for _, _, v in parsed)
+
+
+def _extract_dividend(gaap: dict, tags: tuple[str, ...]) -> list[AnnualFigure]:
+    """Same per-year, tag-priority merge as `_extract`, but every same-
+    year entry for the winning tag is handed to `_annual_dividend_total`
+    together (summed when they're quarterly fragments) instead of keeping
+    only the single latest one. See that function's docstring and DEVLOG
+    "Decision 3u.74" for why dividends-per-share need this and other
+    concepts don't."""
+    raw_by_year_tag: dict[int, tuple[str, str, list[dict]]] = {}
+    priority = {tag: rank for rank, tag in enumerate(tags)}
+
+    for tag in tags:
+        units = (gaap.get(tag) or {}).get("units") or {}
+        unit = next((u for u in units if u not in NON_MONETARY_UNITS), None)
+        if unit is None:
+            unit = next(iter(units), None)
+        if unit is None:
+            continue
+
+        by_year: dict[int, list[dict]] = {}
+        for entry in units[unit]:
+            if entry.get("form") not in ANNUAL_FORMS or entry.get("fp") != "FY":
+                continue
+            fiscal_year = entry.get("fy")
+            if fiscal_year is None or entry.get("end") is None or entry.get("val") is None:
+                continue
+            by_year.setdefault(int(fiscal_year), []).append(entry)
+
+        for year, entries in by_year.items():
+            existing = raw_by_year_tag.get(year)
+            if existing is not None and priority[existing[0]] <= priority[tag]:
+                continue  # a same-or-higher-priority tag already claimed this year
+            raw_by_year_tag[year] = (tag, unit, entries)
+
+    results = []
+    for year in sorted(raw_by_year_tag):
+        tag, unit, entries = raw_by_year_tag[year]
+        total = _annual_dividend_total(entries)
+        if total is None:
+            continue
+        period_end, value = total
+        results.append(AnnualFigure(year, period_end, value, tag, unit))
+    return results
