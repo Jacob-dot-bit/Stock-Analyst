@@ -8940,3 +8940,81 @@ previously-flaky test, which happened to pass this run).
 **This closes the "Pépites filters" backlog item completely** — all
 four dimensions named as deferred back on 2026-09-08 (capitalisation,
 dividend yield, endettement, historique minimal) are now shipped.
+
+## Decision 3u.74 — Two real bugs found running the dividend backfill for real (2026-09-17)
+
+Asked to actually run Decision 3u.73's backfill against the real 291
+remaining candidates. Running it live surfaced two genuine bugs neither
+the plan nor the first round of testing had caught.
+
+**Bug 1 — a genuine non-payer never left the "still missing" batch.**
+`_missing_dividend_concept_query` was keyed on "no `dividend_per_share`
+`Fundamental` row exists" — but a real non-payer with no XBRL dividend
+tag at all will *never* get such a row, no matter how many times it's
+fetched, so it was re-selected and re-fetched on every single call
+forever. Live-confirmed: three consecutive calls dropped "remaining" by
+only 1 each time (291→290→289), and the exact same ~19 tickers (AMD,
+ADBE, DDOG, TSLA, AMZN, PLTR, SMCI, RDDT, CRWD, NFLX, ABNB, AKAM, ALGN,
+APP, ANET, ADSK, AZO, AXON, BKR — all genuine non-payers) kept reappearing.
+Fixed by tracking "has been checked" as its own fact, mirroring
+`Instrument.verified_at`'s own role: new `DiscoveryCandidate.
+dividend_checked_at` (migration `c9bb4d8cd815`), set unconditionally by
+`backfill_dividend_concept` after every fetch attempt regardless of
+outcome. Renamed the query accordingly
+(`_unchecked_dividend_candidates_query`).
+
+**Bug 2 — more serious: a real filer's data was silently wrong, not just
+missing.** Investigating why Bank of America (a well-known payer) showed
+no dividend estimate led to a genuine correctness bug: BAC's real 10-K
+tags **each quarter's dividend separately**, all individually marked
+`fp == "FY"` (confirmed by pulling BAC's actual EDGAR company-facts
+payload directly) — a real filing convention this codebase's existing
+`_extract` (built for `shares_diluted`/`revenue`/etc., which reliably
+file one true annual fact per year) had never had to handle. Taking "the
+latest `fp == 'FY'` entry," the rule every other concept safely follows,
+silently kept only Q4's own $0.28 instead of the real ~$1.08 annual
+total — a plausible-looking but wrong number, not an absence anyone
+would have thought to double-check. Fixed with a new, dividend-specific
+`_extract_dividend`/`_annual_dividend_total` (`providers/edgar.py`):
+groups same-tag, same-year entries; if one already spans most of the
+year (≥330 days) it's a genuine annual total, used as-is (the IBM/
+Albemarle/Oracle case, unchanged); otherwise every entry is treated as a
+same-year sub-period fragment and summed (the BAC case). Exact-duplicate
+periods (a `10-K/A` restating the same quarter) are deduped first, kept
+rather than double-counted. Scoped to `dividend_per_share` only via a
+per-concept dispatch in `_normalise` — every other concept's extraction
+is byte-for-byte unchanged.
+
+**A useful general lesson, worth restating**: this is the second time
+this session a fetch-based feature's "uniformly wrong/missing results"
+turned out to have a root cause one level removed from where the
+investigation started (the first time was `SEC_USER_AGENT` being empty;
+this time, a filer-specific tagging convention nobody had reason to
+expect). Both were found by pulling the real raw payload directly and
+inspecting it, not by guessing from the app's own output — worth doing
+that first whenever a real, known-good input produces a suspicious
+result.
+
+**Data hygiene**: before shipping the fix, backed up the live database
+(`POST /api/backup`), then deleted all 843 already-saved
+`dividend_per_share` rows (66 instruments × their filed years) rather
+than leave any BAC-style wrong values in place hoping they'd self-correct
+later — every one of those instruments' `dividend_checked_at` was still
+unset at that point (the column is new), so a fresh backfill pass
+naturally recomputes all of them under the corrected logic with nothing
+skipped.
+
+**Live-verified end to end after the fix**: ran the corrected backfill
+to completion — 18 calls, `remaining` dropping by exactly 20 every single
+time (357→0, no more plateauing) — confirming Bug 1's fix. **246 of 357**
+already-evaluated candidates now carry real, correct dividend data (a
+~69% payer rate, a plausible ratio for a broad market universe). BAC
+specifically now shows **$1.08/share (2025)** on the real database,
+**1.81% yield** (1.08 ÷ 59.52) rendering correctly on the real `/gems`
+page — confirming Bug 2's fix end to end, not just at the unit level.
+Full backend suite: **1064 passed**. New tests: `test_edgar.py` gained
+`TestDividendAggregation` (the BAC quarterly-sum case, the single-annual-
+fact regression case, the restatement-dedup case, the no-tag-at-all
+case); `test_discovery_api.py`'s backfill tests rewritten around
+`dividend_checked_at` plus a new regression test asserting a non-payer
+is never re-selected on a second call.
