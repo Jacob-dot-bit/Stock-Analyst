@@ -247,7 +247,7 @@ export const fr: Catalogue = {
   'signals.positionReinforceFact': 'Score élevé · sous-pondéré',
   'signals.positionReduceFact': 'Score faible · surpondéré',
   'signals.watchlistReinforceFact': 'Score élevé · prix sous la cible',
-  'signals.hold': '—',
+  'signals.hold': 'Rien à signaler',
   'signals.not_applicable': 'Données insuffisantes',
   'signals.band.high': 'élevé',
   'signals.band.mid': 'moyen',
@@ -619,6 +619,8 @@ export const fr: Catalogue = {
   'watchlist.openItems': 'Titres suivis',
   'watchlist.targetPrice': "Prix d'entrée cible",
   'watchlist.distanceToTarget': "Écart à l'entrée",
+  'watchlist.distanceToTargetTooltip':
+    "Écart entre le cours actuel et votre propre prix d'entrée cible — pas une performance : un écart négatif veut dire que le cours est sous votre cible.",
   'watchlist.note': 'Note',
   'watchlist.addedOn': 'Ajouté le',
   'watchlist.invalidTarget': 'Entre un prix cible valide, ou laisse le champ vide.',
@@ -630,6 +632,7 @@ export const fr: Catalogue = {
   'watchlist.form.companyName': 'Nom de la société (optionnel)',
   'watchlist.form.companyNamePlaceholder': 'ex. LVMH',
   'watchlist.form.targetPrice': "Prix d'entrée cible (optionnel)",
+  'watchlist.form.targetPriceTooltip': "Votre propre référence, jamais suggérée par l'application.",
   'watchlist.form.note': 'Note (optionnelle)',
 
   // --- Filtre de pépites (phase 5) ------------------------------------------
@@ -651,9 +654,11 @@ export const fr: Catalogue = {
   // --- Découverte (recherche automatisée de candidats, phase 7) ------------
   'discovery.title': 'Découverte',
   'discovery.description':
-    'Recherche automatisée de candidats. Chaque candidat reçoit un verdict Acheter/Conserver/Vendre, calculé automatiquement à partir de son score composite existant.',
+    "Recherche automatisée de candidats. Chaque candidat reçoit un verdict Acheter/Conserver/Vendre, calculé automatiquement à partir de son score composite existant — ce n'est pas une recommandation d'investissement réelle.",
   'discovery.empty': 'Rien à afficher pour le moment.',
   'discovery.recommendationColumn': 'Verdict',
+  'discovery.recommendationTooltip':
+    "Calculé automatiquement à partir du score composite existant — ce n'est pas une recommandation d'investissement réelle.",
   'discovery.recommendation.buy': 'Acheter',
   'discovery.recommendation.hold': 'Conserver',
   'discovery.recommendation.sell': 'Vendre',
@@ -671,7 +676,9 @@ export const fr: Catalogue = {
   'discovery.rankByValue': 'Classer par Value',
   'discovery.rankByGrowth': 'Classer par Growth',
   'discovery.valueScore': 'Value',
+  'discovery.valueScoreTooltip': 'Un des piliers du score composite — pas une note autonome.',
   'discovery.growthScore': 'Growth',
+  'discovery.growthScoreTooltip': 'Un des piliers du score composite — pas une note autonome.',
   'discovery.importResult': '{imported} importés, {alreadyPresent} déjà présents.',
   'discovery.refreshResultMore': '{evaluated} évalués, {remaining} restants — clique à nouveau pour continuer.',
   'discovery.refreshResultDone': '{evaluated} évalués, aucun restant.',

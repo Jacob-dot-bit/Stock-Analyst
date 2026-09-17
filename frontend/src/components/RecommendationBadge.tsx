@@ -20,7 +20,7 @@ export function RecommendationBadge({ recommendation }: { recommendation: Recomm
     return <span className="tag neutral">{t('discovery.recommendation.none')}</span>
   }
   return (
-    <span className={`tag ${CLASS_BY_RECOMMENDATION[recommendation]}`}>
+    <span className={`tag ${CLASS_BY_RECOMMENDATION[recommendation]}`} title={t('discovery.recommendationTooltip')}>
       {t(`discovery.recommendation.${recommendation}`)}
     </span>
   )

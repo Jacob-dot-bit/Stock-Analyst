@@ -194,10 +194,18 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                   sort={sort}
                   onSort={handleSort}
                   className="num"
+                  title={t('watchlist.distanceToTargetTooltip')}
                 />
               )}
               {!hidden.has('score') && (
-                <SortableHeader label={t('table.score')} sortKeyName="score" sort={sort} onSort={handleSort} className="num" />
+                <SortableHeader
+                  label={t('table.score')}
+                  sortKeyName="score"
+                  sort={sort}
+                  onSort={handleSort}
+                  className="num"
+                  title={t('table.scoreTooltip')}
+                />
               )}
               {!hidden.has('signal') && <th>{t('table.signal')}</th>}
               {!hidden.has('note') && <th>{t('watchlist.note')}</th>}
@@ -212,11 +220,10 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
             {visible.map((item) => {
               const score = scores[item.instrument.id]
               const signal = signals[item.instrument.id]
-              const isOpportunity = signal?.signal === 'reinforce'
 
               return (
                 <Fragment key={item.id}>
-                  <tr className={isOpportunity ? 'watchlist-opportunity' : ''}>
+                  <tr>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <PriceStatusBadge instrument={item.instrument} />
@@ -261,6 +268,7 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                             style={{ width: '6rem', textAlign: 'right' }}
                             value={editDraft.target}
                             placeholder={t('watchlist.form.targetPrice')}
+                            title={t('watchlist.form.targetPriceTooltip')}
                             onChange={(e) => setEditDraft({ ...editDraft, target: e.target.value })}
                           />
                         ) : item.target_entry_price !== null ? (

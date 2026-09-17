@@ -340,8 +340,12 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                 <tr>
                   <th>{t('table.instrument')}</th>
                   <th className="num">{t('table.price')}</th>
-                  <th className="num">{t('discovery.valueScore')}</th>
-                  <th className="num">{t('discovery.growthScore')}</th>
+                  <th className="num" title={t('discovery.valueScoreTooltip')}>
+                    {t('discovery.valueScore')}
+                  </th>
+                  <th className="num" title={t('discovery.growthScoreTooltip')}>
+                    {t('discovery.growthScore')}
+                  </th>
                   <th>{t('discovery.recommendationColumn')}</th>
                   <th />
                 </tr>

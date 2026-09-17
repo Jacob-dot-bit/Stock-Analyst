@@ -251,7 +251,7 @@ export const pl: Catalogue = {
   'signals.positionReinforceFact': 'Wysoki wynik · niedoważone',
   'signals.positionReduceFact': 'Niski wynik · przeważone',
   'signals.watchlistReinforceFact': 'Wysoki wynik · cena poniżej celu',
-  'signals.hold': '—',
+  'signals.hold': 'Brak sygnału',
   'signals.not_applicable': 'Za mało danych',
   'signals.band.high': 'wysoki',
   'signals.band.mid': 'średni',
@@ -628,6 +628,8 @@ export const pl: Catalogue = {
   'watchlist.openItems': 'Obserwowane instrumenty',
   'watchlist.targetPrice': 'Docelowa cena wejścia',
   'watchlist.distanceToTarget': 'Odległość od celu',
+  'watchlist.distanceToTargetTooltip':
+    'Różnica między aktualną ceną a Twoją własną docelową ceną wejścia — nie jest to wynik: ujemna wartość oznacza, że cena jest poniżej Twojego celu.',
   'watchlist.note': 'Notatka',
   'watchlist.addedOn': 'Dodano',
   'watchlist.invalidTarget': 'Podaj prawidłową cenę docelową albo zostaw pole puste.',
@@ -639,6 +641,7 @@ export const pl: Catalogue = {
   'watchlist.form.companyName': 'Nazwa spółki (opcjonalnie)',
   'watchlist.form.companyNamePlaceholder': 'np. LVMH',
   'watchlist.form.targetPrice': 'Docelowa cena wejścia (opcjonalnie)',
+  'watchlist.form.targetPriceTooltip': 'Twój własny punkt odniesienia — nigdy nie sugerowany przez aplikację.',
   'watchlist.form.note': 'Notatka (opcjonalnie)',
 
   // --- Filtr perełek (etap 5) -----------------------------------------------
@@ -659,9 +662,11 @@ export const pl: Catalogue = {
   // --- Odkrywanie (automatyczne wyszukiwanie kandydatów, etap 7) -----------
   'discovery.title': 'Odkrywanie',
   'discovery.description':
-    'Automatyczne wyszukiwanie kandydatów. Każdy kandydat otrzymuje automatyczny werdykt Kup/Trzymaj/Sprzedaj, obliczony na podstawie jego istniejącego wyniku łącznego.',
+    'Automatyczne wyszukiwanie kandydatów. Każdy kandydat otrzymuje automatyczny werdykt Kup/Trzymaj/Sprzedaj, obliczony na podstawie jego istniejącego wyniku łącznego — to nie jest prawdziwa rekomendacja inwestycyjna.',
   'discovery.empty': 'Nic do pokazania.',
   'discovery.recommendationColumn': 'Werdykt',
+  'discovery.recommendationTooltip':
+    'Obliczone automatycznie na podstawie istniejącego wyniku łącznego — to nie jest prawdziwa rekomendacja inwestycyjna.',
   'discovery.recommendation.buy': 'Kup',
   'discovery.recommendation.hold': 'Trzymaj',
   'discovery.recommendation.sell': 'Sprzedaj',
@@ -679,7 +684,9 @@ export const pl: Catalogue = {
   'discovery.rankByValue': 'Sortuj wg Value',
   'discovery.rankByGrowth': 'Sortuj wg Growth',
   'discovery.valueScore': 'Value',
+  'discovery.valueScoreTooltip': 'Jeden z filarów wyniku łącznego — nie samodzielna ocena.',
   'discovery.growthScore': 'Growth',
+  'discovery.growthScoreTooltip': 'Jeden z filarów wyniku łącznego — nie samodzielna ocena.',
   'discovery.importResult': '{imported} zaimportowanych, {alreadyPresent} już obecnych.',
   'discovery.refreshResultMore': '{evaluated} ocenionych, {remaining} pozostało — kliknij ponownie, aby kontynuować.',
   'discovery.refreshResultDone': '{evaluated} ocenionych, nic nie pozostało.',

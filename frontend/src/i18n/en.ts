@@ -248,7 +248,7 @@ export const en: Catalogue = {
   'signals.positionReinforceFact': 'High score · under-allocated',
   'signals.positionReduceFact': 'Low score · over-allocated',
   'signals.watchlistReinforceFact': 'High score · at/below target',
-  'signals.hold': '—',
+  'signals.hold': 'Nothing to flag',
   'signals.not_applicable': 'Insufficient data',
   'signals.band.high': 'high',
   'signals.band.mid': 'mid',
@@ -618,6 +618,8 @@ export const en: Catalogue = {
   'watchlist.openItems': 'Watched instruments',
   'watchlist.targetPrice': 'Target entry price',
   'watchlist.distanceToTarget': 'Distance to target',
+  'watchlist.distanceToTargetTooltip':
+    'Gap between the current price and your own target entry price — not a performance figure: a negative gap means the price is below your target.',
   'watchlist.note': 'Note',
   'watchlist.addedOn': 'Added',
   'watchlist.invalidTarget': 'Enter a valid target price, or leave it blank.',
@@ -629,6 +631,7 @@ export const en: Catalogue = {
   'watchlist.form.companyName': 'Company name (optional)',
   'watchlist.form.companyNamePlaceholder': 'e.g. LVMH',
   'watchlist.form.targetPrice': 'Target entry price (optional)',
+  'watchlist.form.targetPriceTooltip': 'Your own reference — never suggested by the app.',
   'watchlist.form.note': 'Note (optional)',
 
   // --- Hidden gems screener (phase 5) ---------------------------------------
@@ -648,9 +651,11 @@ export const en: Catalogue = {
   // --- Discovery (automated candidate search, phase 7) ----------------------
   'discovery.title': 'Discovery',
   'discovery.description':
-    'Automated candidate search. Each candidate gets an automatic Buy/Hold/Sell verdict, mechanically derived from its existing composite score.',
+    "Automated candidate search. Each candidate gets an automatic Buy/Hold/Sell verdict, mechanically derived from its existing composite score — not a real investment recommendation.",
   'discovery.empty': 'Nothing to show yet.',
   'discovery.recommendationColumn': 'Verdict',
+  'discovery.recommendationTooltip':
+    'Mechanically derived from the existing composite score — not a real investment recommendation.',
   'discovery.recommendation.buy': 'Buy',
   'discovery.recommendation.hold': 'Hold',
   'discovery.recommendation.sell': 'Sell',
@@ -668,7 +673,9 @@ export const en: Catalogue = {
   'discovery.rankByValue': 'Rank by Value',
   'discovery.rankByGrowth': 'Rank by Growth',
   'discovery.valueScore': 'Value',
+  'discovery.valueScoreTooltip': 'One pillar of the composite score — not a standalone rating.',
   'discovery.growthScore': 'Growth',
+  'discovery.growthScoreTooltip': 'One pillar of the composite score — not a standalone rating.',
   'discovery.importResult': '{imported} imported, {alreadyPresent} already present.',
   'discovery.refreshResultMore': '{evaluated} evaluated, {remaining} remaining — click again to continue.',
   'discovery.refreshResultDone': '{evaluated} evaluated, none remaining.',

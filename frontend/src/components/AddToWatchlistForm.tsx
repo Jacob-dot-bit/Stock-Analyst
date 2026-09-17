@@ -137,7 +137,9 @@ export function AddToWatchlistForm({ onCreated }: Props) {
           />
         </div>
         <div className="field">
-          <label htmlFor="wl-target">{t('watchlist.form.targetPrice')}</label>
+          <label htmlFor="wl-target" title={t('watchlist.form.targetPriceTooltip')}>
+            {t('watchlist.form.targetPrice')}
+          </label>
           <input
             id="wl-target"
             value={targetPrice}
