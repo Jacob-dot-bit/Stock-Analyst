@@ -465,6 +465,7 @@ export const pl: Catalogue = {
   'filters.debtMax': 'Dług/kapitał własny maks.',
   'filters.historyMin': 'Historia min. (lata)',
   'filters.dividendMin': 'Min. stopa dywidendy (%)',
+  'filters.scoreMin': 'Min. wynik łączny',
   'table.columns': 'Kolumny',
 
   // --- Transakcje --------------------------------------------------------------
@@ -698,6 +699,9 @@ export const pl: Catalogue = {
   'discovery.dividendFilterLabel': 'Stopa dywidendy',
   'discovery.dividendFilterHint':
     'Szacowana na podstawie zgłoszonej dywidendy na akcję podzielonej przez cenę — szacunek na poziomie spółki, inny niż rzeczywista stopa już obliczona dla Twoich posiadanych pozycji. Stosowany do rankingu S&P 500 i skanów Finviz poniżej. Wymaga co najmniej jednego kliknięcia „Uzupełnij dane o dywidendach” dla już ocenionych kandydatów.',
+  'discovery.scoreFilterLabel': 'Minimalny wynik łączny',
+  'discovery.scoreFilterHint':
+    'Ukrywa kandydatów, których wynik łączny (0-100) jest poniżej tego progu — kandydat bez obliczonego wyniku (niewystarczające dane) jest również ukryty, a nie pokazany jako spełniający próg. Stosowany do rankingu S&P 500 i skanów Finviz poniżej.',
   'discovery.rankByValue': 'Sortuj wg Value',
   'discovery.rankByGrowth': 'Sortuj wg Growth',
   'discovery.valueScore': 'Value',

@@ -458,6 +458,7 @@ export const fr: Catalogue = {
   'filters.debtMax': 'Dette/capitaux propres max.',
   'filters.historyMin': 'Historique min. (années)',
   'filters.dividendMin': 'Rendement dividende min. (%)',
+  'filters.scoreMin': 'Score composite min.',
   'table.columns': 'Colonnes',
 
   // --- Transactions ----------------------------------------------------------
@@ -690,6 +691,9 @@ export const fr: Catalogue = {
   'discovery.dividendFilterLabel': 'Rendement du dividende',
   'discovery.dividendFilterHint':
     'Estimation à partir des dividendes déclarés par action, divisés par le cours — une estimation au niveau de l’entreprise, différente du rendement réel calculé pour vos positions détenues. Appliqué au classement S&P 500 et aux scans Finviz ci-dessous. Nécessite d’avoir cliqué sur « Compléter les données de dividendes » au moins une fois pour les candidats déjà évalués.',
+  'discovery.scoreFilterLabel': 'Score composite minimum',
+  'discovery.scoreFilterHint':
+    'Masque les candidats dont le score composite (0-100) est sous ce seuil — un candidat sans score calculé du tout (données insuffisantes) est également masqué, pas affiché comme s’il passait le seuil. Appliqué au classement S&P 500 et aux scans Finviz ci-dessous.',
   'discovery.rankByValue': 'Classer par Value',
   'discovery.rankByGrowth': 'Classer par Growth',
   'discovery.valueScore': 'Value',

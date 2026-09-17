@@ -457,6 +457,7 @@ export const en: Catalogue = {
   'filters.debtMax': 'Max debt/equity',
   'filters.historyMin': 'Min history (years)',
   'filters.dividendMin': 'Min dividend yield (%)',
+  'filters.scoreMin': 'Min composite score',
   'table.columns': 'Columns',
 
   // --- Transactions ----------------------------------------------------------
@@ -687,6 +688,9 @@ export const en: Catalogue = {
   'discovery.dividendFilterLabel': 'Dividend yield',
   'discovery.dividendFilterHint':
     "Estimated from filed dividends per share divided by price — a company-level estimate, different from the real yield already computed for your held positions. Applied to the S&P 500 ranking and Finviz scans below. Needs \"Backfill dividend data\" clicked at least once for candidates already evaluated.",
+  'discovery.scoreFilterLabel': 'Minimum composite score',
+  'discovery.scoreFilterHint':
+    "Hides candidates whose composite score (0-100) is below this threshold — a candidate with no computed score at all (insufficient data) is hidden too, not shown as if it cleared the bar. Applied to the S&P 500 ranking and Finviz scans below.",
   'discovery.rankByValue': 'Rank by Value',
   'discovery.rankByGrowth': 'Rank by Growth',
   'discovery.valueScore': 'Value',

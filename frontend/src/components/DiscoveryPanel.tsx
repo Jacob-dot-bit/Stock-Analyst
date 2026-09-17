@@ -74,6 +74,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   const [dividendMin, setDividendMin] = useState('')
   const [dividendBackfillNotice, setDividendBackfillNotice] = useState<string | null>(null)
   const [dividendBackfillBusy, setDividendBackfillBusy] = useState(false)
+  // `composite_score` already exists (Decision 3u.20) — this is a plain
+  // threshold on it, no new field needed. See DEVLOG "Decision 3u.75".
+  const [scoreMin, setScoreMin] = useState('')
 
   async function loadCandidates(nextRankBy: RankBy) {
     setError(null)
@@ -243,6 +246,17 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
     if (minDividend === null) return true
     if (c.dividend_yield_estimate === null) return false
     return c.dividend_yield_estimate >= minDividend
+  }
+
+  const minScore = scoreMin.trim() === '' ? null : Number(scoreMin)
+
+  function withinScoreMin(c: DiscoveryCandidate): boolean {
+    if (minScore === null) return true
+    // A candidate with no composite score at all has nothing to compare
+    // against a threshold — same "unknown excluded" rule as every other
+    // filter here, not shown as if it cleared the bar.
+    if (c.composite_score === null) return false
+    return c.composite_score >= minScore
   }
 
   async function handleDividendBackfill() {
@@ -428,6 +442,17 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.scoreFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.scoreFilterHint')}
+        </p>
+        <div className="field">
+          <label htmlFor="discovery-score-min">{t('filters.scoreMin')}</label>
+          <input id="discovery-score-min" value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.2rem' }}>
         <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.sp500.title')}</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           {t('discovery.sp500.description')}
@@ -497,6 +522,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   .filter(withinDebtLimit)
                   .filter(withinHistoryMin)
                   .filter(withinDividendMin)
+                  .filter(withinScoreMin)
                   .map((c) => candidateRow(c, true))}
               </tbody>
             </table>
@@ -544,6 +570,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
             .filter(withinDebtLimit)
             .filter(withinHistoryMin)
             .filter(withinDividendMin)
+            .filter(withinScoreMin)
           return (
             <div key={preset} style={{ marginTop: '0.6rem' }}>
               <div className="muted" style={{ fontSize: '0.82rem' }}>
