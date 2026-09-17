@@ -69,6 +69,11 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   const [capMax, setCapMax] = useState('')
   const [debtMax, setDebtMax] = useState('')
   const [historyMin, setHistoryMin] = useState('')
+  // Same local scope as the other three — `dividend_yield_estimate` also
+  // only exists on `DiscoveryCandidate`. See DEVLOG "Decision 3u.73".
+  const [dividendMin, setDividendMin] = useState('')
+  const [dividendBackfillNotice, setDividendBackfillNotice] = useState<string | null>(null)
+  const [dividendBackfillBusy, setDividendBackfillBusy] = useState(false)
 
   async function loadCandidates(nextRankBy: RankBy) {
     setError(null)
@@ -230,6 +235,33 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
     return c.price_history_years >= minHistory
   }
 
+  // The field takes a percentage (e.g. "2" for 2%); the stored value is a
+  // fraction, same convention as `dividend_yield_estimate` itself.
+  const minDividend = dividendMin.trim() === '' ? null : Number(dividendMin) / 100
+
+  function withinDividendMin(c: DiscoveryCandidate): boolean {
+    if (minDividend === null) return true
+    if (c.dividend_yield_estimate === null) return false
+    return c.dividend_yield_estimate >= minDividend
+  }
+
+  async function handleDividendBackfill() {
+    setDividendBackfillBusy(true)
+    setError(null)
+    try {
+      const result = await api.backfillDiscoveryDividends()
+      setDividendBackfillNotice(
+        result.remaining > 0
+          ? t('discovery.refreshResultMore', { evaluated: result.evaluated, remaining: result.remaining })
+          : t('discovery.refreshResultDone', { evaluated: result.evaluated }),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setDividendBackfillBusy(false)
+    }
+  }
+
   // Option lists reflect what's actually loaded right now (S&P 500 +
   // Finviz combined) rather than a fixed taxonomy — a filter never offers
   // a choice that would just show an empty list.
@@ -255,6 +287,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
             <td className="num">{c.growth_score !== null ? formatNumber(c.growth_score, 0) : '—'}</td>
             <td className="num">{c.market_cap !== null ? formatCompactNumber(c.market_cap) : '—'}</td>
             <td className="num">{c.debt_ratio !== null ? formatNumber(c.debt_ratio) : '—'}</td>
+            <td className="num">
+              {c.dividend_yield_estimate !== null ? `${formatNumber(c.dividend_yield_estimate * 100)}%` : '—'}
+            </td>
           </>
         )}
         <td>
@@ -382,6 +417,17 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
+        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.dividendFilterLabel')}</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          {t('discovery.dividendFilterHint')}
+        </p>
+        <div className="field">
+          <label htmlFor="discovery-dividend-min">{t('filters.dividendMin')}</label>
+          <input id="discovery-dividend-min" value={dividendMin} onChange={(e) => setDividendMin(e.target.value)} />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.2rem' }}>
         <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.sp500.title')}</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
           {t('discovery.sp500.description')}
@@ -392,6 +438,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
           </button>
           <button onClick={() => void handleRefresh()} disabled={busy}>
             {busy ? t('common.saving') : t('discovery.sp500.refresh')}
+          </button>
+          <button onClick={() => void handleDividendBackfill()} disabled={dividendBackfillBusy}>
+            {dividendBackfillBusy ? t('common.saving') : t('discovery.backfillDividends')}
           </button>
           <button className={rankBy === 'value' ? 'primary' : undefined} onClick={() => void handleRankByChange('value')}>
             {t('discovery.rankByValue')}
@@ -408,6 +457,11 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
         {refreshNotice && (
           <div className="muted" style={{ fontSize: '0.82rem' }}>
             {refreshNotice}
+          </div>
+        )}
+        {dividendBackfillNotice && (
+          <div className="muted" style={{ fontSize: '0.82rem' }}>
+            {dividendBackfillNotice}
           </div>
         )}
 
@@ -427,6 +481,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   </th>
                   <th className="num">{t('discovery.marketCap')}</th>
                   <th className="num">{t('discovery.debtRatio')}</th>
+                  <th className="num">{t('discovery.dividendYield')}</th>
                   <th>{t('discovery.recommendationColumn')}</th>
                   <th />
                 </tr>
@@ -441,6 +496,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   .filter(withinCapRange)
                   .filter(withinDebtLimit)
                   .filter(withinHistoryMin)
+                  .filter(withinDividendMin)
                   .map((c) => candidateRow(c, true))}
               </tbody>
             </table>
@@ -487,6 +543,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
             .filter(withinCapRange)
             .filter(withinDebtLimit)
             .filter(withinHistoryMin)
+            .filter(withinDividendMin)
           return (
             <div key={preset} style={{ marginTop: '0.6rem' }}>
               <div className="muted" style={{ fontSize: '0.82rem' }}>

@@ -743,6 +743,11 @@ export interface DiscoveryCandidate {
   /** Roughly how many years of cached daily price history exist for this
    * instrument — a data-sufficiency fact, not a score. */
   price_history_years: number | null
+  /** Filed dividends-per-share ÷ price — a company-level fundamentals
+   * estimate, deliberately separate from the scored `dividend_yield`
+   * metric (held-stock lot replay). `null` until the underlying
+   * fundamentals concept has been fetched. See DEVLOG "Decision 3u.73". */
+  dividend_yield_estimate: number | null
 }
 
 export interface DiscoveryFinvizResult {

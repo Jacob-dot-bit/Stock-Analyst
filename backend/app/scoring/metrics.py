@@ -169,6 +169,26 @@ def market_cap(
     return price_conv * shares.value
 
 
+def dividend_yield_estimate(
+    concepts: dict[str, list[AnnualValue]], price: float | None, price_currency: str, fx_rate: float | None
+) -> float | None:
+    """Filed dividends-per-share ÷ price — a company-level fundamentals
+    estimate for instruments with no lot/transaction history (Discovery
+    candidates). Deliberately NOT the same figure as the scored
+    `dividend_yield` metric below, which replays this account's own
+    holding history for held/previously-held stocks — the two measure
+    different things and must never be conflated under one name. Same
+    unscored, informational-only pattern as `market_cap`. See DEVLOG
+    "Decision 3u.73"."""
+    per_share = _latest(concepts, "dividend_per_share")
+    if per_share is None or price is None:
+        return None
+    price_conv = _price_in(per_share.currency, price, price_currency, fx_rate)
+    if price_conv is None or price_conv <= 0:
+        return None
+    return per_share.value / price_conv
+
+
 def debt_to_equity(concepts: dict[str, list[AnnualValue]], cfg: MetricConfig) -> MetricResult:
     debt = _latest(concepts, "debt_long_term")
     equity = _latest(concepts, "equity")

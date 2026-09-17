@@ -464,6 +464,7 @@ export const pl: Catalogue = {
   'filters.capMax': 'Kapitalizacja maks.',
   'filters.debtMax': 'Dług/kapitał własny maks.',
   'filters.historyMin': 'Historia min. (lata)',
+  'filters.dividendMin': 'Min. stopa dywidendy (%)',
   'table.columns': 'Kolumny',
 
   // --- Transakcje --------------------------------------------------------------
@@ -694,6 +695,9 @@ export const pl: Catalogue = {
   'discovery.historyFilterLabel': 'Minimalna historia cen',
   'discovery.historyFilterHint':
     'Przybliżona liczba lat historii cen w pamięci podręcznej dla tego instrumentu — wymóg wystarczalności danych, nie ocena samej spółki. Stosowany do rankingu S&P 500 i skanów Finviz poniżej.',
+  'discovery.dividendFilterLabel': 'Stopa dywidendy',
+  'discovery.dividendFilterHint':
+    'Szacowana na podstawie zgłoszonej dywidendy na akcję podzielonej przez cenę — szacunek na poziomie spółki, inny niż rzeczywista stopa już obliczona dla Twoich posiadanych pozycji. Stosowany do rankingu S&P 500 i skanów Finviz poniżej. Wymaga co najmniej jednego kliknięcia „Uzupełnij dane o dywidendach” dla już ocenionych kandydatów.',
   'discovery.rankByValue': 'Sortuj wg Value',
   'discovery.rankByGrowth': 'Sortuj wg Growth',
   'discovery.valueScore': 'Value',
@@ -702,6 +706,8 @@ export const pl: Catalogue = {
   'discovery.growthScoreTooltip': 'Jeden z filarów wyniku łącznego — nie samodzielna ocena.',
   'discovery.marketCap': 'Kapitalizacja',
   'discovery.debtRatio': 'Dług/kapitał',
+  'discovery.dividendYield': 'Stopa dywidendy',
+  'discovery.backfillDividends': 'Uzupełnij dane o dywidendach',
   'discovery.importResult': '{imported} zaimportowanych, {alreadyPresent} już obecnych.',
   'discovery.refreshResultMore': '{evaluated} ocenionych, {remaining} pozostało — kliknij ponownie, aby kontynuować.',
   'discovery.refreshResultDone': '{evaluated} ocenionych, nic nie pozostało.',

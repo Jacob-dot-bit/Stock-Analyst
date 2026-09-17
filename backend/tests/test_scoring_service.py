@@ -152,11 +152,12 @@ class TestFullyResolvedInstrument:
 
 
 class TestDiscoveryFilterFields:
-    """`market_cap`/`debt_ratio`/`price_history_years` — informational
-    fields for the Pépites screening filters, never fed into `composite`.
-    See DEVLOG "Decision 3u.72"."""
+    """`market_cap`/`debt_ratio`/`price_history_years`/
+    `dividend_yield_estimate` — informational fields for the Pépites
+    screening filters, never fed into `composite`. See DEVLOG
+    "Decision 3u.72"/"Decision 3u.73"."""
 
-    def test_fully_resolved_stock_gets_all_three(self, db, config):
+    def test_fully_resolved_stock_gets_all_four(self, db, config):
         stock = Instrument(broker_symbol="AAPL.US", category="STOCK", currency="USD", country="US")
         db.add(stock)
         db.flush()
@@ -164,6 +165,7 @@ class TestDiscoveryFilterFields:
             ("shares_diluted", 2023, 100.0), ("shares_diluted", 2024, 100.0),
             ("equity", 2023, 2000.0), ("equity", 2024, 2100.0),
             ("debt_long_term", 2023, 800.0), ("debt_long_term", 2024, 700.0),
+            ("dividend_per_share", 2023, 1.0), ("dividend_per_share", 2024, 1.518),
         ]
         for concept, fy, value in figures:
             db.add(
@@ -182,6 +184,25 @@ class TestDiscoveryFilterFields:
         # debt_long_term(2024)/equity(2024) = 700.0/2100.0.
         assert score.debt_ratio == pytest.approx(700.0 / 2100.0)
         assert score.price_history_years == pytest.approx(260 / 252, abs=0.05)
+        # dividend_per_share(2024)/last close = 1.518/151.8 = exactly 0.01.
+        assert score.dividend_yield_estimate == pytest.approx(0.01)
+
+    def test_stock_with_no_dividend_concept_gets_null_estimate(self, db, config):
+        stock = Instrument(broker_symbol="AAPL.US", category="STOCK", currency="USD", country="US")
+        db.add(stock)
+        db.flush()
+        db.add(
+            Fundamental(
+                instrument_id=stock.id, concept="shares_diluted", fiscal_year=2024,
+                period_end=date(2024, 12, 31), value=100.0, currency="USD", tag="x",
+            )
+        )
+        _closes(db, stock.id, 260, start=100.0, step=0.2)
+        db.commit()
+
+        score = compute_scores(db, [stock], config)[0]
+
+        assert score.dividend_yield_estimate is None
 
     def test_etf_with_no_fundamentals_gets_history_but_not_cap_or_debt(self, db, config):
         etf = Instrument(broker_symbol="SPY.US", category="ETF", currency="USD", country="US")

@@ -457,6 +457,7 @@ export const fr: Catalogue = {
   'filters.capMax': 'Capitalisation max.',
   'filters.debtMax': 'Dette/capitaux propres max.',
   'filters.historyMin': 'Historique min. (années)',
+  'filters.dividendMin': 'Rendement dividende min. (%)',
   'table.columns': 'Colonnes',
 
   // --- Transactions ----------------------------------------------------------
@@ -686,6 +687,9 @@ export const fr: Catalogue = {
   'discovery.historyFilterLabel': 'Historique de prix minimal',
   'discovery.historyFilterHint':
     'Nombre approximatif d’années de cours en cache pour cet instrument — une exigence de suffisance des données, pas un critère de qualité de l’entreprise. Appliqué au classement S&P 500 et aux scans Finviz ci-dessous.',
+  'discovery.dividendFilterLabel': 'Rendement du dividende',
+  'discovery.dividendFilterHint':
+    'Estimation à partir des dividendes déclarés par action, divisés par le cours — une estimation au niveau de l’entreprise, différente du rendement réel calculé pour vos positions détenues. Appliqué au classement S&P 500 et aux scans Finviz ci-dessous. Nécessite d’avoir cliqué sur « Compléter les données de dividendes » au moins une fois pour les candidats déjà évalués.',
   'discovery.rankByValue': 'Classer par Value',
   'discovery.rankByGrowth': 'Classer par Growth',
   'discovery.valueScore': 'Value',
@@ -694,6 +698,8 @@ export const fr: Catalogue = {
   'discovery.growthScoreTooltip': 'Un des piliers du score composite — pas une note autonome.',
   'discovery.marketCap': 'Capitalisation',
   'discovery.debtRatio': 'Dette/CP',
+  'discovery.dividendYield': 'Rendement dividende',
+  'discovery.backfillDividends': 'Compléter les données de dividendes',
   'discovery.importResult': '{imported} importés, {alreadyPresent} déjà présents.',
   'discovery.refreshResultMore': '{evaluated} évalués, {remaining} restants — clique à nouveau pour continuer.',
   'discovery.refreshResultDone': '{evaluated} évalués, aucun restant.',

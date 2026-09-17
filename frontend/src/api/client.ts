@@ -476,6 +476,9 @@ export const api = {
 
   refreshDiscovery: () => request<DiscoveryRefreshResult>('/api/discovery/refresh', { method: 'POST' }),
 
+  backfillDiscoveryDividends: () =>
+    request<DiscoveryRefreshResult>('/api/discovery/backfill-dividends', { method: 'POST' }),
+
   getDiscoveryCandidates: (rankBy: 'value' | 'growth', limit = 20) =>
     request<DiscoveryCandidate[]>(`/api/discovery/candidates?rank_by=${rankBy}&limit=${limit}`),
 

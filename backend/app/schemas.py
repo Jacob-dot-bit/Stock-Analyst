@@ -1052,6 +1052,12 @@ class DiscoveryCandidateOut(BaseModel):
     #: instrument (`len(price bars) / 252`) — a data-sufficiency fact, not a
     #: score. `None` when there's no priced history at all.
     price_history_years: float | None = None
+    #: Filed dividends-per-share ÷ price — a company-level fundamentals
+    #: estimate, deliberately separate from the scored `dividend_yield`
+    #: metric (held-stock lot replay). `None` until the `dividend_per_share`
+    #: concept has been fetched for this instrument. See DEVLOG
+    #: "Decision 3u.73".
+    dividend_yield_estimate: float | None = None
 
 
 class DiscoveryFinvizOut(BaseModel):

@@ -98,6 +98,16 @@ CONCEPT_TAGS: dict[str, tuple[str, ...]] = {
         "PaymentsToAcquireProductiveAssets",
     ),
     "shares_diluted": ("WeightedAverageNumberOfDilutedSharesOutstanding",),
+    #: Annual dividends declared per share — a duration fact filed once per
+    #: fiscal year (`fp == "FY"`), same shape as `shares_diluted`, so the
+    #: existing `_extract` filter needs no new aggregation logic. Powers
+    #: Discovery's `dividend_yield_estimate`, deliberately separate from the
+    #: scored `dividend_yield` metric (which replays this account's own lot
+    #: history for held stocks) — see DEVLOG "Decision 3u.73".
+    "dividend_per_share": (
+        "CommonStockDividendsPerShareDeclared",
+        "CommonStockDividendsPerShareCashPaid",
+    ),
 }
 
 #: IFRS equivalents, used by foreign private issuers such as TotalEnergies.
@@ -123,6 +133,7 @@ IFRS_CONCEPT_TAGS: dict[str, tuple[str, ...]] = {
     # all. `AnnualFigure.tag` still records which one actually produced a
     # given value, so this substitution is never silent.
     "shares_diluted": ("WeightedAverageShares", "NumberOfSharesOutstanding"),
+    "dividend_per_share": ("DividendsPaidPerShare",),
 }
 
 

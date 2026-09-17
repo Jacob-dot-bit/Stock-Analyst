@@ -10,7 +10,7 @@ not the scoring pipeline itself (covered by `test_scoring_service.py`).
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,11 +18,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base, get_db
-from app.discovery.service import refresh_batch
+from app.discovery.service import backfill_dividend_concept, refresh_batch
 from app.ingest.service import get_or_create_instrument
 from app.main import app
 from app.models import (
     DiscoveryCandidate,
+    Fundamental,
     Instrument,
     Position,
     ProviderCorporateActionCandidate,
@@ -30,6 +31,7 @@ from app.models import (
     WatchlistItem,
 )
 from app.providers.base import Bar, ProviderChain, RateLimited, SymbolNotFound
+from app.providers.edgar import AnnualFigure, Fundamentals
 from app.scoring.service import InstrumentScore, PillarScore
 from tests.test_providers import FakeProvider
 
@@ -109,9 +111,10 @@ def daily_bars(close: float = 100.0, count: int = 30) -> list[Bar]:
 class FakeEdgarProvider:
     name = "edgar"
 
-    def __init__(self, enabled=True, error=None):
+    def __init__(self, enabled=True, error=None, fundamentals=None):
         self._enabled = enabled
         self._error = error
+        self._fundamentals = fundamentals
 
     def is_enabled(self):
         return self._enabled
@@ -119,6 +122,8 @@ class FakeEdgarProvider:
     def fetch(self, ticker, expected_name=None):
         if self._error:
             raise self._error
+        if self._fundamentals is not None:
+            return self._fundamentals
         raise SymbolNotFound("no fake fundamentals configured")
 
 
@@ -147,6 +152,7 @@ def fake_scores(pillars_by_id: dict[int, dict]):
                     market_cap=fields.get("market_cap"),
                     debt_ratio=fields.get("debt_ratio"),
                     price_history_years=fields.get("price_history_years"),
+                    dividend_yield_estimate=fields.get("dividend_yield_estimate"),
                 )
             )
         return results
@@ -357,7 +363,17 @@ class TestCandidates:
         _seed([DiscoveryCandidate(instrument_id=a.id, source="sp500")])
         monkeypatch.setattr(
             "app.discovery.service.compute_scores",
-            fake_scores({a.id: {"value": 50, "market_cap": 1_500_000_000.0, "debt_ratio": 0.42, "price_history_years": 3.5}}),
+            fake_scores(
+                {
+                    a.id: {
+                        "value": 50,
+                        "market_cap": 1_500_000_000.0,
+                        "debt_ratio": 0.42,
+                        "price_history_years": 3.5,
+                        "dividend_yield_estimate": 0.021,
+                    }
+                }
+            ),
         )
 
         response = client.get("/api/discovery/candidates?rank_by=value")
@@ -366,6 +382,7 @@ class TestCandidates:
         assert body["market_cap"] == pytest.approx(1_500_000_000.0)
         assert body["debt_ratio"] == pytest.approx(0.42)
         assert body["price_history_years"] == pytest.approx(3.5)
+        assert body["dividend_yield_estimate"] == pytest.approx(0.021)
 
     def test_market_cap_debt_ratio_and_price_history_default_to_null(self, client, monkeypatch):
         a = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")
@@ -379,6 +396,7 @@ class TestCandidates:
         assert body["market_cap"] is None
         assert body["debt_ratio"] is None
         assert body["price_history_years"] is None
+        assert body["dividend_yield_estimate"] is None
 
 
 class TestRefreshBatch:
@@ -441,6 +459,95 @@ class TestRefreshBatch:
             chain = ProviderChain([FakeProvider("test", bars=daily_bars())])
             result = refresh_batch(db, chain, FakeEdgarProvider(), FakeEsefProvider(), batch_size=2)
 
+            assert result == {"evaluated": 2, "remaining": 3}
+        finally:
+            db.close()
+
+
+class TestBackfillDividendConcept:
+    """One-off catch-up for candidates evaluated before the
+    `dividend_per_share` concept existed — see DEVLOG "Decision 3u.73"."""
+
+    def test_only_revisits_already_evaluated_candidates_missing_the_concept(self, client, monkeypatch):
+        never_evaluated = Instrument(broker_symbol="AAA.US", category="STOCK", currency="USD", country="US")
+        missing_concept = Instrument(
+            broker_symbol="BBB.US", category="STOCK", currency="USD", country="US", verified_at=datetime.now(UTC)
+        )
+        already_has_it = Instrument(
+            broker_symbol="CCC.US", category="STOCK", currency="USD", country="US", verified_at=datetime.now(UTC)
+        )
+        _seed([never_evaluated, missing_concept, already_has_it])
+        _seed(
+            [
+                DiscoveryCandidate(instrument_id=never_evaluated.id, source="sp500"),
+                DiscoveryCandidate(instrument_id=missing_concept.id, source="sp500"),
+                DiscoveryCandidate(instrument_id=already_has_it.id, source="sp500"),
+            ]
+        )
+        _seed(
+            [
+                Fundamental(
+                    instrument_id=already_has_it.id, concept="dividend_per_share", fiscal_year=2024,
+                    period_end=date(2024, 12, 31), value=1.0, currency="USD", tag="x",
+                )
+            ]
+        )
+        fundamentals = Fundamentals(
+            cik="1", company_name="BBB",
+            concepts={
+                "dividend_per_share": [
+                    AnnualFigure(fiscal_year=2024, period_end=date(2024, 12, 31), value=2.0, tag="x", currency="USD")
+                ]
+            },
+        )
+        monkeypatch.setattr(
+            "app.routers.discovery.get_edgar_provider", lambda: FakeEdgarProvider(fundamentals=fundamentals)
+        )
+        monkeypatch.setattr("app.routers.discovery.get_esef_provider", lambda: FakeEsefProvider())
+
+        response = client.post("/api/discovery/backfill-dividends")
+
+        assert response.status_code == 200
+        # Only `missing_concept` qualifies: never-evaluated is `refresh_batch`'s
+        # job, already-has-it needs no re-fetch. The fake actually returns
+        # data, so it's not missing anymore afterward either.
+        assert response.json() == {"evaluated": 1, "remaining": 0}
+
+    def test_stops_at_the_batch_size_and_reports_the_rest_as_remaining(self, monkeypatch, tmp_path):
+        engine = create_engine(
+            f"sqlite:///{tmp_path / 'test3.db'}", connect_args={"check_same_thread": False, "timeout": 30}
+        )
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        db = Session()
+        try:
+            instruments = [
+                get_or_create_instrument(db, f"AAA{i}.US", currency="USD", category="STOCK") for i in range(5)
+            ]
+            db.commit()
+            for i in instruments:
+                db.refresh(i)
+                i.verified_at = datetime.now(UTC)
+            db.add_all([DiscoveryCandidate(instrument_id=i.id, source="sp500") for i in instruments])
+            db.commit()
+
+            fundamentals = Fundamentals(
+                cik="1", company_name="AAA",
+                concepts={
+                    "dividend_per_share": [
+                        AnnualFigure(
+                            fiscal_year=2024, period_end=date(2024, 12, 31), value=2.0, tag="x", currency="USD"
+                        )
+                    ]
+                },
+            )
+            result = backfill_dividend_concept(
+                db, FakeEdgarProvider(fundamentals=fundamentals), FakeEsefProvider(), batch_size=2
+            )
+
+            # The fake returns real data for every fetched instrument, so
+            # the 2 processed genuinely drop out of "missing" — only the 3
+            # untouched ones remain.
             assert result == {"evaluated": 2, "remaining": 3}
         finally:
             db.close()

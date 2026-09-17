@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 from app.fundamentals.service import fetch_fundamentals
 from app.ingest.service import get_or_create_instrument
-from app.models import DiscoveryCandidate, Instrument, Position, ScreenerCandidate, WatchlistItem
+from app.models import DiscoveryCandidate, Fundamental, Instrument, Position, ScreenerCandidate, WatchlistItem
 from app.prices.service import refresh_many
 from app.providers.base import ProviderChain
 from app.providers.edgar import EdgarProvider
@@ -117,6 +117,51 @@ def refresh_batch(
     return {"evaluated": len(instruments), "remaining": remaining}
 
 
+def _missing_dividend_concept_query():
+    """Already-evaluated (`verified_at IS NOT NULL`) Discovery candidates
+    with no `dividend_per_share` `Fundamental` row yet — the real gap the
+    normal once-only `refresh_batch` flow can't close on its own, since it
+    permanently excludes anything already evaluated. See DEVLOG
+    "Decision 3u.73"."""
+    return (
+        select(Instrument)
+        .join(DiscoveryCandidate, DiscoveryCandidate.instrument_id == Instrument.id)
+        .where(
+            Instrument.verified_at.is_not(None),
+            ~select(Fundamental.id)
+            .where(Fundamental.instrument_id == Instrument.id, Fundamental.concept == "dividend_per_share")
+            .exists(),
+        )
+    )
+
+
+def backfill_dividend_concept(
+    db: Session,
+    edgar: EdgarProvider,
+    esef: EsefProvider,
+    batch_size: int = BATCH_SIZE,
+) -> dict[str, int]:
+    """One-off catch-up for Discovery candidates evaluated before the
+    `dividend_per_share` concept existed (Decision 3u.73's `market_cap`/
+    `debt_ratio`/`price_history_years` predecessors needed no such
+    backfill — they were derived from data already being fetched; a new
+    concept means already-evaluated candidates genuinely never got it).
+    Fundamentals only, no price refresh needed. `force=True` bypasses
+    `fetch_fundamentals`'s "already fresh today" skip — this batch is
+    specifically instruments the normal flow would otherwise never
+    revisit."""
+    instruments = list(db.execute(_missing_dividend_concept_query().limit(batch_size)).scalars())
+
+    if instruments:
+        fetch_fundamentals(db, instruments, edgar, esef, force=True)
+
+    remaining = db.execute(
+        select(func.count()).select_from(_missing_dividend_concept_query().subquery())
+    ).scalar_one()
+
+    return {"evaluated": len(instruments), "remaining": remaining}
+
+
 def pillar_score(score: InstrumentScore, name: str) -> float | None:
     return next((p.score for p in score.pillars if p.name == name), None)
 
@@ -178,6 +223,7 @@ def ranked_candidates(db: Session, rank_by: str, limit: int, config: ScoringConf
                 "market_cap": score.market_cap,
                 "debt_ratio": score.debt_ratio,
                 "price_history_years": score.price_history_years,
+                "dividend_yield_estimate": score.dividend_yield_estimate,
                 "_rank_value": rank_value,
             }
         )

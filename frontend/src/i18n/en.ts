@@ -456,6 +456,7 @@ export const en: Catalogue = {
   'filters.capMax': 'Max market cap',
   'filters.debtMax': 'Max debt/equity',
   'filters.historyMin': 'Min history (years)',
+  'filters.dividendMin': 'Min dividend yield (%)',
   'table.columns': 'Columns',
 
   // --- Transactions ----------------------------------------------------------
@@ -683,6 +684,9 @@ export const en: Catalogue = {
   'discovery.historyFilterLabel': 'Minimum price history',
   'discovery.historyFilterHint':
     "Roughly how many years of cached price history exist for the instrument — a data-sufficiency requirement, not a judgment of the company itself. Applied to the S&P 500 ranking and Finviz scans below.",
+  'discovery.dividendFilterLabel': 'Dividend yield',
+  'discovery.dividendFilterHint':
+    "Estimated from filed dividends per share divided by price — a company-level estimate, different from the real yield already computed for your held positions. Applied to the S&P 500 ranking and Finviz scans below. Needs \"Backfill dividend data\" clicked at least once for candidates already evaluated.",
   'discovery.rankByValue': 'Rank by Value',
   'discovery.rankByGrowth': 'Rank by Growth',
   'discovery.valueScore': 'Value',
@@ -691,6 +695,8 @@ export const en: Catalogue = {
   'discovery.growthScoreTooltip': 'One pillar of the composite score — not a standalone rating.',
   'discovery.marketCap': 'Market cap',
   'discovery.debtRatio': 'Debt/equity',
+  'discovery.dividendYield': 'Dividend yield',
+  'discovery.backfillDividends': 'Backfill dividend data',
   'discovery.importResult': '{imported} imported, {alreadyPresent} already present.',
   'discovery.refreshResultMore': '{evaluated} evaluated, {remaining} remaining — click again to continue.',
   'discovery.refreshResultDone': '{evaluated} evaluated, none remaining.',

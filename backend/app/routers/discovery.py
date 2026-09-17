@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.corporate_actions.service import list_outstanding_candidates
 from app.db import get_db
 from app.discovery.service import (
+    backfill_dividend_concept,
     import_sp500_universe,
     pillar_score,
     ranked_candidates,
@@ -59,6 +60,17 @@ def refresh(db: Session = Depends(get_db)) -> DiscoveryRefreshOut:
     return DiscoveryRefreshOut(**result)
 
 
+@router.post("/backfill-dividends", response_model=DiscoveryRefreshOut)
+def backfill_dividends(db: Session = Depends(get_db)) -> DiscoveryRefreshOut:
+    """One-off catch-up for candidates evaluated before the
+    `dividend_per_share` fundamentals concept existed — `refresh_batch`
+    never revisits an already-evaluated candidate, so this is the only
+    path that backfills it for them. Same "click again to continue"
+    batching as `/refresh`. See DEVLOG "Decision 3u.73"."""
+    result = backfill_dividend_concept(db, get_edgar_provider(), get_esef_provider())
+    return DiscoveryRefreshOut(**result)
+
+
 def _pending_instrument_ids(db: Session) -> set[int]:
     """Instruments with an unresolved corporate-action candidate — computed
     once per request (cache-only, no provider calls, same query Data Health
@@ -84,6 +96,7 @@ def _to_out(db: Session, row: dict, pending_ids: set[int]) -> DiscoveryCandidate
         market_cap=row["market_cap"],
         debt_ratio=row["debt_ratio"],
         price_history_years=row["price_history_years"],
+        dividend_yield_estimate=row["dividend_yield_estimate"],
     )
 
 
@@ -160,6 +173,7 @@ def finviz_scan(
                     market_cap=score.market_cap if score else None,
                     debt_ratio=score.debt_ratio if score else None,
                     price_history_years=score.price_history_years if score else None,
+                    dividend_yield_estimate=score.dividend_yield_estimate if score else None,
                 )
             )
         except Exception:

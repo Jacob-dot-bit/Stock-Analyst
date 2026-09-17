@@ -73,6 +73,11 @@ class InstrumentScore:
     market_cap: float | None = None
     debt_ratio: float | None = None
     price_history_years: float | None = None
+    #: Filed dividends-per-share ÷ price — deliberately separate from the
+    #: scored `dividend_yield` metric (Value pillar), which only works for
+    #: held/previously-held stocks via lot replay. See DEVLOG
+    #: "Decision 3u.73".
+    dividend_yield_estimate: float | None = None
 
 
 def score_band(composite: float | None) -> str:
@@ -374,6 +379,7 @@ def compute_scores(db: Session, instruments: list[Instrument], config: ScoringCo
                 market_cap=metrics.market_cap(concepts, price, price_currency, fx_rate),
                 debt_ratio=_metric_value(pillars, "value", "debt_to_equity"),
                 price_history_years=round(len(closes) / 252, 1) if closes else None,
+                dividend_yield_estimate=metrics.dividend_yield_estimate(concepts, price, price_currency, fx_rate),
             )
         )
 
