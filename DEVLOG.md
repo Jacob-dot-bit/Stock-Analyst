@@ -8725,3 +8725,72 @@ shows four separate rows for that year (`PEA/EUR`, `My Trades/USD`,
 the 2025 hero "Dividendes 2025 — brut" no longer shows a single "82.3" but
 correctly separates EUR/USD/CHF/GBP. A real, previously-wrong number is
 now correct for the first time since this page shipped (Decision 3u.28).
+
+## Decision 3u.71 — Beginner UX audit: Watchlist and Pépites, closing the screen-by-screen sequence (2026-09-17)
+
+Last two screens in the priority order set on 2026-09-07 (Portfolio and
+Position-detail: Decisions 3u.37/3u.38; Transactions/Dividendes: Decisions
+3u.69/3u.70). Two Explore agents read every component and i18n string
+these screens use — a codebase-wide grep had already confirmed neither
+has any color-as-verdict misuse, so this pass was wording/disclosure only.
+
+**Watchlist**: the "Écart à l'entrée" column — a signed, green/red
+percentage with no explanation on the column itself — looks exactly like
+the P&L figures already audited on Portfolio/Position, but it isn't one:
+it's the gap to the *user's own* target price, not a performance figure.
+Added a header tooltip. The Score column's header had no tooltip either,
+unlike `PositionsTable.tsx`'s equivalent — added the same
+`table.scoreTooltip` it already reuses elsewhere. The "hold" signal state
+rendered as a bare "—", visually indistinguishable from "no data," while
+its siblings ("Insufficient data", the reinforce fact) show real
+sentences — changed to a short visible phrase ("Nothing to flag" / "Rien
+à signaler" / "Brak sygnału"), still neutral-gray. Added a tooltip on the
+target-price field stating it's the user's own reference, never
+app-suggested. Also removed `watchlist-opportunity`, a CSS class applied
+to reinforce-signal rows with **no matching rule anywhere in `index.css`**
+— found dead while auditing the Signal column. Chose to remove rather than
+implement new row-highlight styling: this app has already deliberately
+downplayed "reinforce" to a neutral amber badge rather than a stronger
+visual cue (`SignalBadge.tsx`'s own doc comment), so adding a full-row
+highlight now would cut against that established direction.
+
+**Pépites/Discovery**: the `RecommendationBadge` — the single place in
+the whole app carrying an actual Buy/Hold/Sell verdict (a deliberate,
+disclosed exception, Decision 3u.21) — had no tooltip at all, unlike every
+sibling badge on the page (`ScoreBadge`, `PriceStatusBadge`,
+`InsightsBadge`). This is exactly the gap Decisions 3u.63 and 3u.64 both
+already named as "not yet built." Added one, stating plainly the verdict
+is mechanically derived from the composite score, not real investment
+advice — applies everywhere the shared component renders (S&P 500 table,
+both Finviz result tables). `discovery.description` explained the
+mechanism but never said "not advice," unlike every other verdict-
+adjacent surface in this app (`scores.notAdvice`, `backtest.disclaimer`,
+`policy.gaps.disclaimer`) — appended that sentence. Added tooltips to the
+Value/Growth pillar-score columns in the S&P 500 table too, since a bare
+"72"/"40" sitting next to the Verdict column risked reading as two more
+little verdicts.
+
+Not changed: the verdict's existence and its green/gray/red coloring —
+both the settled Decision 3u.21 exception, not revisited. Everything else
+on both screens (price-status icon, sparkline, news sentiment, AI-
+commentary disclaimer, category tags, filters, S&P 500/Finviz operational
+counts, backtest panel) was checked and already carries adequate
+disclosure.
+
+`tsc -b`/`oxlint` clean (same 2 pre-existing warnings); i18n at parity
+(824 keys × 3 locales). Frontend-only change — no backend touch, no
+migration, no service restart needed.
+
+**Live-verified against the real running app**: both new Watchlist header
+tooltips render with the intended text; the strengthened
+`discovery.description` reads with its new closing clause. The "hold"
+signal string and the three new Pépites tooltip strings were confirmed
+served by the dev server (`GET /src/i18n/en.ts`) — this live portfolio
+currently has no watchlist row in the exact "hold" state and no S&P 500
+data imported yet, so those two specific badges couldn't be visually
+hovered this session; re-check once either exists.
+
+**This closes the beginner-comprehension initiative's screen-by-screen
+sequence** — all five screens named in the 2026-09-07 priority order
+(Portfolio, Position-detail, Transactions, Dividendes, Watchlist, Pépites)
+are now audited and fixed.
