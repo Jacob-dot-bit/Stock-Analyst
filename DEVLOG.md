@@ -9018,3 +9018,36 @@ fact regression case, the restatement-dedup case, the no-tag-at-all
 case); `test_discovery_api.py`'s backfill tests rewritten around
 `dividend_checked_at` plus a new regression test asserting a non-payer
 is never re-selected on a second call.
+
+## Decision 3u.75 — Minimum composite score filter, closing the Pépites filters backlog for good (2026-09-17)
+
+Went back to the original 2026-09-08 backlog wording for "Pépites
+filters" (item 15.5) to check what was actually still open beyond the
+four dimensions Decisions 3u.72-3u.74 shipped. Three items in that list
+had never been precisely scoped: "score d'analyse," "valorisation
+disponible," "croissance disponible." Asked directly how to define them
+rather than guess; the user chose a single minimum-composite-score
+threshold — covering "score d'analyse" directly, and "valorisation/
+croissance disponible" implicitly (a candidate with no Value/Growth
+data has no composite score either, so it's excluded by the same
+threshold without a separate toggle).
+
+Pure frontend addition: `composite_score` already exists on
+`DiscoveryCandidate` (Decision 3u.20) — no new backend field, no new
+fetch. New `scoreMin` filter in `DiscoveryPanel.tsx`, same established
+pattern as every other Pépites filter this session (min-only numeric
+input, "unknown excluded" convention — a candidate with no computed
+score at all is hidden, not shown as if it cleared the bar — applied at
+both the S&P 500 and Finviz call sites, same disclosed-scope hint
+sentence).
+
+`tsc -b`/`oxlint` clean; i18n at parity (844 keys × 3 locales).
+**Live-verified against the real portfolio**: a minimum of 90 on the
+real `/gems` page's value-ranked top 20 narrowed 20 rows to exactly 1
+(AJG.US) — cross-checked against the raw `composite_score` values from
+the API directly: AJG was the only one of the 20 at 91.10, every other
+candidate scored between 55.5 and 89.5.
+
+**This closes the "Pépites filters" backlog item completely, including
+the three previously-unscoped dimensions** — nothing named in the
+2026-09-08 backlog list remains unaddressed.
