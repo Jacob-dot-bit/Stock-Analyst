@@ -13,7 +13,7 @@ def _mapping_response(rows: list[dict]) -> httpx.Response:
     return httpx.Response(200, json=rows)
 
 
-def _match(figi: str, share_class_figi: str | None = None, name: str | None = None) -> dict:
+def _match(figi: str, share_class_figi: str | None = "SC0", name: str | None = None) -> dict:
     return {"data": [{"figi": figi, "shareClassFIGI": share_class_figi, "name": name}]}
 
 
@@ -71,6 +71,50 @@ class TestMapInstruments:
                 [{"data": [{"figi": "AAA", "shareClassFIGI": "X"}, {"figi": "BBB", "shareClassFIGI": "Y"}]}]
             ),
         )
+
+        results = map_instruments([FigiJob(isin=None, ticker="F", currency=None)], None, 10)
+
+        assert results == [None]
+
+    def test_many_rows_sharing_one_share_class_figi_resolves_not_ambiguous(self, monkeypatch):
+        """A bare ISIN lookup on a real security returns one row per
+        exchange/vendor feed (e.g. 275 rows for Apple's US0378331005) — row
+        count alone is not an ambiguity signal, only disagreement on
+        `shareClassFIGI` is. Prefers the row whose `figi` equals the
+        `compositeFIGI` as the traceability value."""
+        rows = [
+            {"figi": "BBG000B9XSK7", "compositeFIGI": "BBG000B9XRY4", "shareClassFIGI": "BBG001S5N8V8", "name": "APPLE INC"},
+            {"figi": "BBG000B9XRY4", "compositeFIGI": "BBG000B9XRY4", "shareClassFIGI": "BBG001S5N8V8", "name": "APPLE INC"},
+            {"figi": "BBG000B9XT70", "compositeFIGI": "BBG000B9XRY4", "shareClassFIGI": "BBG001S5N8V8", "name": "APPLE INC"},
+        ]
+        monkeypatch.setattr(httpx, "post", lambda *a, **k: _mapping_response([{"data": rows}]))
+
+        results = map_instruments([FigiJob(isin="US0378331005", ticker=None, currency=None)], None, 10)
+
+        assert results == [FigiMatch(figi="BBG000B9XRY4", share_class_figi="BBG001S5N8V8", name="APPLE INC")]
+
+    def test_rows_with_no_share_class_figi_are_ignored_as_noise(self, monkeypatch):
+        """A handful of rows OpenFIGI can't assign a share class to (e.g.
+        synthetic CFD-style tickers like "AAPLGBX" on exchange "X1") must
+        not count against agreement between the real rows."""
+        rows = [
+            {"figi": "SYN1", "compositeFIGI": None, "shareClassFIGI": None, "name": "APPLE INC"},
+            {"figi": "BBG000B9XRY4", "compositeFIGI": "BBG000B9XRY4", "shareClassFIGI": "BBG001S5N8V8", "name": "APPLE INC"},
+        ]
+        monkeypatch.setattr(httpx, "post", lambda *a, **k: _mapping_response([{"data": rows}]))
+
+        results = map_instruments([FigiJob(isin="US0378331005", ticker=None, currency=None)], None, 10)
+
+        assert results == [FigiMatch(figi="BBG000B9XRY4", share_class_figi="BBG001S5N8V8", name="APPLE INC")]
+
+    def test_rows_disagreeing_on_share_class_figi_is_still_ambiguous(self, monkeypatch):
+        """Multiple rows are only safe to collapse when they agree — real
+        disagreement (different companies) must still come back `None`."""
+        rows = [
+            {"figi": "AAA", "compositeFIGI": "AAA", "shareClassFIGI": "X"},
+            {"figi": "BBB", "compositeFIGI": "BBB", "shareClassFIGI": "Y"},
+        ]
+        monkeypatch.setattr(httpx, "post", lambda *a, **k: _mapping_response([{"data": rows}]))
 
         results = map_instruments([FigiJob(isin=None, ticker="F", currency=None)], None, 10)
 

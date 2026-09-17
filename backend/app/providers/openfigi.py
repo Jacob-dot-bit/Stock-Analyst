@@ -49,11 +49,12 @@ def map_instruments(
 ) -> list[FigiMatch | None]:
     """One `FigiMatch | None` per job, same order and length as `jobs`.
 
-    `None` for a job with zero matches, an **ambiguous (more than one)
-    match** — never picks "the first of several," an honest gap beats a
-    confidently wrong cross-reference feeding a duplicate warning — or any
-    HTTP/parse/network failure. A failure on one chunk never discards
-    results already collected from an earlier chunk in the same call.
+    `None` for a job with zero matches, a **genuinely ambiguous** match
+    (see `_resolve_match`) — never picks "the first of several," an honest
+    gap beats a confidently wrong cross-reference feeding a duplicate
+    warning — or any HTTP/parse/network failure. A failure on one chunk
+    never discards results already collected from an earlier chunk in the
+    same call.
     """
     results: list[FigiMatch | None] = []
     headers = {"Content-Type": "application/json"}
@@ -74,19 +75,34 @@ def map_instruments(
             continue
 
         for row in payload:
-            data = row.get("data") or []
-            if len(data) != 1:
-                results.append(None)
-                continue
-            match = data[0]
-            figi = match.get("figi")
-            results.append(
-                FigiMatch(figi=figi, share_class_figi=match.get("shareClassFIGI"), name=match.get("name"))
-                if figi
-                else None
-            )
+            results.append(_resolve_match(row.get("data") or []))
 
     return results
+
+
+def _resolve_match(data: list[dict]) -> FigiMatch | None:
+    """A bare ISIN lookup returns one row per exchange/vendor feed for the
+    *same* security (e.g. 275 rows for Apple's ISIN) — plain row count is
+    not an ambiguity signal. A handful of synthetic CFD-style rows (e.g.
+    ticker "AAPLGBX" on exchange "X1") carry no `shareClassFIGI` at all;
+    those are dropped before judging agreement. What's left is ambiguous
+    only if those rows disagree on `shareClassFIGI` — the field this app
+    actually keys duplicate-detection on (see module docstring) — which
+    means genuinely different real-world securities, not just different
+    listings of the same one.
+    """
+    candidates = [row for row in data if row.get("shareClassFIGI")]
+    if not candidates:
+        return None
+    share_class_figis = {row["shareClassFIGI"] for row in candidates}
+    if len(share_class_figis) != 1:
+        return None
+    share_class_figi = share_class_figis.pop()
+    primary = next((row for row in candidates if row.get("figi") == row.get("compositeFIGI")), candidates[0])
+    figi = primary.get("figi")
+    if not figi:
+        return None
+    return FigiMatch(figi=figi, share_class_figi=share_class_figi, name=primary.get("name"))
 
 
 def _job_payload(job: FigiJob) -> dict:
