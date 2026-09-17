@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import DiscoveryCandidate, Instrument, Position, ScreenerCandidate, WatchlistItem
-from app.providers.openfigi import FigiJob, map_instruments
+from app.providers.openfigi import FIGI_LOOKUP_FAILED, FigiJob, map_instruments
 from app.providers.wikidata import resolve_isin
 
 #: Same constant discovery/service.py's own BATCH_SIZE uses — one click's
@@ -181,6 +181,11 @@ def backfill_figis(
     now = datetime.now(UTC)
     resolved = 0
     for instrument, match in zip(instruments, matches):
+        if match is FIGI_LOOKUP_FAILED:
+            # The OpenFIGI call itself failed (rate limit, network) — not
+            # a genuine non-match. Leave `figi_checked_at` unset so this
+            # instrument is picked up again on the next backfill call.
+            continue
         instrument.figi_checked_at = now
         if match:
             instrument.figi = match.figi

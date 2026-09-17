@@ -44,19 +44,32 @@ class FigiMatch:
     name: str | None
 
 
+class FigiLookupFailed:
+    """Sentinel returned by `map_instruments` when the HTTP call itself
+    failed — rate limit (OpenFIGI's unauthenticated 25 req/min is easy to
+    hit backfilling a real portfolio), other non-200, network or parse
+    error. Distinct from `None`, which means OpenFIGI *answered* and had
+    no usable match. Callers must retry a `FigiLookupFailed` instrument
+    later and must never record it as a permanent non-match — conflating
+    the two was a live bug caught during the first real backfill run
+    (Decision 3u.76's own "have we tried" gate, applied to the wrong
+    signal)."""
+
+
+FIGI_LOOKUP_FAILED = FigiLookupFailed()
+
+
 def map_instruments(
     jobs: list[FigiJob], api_key: str | None, max_jobs_per_request: int, timeout: float = 15.0
-) -> list[FigiMatch | None]:
-    """One `FigiMatch | None` per job, same order and length as `jobs`.
-
-    `None` for a job with zero matches, a **genuinely ambiguous** match
-    (see `_resolve_match`) — never picks "the first of several," an honest
-    gap beats a confidently wrong cross-reference feeding a duplicate
-    warning — or any HTTP/parse/network failure. A failure on one chunk
-    never discards results already collected from an earlier chunk in the
-    same call.
+) -> list[FigiMatch | FigiLookupFailed | None]:
+    """One result per job, same order and length as `jobs`: a `FigiMatch`
+    on a resolved match, `None` for a job OpenFIGI answered with zero
+    matches or a **genuinely ambiguous** one (see `_resolve_match`) — never
+    picks "the first of several" — or `FIGI_LOOKUP_FAILED` if the call
+    itself didn't succeed. A failure on one chunk never discards results
+    already collected from an earlier chunk in the same call.
     """
-    results: list[FigiMatch | None] = []
+    results: list[FigiMatch | FigiLookupFailed | None] = []
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["X-OPENFIGI-APIKEY"] = api_key
@@ -67,11 +80,11 @@ def map_instruments(
         try:
             response = httpx.post(MAPPING_URL, json=body, headers=headers, timeout=timeout)
             if response.status_code != 200:
-                results.extend([None] * len(chunk))
+                results.extend([FIGI_LOOKUP_FAILED] * len(chunk))
                 continue
             payload = response.json()
         except (httpx.HTTPError, ValueError):
-            results.extend([None] * len(chunk))
+            results.extend([FIGI_LOOKUP_FAILED] * len(chunk))
             continue
 
         for row in payload:

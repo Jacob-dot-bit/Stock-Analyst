@@ -6,7 +6,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from app.providers.openfigi import FigiJob, FigiMatch, map_instruments
+from app.providers.openfigi import FIGI_LOOKUP_FAILED, FigiJob, FigiMatch, map_instruments
 
 
 def _mapping_response(rows: list[dict]) -> httpx.Response:
@@ -120,14 +120,19 @@ class TestMapInstruments:
 
         assert results == [None]
 
-    def test_http_non_200_is_none_not_a_raise(self, monkeypatch):
+    def test_http_non_200_is_lookup_failed_not_a_permanent_non_match(self, monkeypatch):
+        """A 429 (OpenFIGI's unauthenticated rate limit — 25 req/min, easy
+        to hit backfilling a real portfolio) must come back as
+        `FIGI_LOOKUP_FAILED`, never as `None` — `None` tells the caller
+        "OpenFIGI answered, there's genuinely nothing here," which a
+        rate-limited request never established."""
         monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(429, json={}))
 
         results = map_instruments([FigiJob(isin="US0378331005", ticker=None, currency=None)], None, 10)
 
-        assert results == [None]
+        assert results == [FIGI_LOOKUP_FAILED]
 
-    def test_network_error_is_none_not_a_raise(self, monkeypatch):
+    def test_network_error_is_lookup_failed_not_a_permanent_non_match(self, monkeypatch):
         def raise_error(*a, **k):
             raise httpx.ConnectError("no route to host")
 
@@ -135,7 +140,7 @@ class TestMapInstruments:
 
         results = map_instruments([FigiJob(isin="US0378331005", ticker=None, currency=None)], None, 10)
 
-        assert results == [None]
+        assert results == [FIGI_LOOKUP_FAILED]
 
     def test_more_jobs_than_the_chunk_size_split_into_multiple_calls_in_order(self, monkeypatch):
         calls = []

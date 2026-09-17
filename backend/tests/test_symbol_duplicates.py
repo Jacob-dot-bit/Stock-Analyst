@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base
 from app.models import DiscoveryCandidate, Instrument, Position, ScreenerCandidate, WatchlistItem
-from app.providers.openfigi import FigiMatch
+from app.providers.openfigi import FIGI_LOOKUP_FAILED, FigiMatch
 from app.symbols.duplicates import backfill_figis, find_figi_duplicates
 
 
@@ -113,6 +113,23 @@ class TestBackfillFigisChecksAreMarkedRegardlessOfOutcome:
         assert watched.figi == "X"
         assert watched.share_class_figi == "Y"
         assert watched.name == "Real Name"  # backfilled since it had none
+
+    def test_a_transient_lookup_failure_is_not_marked_checked_and_is_retried(self, db, monkeypatch):
+        """A rate-limited/network-failed request is `FIGI_LOOKUP_FAILED`,
+        not a genuine non-match — unlike the real-non-match case above,
+        this one must stay eligible for the very next backfill call."""
+        watched = _instrument(db, "AAA.US")
+        db.add(WatchlistItem(instrument_id=watched.id))
+        db.commit()
+        monkeypatch.setattr(
+            "app.symbols.duplicates.map_instruments", lambda jobs, *a, **k: [FIGI_LOOKUP_FAILED] * len(jobs)
+        )
+
+        result = backfill_figis(db, api_key=None, max_jobs_per_request=10)
+
+        assert result == {"checked": 1, "resolved": 0, "remaining": 1}
+        db.refresh(watched)
+        assert watched.figi_checked_at is None
 
     def test_an_existing_name_is_not_overwritten(self, db, monkeypatch):
         watched = _instrument(db, "AAA.US", name="Original Name")
