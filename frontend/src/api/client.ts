@@ -1,6 +1,7 @@
 import type {
   AllocationRow,
   AttentionItem,
+  BackfillFigisResult,
   BackfillIsinsResult,
   BacktestReport,
   Backup,
@@ -326,6 +327,9 @@ export const api = {
 
   backfillIsins: () =>
     request<BackfillIsinsResult>('/api/portfolio/backfill-isins', { method: 'POST' }),
+
+  backfillFigis: () =>
+    request<BackfillFigisResult>('/api/portfolio/backfill-figis', { method: 'POST' }),
 
   searchSymbols: (query: string) =>
     request<SymbolSearchResult[]>(`/api/portfolio/symbol-search?q=${encodeURIComponent(query)}`),

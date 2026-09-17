@@ -236,6 +236,9 @@ export const fr: Catalogue = {
   'duplicates.backfillIsins': 'Rechercher les identifiants manquants',
   'duplicates.backfilling': 'Recherche en cours…',
   'duplicates.backfillResult': '{checked} vérifiés, {updated} mis à jour.',
+  'duplicates.backfillFigis': "Rechercher l'identité OpenFIGI manquante",
+  'duplicates.backfillFigisResultMore': '{checked} vérifiés, {remaining} restants — clique à nouveau pour continuer.',
+  'duplicates.backfillFigisResultDone': '{checked} vérifiés, aucun restant.',
 
   // --- Signaux position/watchlist -------------------------------------------
   // Combinaison fixe du score composite et de l'écart d'allocation/prix cible
@@ -285,6 +288,12 @@ export const fr: Catalogue = {
   'dataHealth.subtitle':
     "Pour chaque position détenue : d'où vient sa valeur, à quelle date elle est valable, et si ses corporate actions sont confirmées.",
   'dataHealth.empty': 'Aucune position détenue pour le moment.',
+  'dataHealth.figiDuplicates.title': 'Doublons possibles (identité OpenFIGI)',
+  'dataHealth.figiDuplicates.hint':
+    "Ces lignes partagent le même identifiant OpenFIGI (par action) — probablement la même entreprise suivie sous deux symboles différents. Un fait, jamais fusionné automatiquement : à vous de vérifier et de décider.",
+  'dataHealth.figiDuplicates.source.held': 'détenue',
+  'dataHealth.figiDuplicates.source.watchlist': 'watchlist',
+  'dataHealth.figiDuplicates.source.screener': 'pépites',
   'dataHealth.staleSince': 'dernière cotation : {date}',
   'dataHealth.declaredSince': 'valorisation déclarée le : {date}',
 

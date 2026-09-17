@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { DataHealth, DataHealthRow, DataHealthSeverity } from '../api/types'
+import type { DataHealth, DataHealthRow, DataHealthSeverity, FigiDuplicatePair } from '../api/types'
 import { useI18n } from '../i18n'
 
 //: Which CSS badge class each overall severity maps to. "action_required"
@@ -40,6 +40,17 @@ function ValuationCell({ row }: { row: DataHealthRow }) {
         </div>
       )}
     </div>
+  )
+}
+
+function FigiDuplicateRow({ pair }: { pair: FigiDuplicatePair }) {
+  const { t } = useI18n()
+  const label = (symbol: string, name: string | null, sources: string[]) =>
+    `${name ? `${symbol} — ${name}` : symbol} (${sources.map((s) => t(`dataHealth.figiDuplicates.source.${s}`)).join(', ')})`
+  return (
+    <li>
+      {label(pair.a_symbol, pair.a_name, pair.a_sources)} · {label(pair.b_symbol, pair.b_name, pair.b_sources)}
+    </li>
   )
 }
 
@@ -87,7 +98,7 @@ export function DataHealthPanel() {
 
   if (error || data === null) return null
 
-  const { summary, rows } = data
+  const { summary, rows, figi_duplicates: figiDuplicates } = data
 
   return (
     <div className="card">
@@ -96,11 +107,13 @@ export function DataHealthPanel() {
         {t('dataHealth.subtitle')}
       </p>
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && figiDuplicates.length === 0 && (
         <p className="muted" style={{ marginTop: 0 }}>
           {t('dataHealth.empty')}
         </p>
-      ) : (
+      )}
+
+      {rows.length > 0 && (
         <>
           <div className="data-health-summary">
             {summary.action_required_count > 0 && (
@@ -156,6 +169,20 @@ export function DataHealthPanel() {
             </table>
           </div>
         </>
+      )}
+
+      {figiDuplicates.length > 0 && (
+        <div style={{ marginTop: rows.length > 0 ? '1.2rem' : 0 }}>
+          <h3 style={{ marginBottom: '0.2rem' }}>{t('dataHealth.figiDuplicates.title')}</h3>
+          <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+            {t('dataHealth.figiDuplicates.hint')}
+          </p>
+          <ul>
+            {figiDuplicates.map((pair) => (
+              <FigiDuplicateRow key={`${pair.a_instrument_id}-${pair.b_instrument_id}`} pair={pair} />
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   )

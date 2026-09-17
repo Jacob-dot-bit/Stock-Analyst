@@ -113,6 +113,12 @@ class Settings(BaseSettings):
     # requests are rejected, so the EDGAR provider stays disabled.
     sec_user_agent: str | None = None
 
+    # OpenFIGI (canonical instrument identity — see DEVLOG "Decision
+    # 3u.76"). Unlike SEC EDGAR, it works fully unauthenticated (25
+    # req/min, 10 jobs/request); a key only raises the ceiling (25 req/6s,
+    # 100 jobs/request) — no `xxx_enabled` gate on whether it runs at all.
+    openfigi_api_key: str | None = None
+
     # --- Phase 3: scoring engine ---
     # Pillar/metric weights and thresholds, kept out of code so tuning them never
     # needs a deploy. See DEVLOG "Decision 3r.1".
@@ -137,6 +143,7 @@ class Settings(BaseSettings):
         "intrinio_api_key",
         "eodhd_api_key",
         "marketstack_api_key",
+        "openfigi_api_key",
         mode="after",
     )
     @classmethod
@@ -194,6 +201,13 @@ class Settings(BaseSettings):
     @property
     def benchmark_enabled(self) -> bool:
         return bool(self.benchmark_broker_symbol and self.benchmark_provider_symbol)
+
+    @property
+    def openfigi_max_jobs_per_request(self) -> int:
+        """OpenFIGI's own per-request batch ceiling: 10 unauthenticated,
+        100 with a free API key. Sizing, not a feature gate — the API
+        itself needs no key at all."""
+        return 100 if self.openfigi_api_key else 10
 
 
 @lru_cache

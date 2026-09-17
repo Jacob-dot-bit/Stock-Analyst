@@ -30,6 +30,7 @@ from app.models import (
     PersonalPolicyLimit,
     Position,
     PriceBar,
+    ScreenerCandidate,
     Source,
     SymbolOverride,
     Transaction,
@@ -51,6 +52,7 @@ from app.schemas import (
     AllocationRowOut,
     AllocationTargetIn,
     AttentionItemOut,
+    BackfillFigisOut,
     BackfillIsinsOut,
     BreakdownItem,
     DataHealthCorporateActionsOut,
@@ -61,6 +63,7 @@ from app.schemas import (
     DeclaredValuationSourceOut,
     DrawdownOut,
     EnrichSectorsOut,
+    FigiDuplicatePairOut,
     IsinIn,
     InstrumentOut,
     LiquidityOut,
@@ -86,7 +89,7 @@ from app.schemas import (
 )
 from app.scoring.config import get_scoring_config
 from app.scoring.service import compute_scores, score_band
-from app.symbols.duplicates import backfill_isins
+from app.symbols.duplicates import backfill_figis, backfill_isins, find_figi_duplicates
 
 #: One position's up-to-date value, P&L, P&L%, price (instrument currency) and
 #: price_source ('live' | 'cached' | 'broker').
@@ -1185,7 +1188,37 @@ def get_data_health(db: Session = Depends(get_db)) -> DataHealthOut:
         action_required_count=counts["action_required"],
         not_applicable_count=counts["not_applicable"],
     )
-    return DataHealthOut(summary=summary, rows=rows)
+
+    held_ids = {p.instrument_id for p in positions}
+    watchlist_ids = set(db.execute(select(WatchlistItem.instrument_id)).scalars())
+    screener_ids = set(db.execute(select(ScreenerCandidate.instrument_id)).scalars())
+
+    def _sources(instrument_id: int) -> list[str]:
+        sources = []
+        if instrument_id in held_ids:
+            sources.append("held")
+        if instrument_id in watchlist_ids:
+            sources.append("watchlist")
+        if instrument_id in screener_ids:
+            sources.append("screener")
+        return sources
+
+    figi_duplicates = [
+        FigiDuplicatePairOut(
+            a_instrument_id=a.id,
+            a_symbol=a.broker_symbol,
+            a_name=a.name,
+            a_sources=_sources(a.id),
+            b_instrument_id=b.id,
+            b_symbol=b.broker_symbol,
+            b_name=b.name,
+            b_sources=_sources(b.id),
+            share_class_figi=a.share_class_figi,
+        )
+        for a, b in find_figi_duplicates(db)
+    ]
+
+    return DataHealthOut(summary=summary, rows=rows, figi_duplicates=figi_duplicates)
 
 
 @router.get("/onboarding", response_model=OnboardingStatusOut)
@@ -1411,6 +1444,17 @@ def backfill_isins_endpoint(db: Session = Depends(get_db)) -> BackfillIsinsOut:
     """
     result = backfill_isins(db)
     return BackfillIsinsOut(**result)
+
+
+@router.post("/backfill-figis", response_model=BackfillFigisOut)
+def backfill_figis_endpoint(db: Session = Depends(get_db)) -> BackfillFigisOut:
+    """One-off catch-up run of `symbols/duplicates.py::backfill_figis` —
+    resolves a canonical OpenFIGI identity for tracked instruments that
+    don't have one yet, same "click again to continue" batching as
+    `/backfill-isins`. See DEVLOG "Decision 3u.76"."""
+    settings = get_settings()
+    result = backfill_figis(db, settings.openfigi_api_key, settings.openfigi_max_jobs_per_request)
+    return BackfillFigisOut(**result)
 
 
 @router.get("/symbol-search", response_model=list[SymbolSearchResult])

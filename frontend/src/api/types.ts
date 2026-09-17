@@ -230,6 +230,13 @@ export interface BackfillIsinsResult {
   updated: number
 }
 
+/** Result of a `POST /backfill-figis` run. See DEVLOG "Decision 3u.76". */
+export interface BackfillFigisResult {
+  checked: number
+  resolved: number
+  remaining: number
+}
+
 export interface SymbolSearchResult {
   symbol: string
   name: string
@@ -386,9 +393,24 @@ export interface DataHealthSummary {
   not_applicable_count: number
 }
 
+/** One pair of tracked instruments sharing an OpenFIGI `share_class_figi`
+ * — a fact, never a merge instruction. See DEVLOG "Decision 3u.76". */
+export interface FigiDuplicatePair {
+  a_instrument_id: number
+  a_symbol: string
+  a_name: string | null
+  a_sources: string[]
+  b_instrument_id: number
+  b_symbol: string
+  b_name: string | null
+  b_sources: string[]
+  share_class_figi: string
+}
+
 export interface DataHealth {
   summary: DataHealthSummary
   rows: DataHealthRow[]
+  figi_duplicates: FigiDuplicatePair[]
 }
 
 export interface OnboardingStatus {

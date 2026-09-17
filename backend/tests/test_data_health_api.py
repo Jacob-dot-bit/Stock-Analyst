@@ -157,6 +157,7 @@ class TestEmptyAndAllFresh:
                 "not_applicable_count": 0,
             },
             "rows": [],
+            "figi_duplicates": [],
         }
 
     def test_all_fresh_portfolio_is_all_info(self, client):
@@ -445,3 +446,41 @@ class TestPositionsOnlyScope:
         body = client.get("/api/portfolio/data-health").json()
         assert body["summary"]["total_instruments"] == 0
         assert body["rows"] == []
+
+
+def _set_share_class_figi(instrument_id: int, value: str) -> None:
+    session = next(app.dependency_overrides[get_db]())
+    try:
+        session.get(Instrument, instrument_id).share_class_figi = value
+        session.commit()
+    finally:
+        session.close()
+
+
+class TestFigiDuplicates:
+    """`figi_duplicates` — additive, never affects `rows`/`summary`'s
+    "held positions only" scope. See DEVLOG "Decision 3u.76"."""
+
+    def test_a_held_and_a_watchlisted_instrument_sharing_a_figi_are_paired(self, client):
+        held = held_instrument("AAA.US", "STOCK")
+        _set_share_class_figi(held.id, "SAME")
+        watched = Instrument(broker_symbol="BBB.L", category="STOCK", share_class_figi="SAME")
+        _seed([watched])
+        _seed([WatchlistItem(instrument_id=watched.id)])
+
+        body = client.get("/api/portfolio/data-health").json()
+
+        assert len(body["figi_duplicates"]) == 1
+        pair = body["figi_duplicates"][0]
+        assert {pair["a_symbol"], pair["b_symbol"]} == {"AAA.US", "BBB.L"}
+        symbol_to_sources = {pair["a_symbol"]: pair["a_sources"], pair["b_symbol"]: pair["b_sources"]}
+        assert symbol_to_sources["AAA.US"] == ["held"]
+        assert symbol_to_sources["BBB.L"] == ["watchlist"]
+        assert pair["share_class_figi"] == "SAME"
+
+    def test_no_shared_figi_is_an_empty_list(self, client):
+        held_instrument("AAA.US", "STOCK")
+
+        body = client.get("/api/portfolio/data-health").json()
+
+        assert body["figi_duplicates"] == []

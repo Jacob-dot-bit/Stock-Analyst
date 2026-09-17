@@ -237,6 +237,9 @@ export const en: Catalogue = {
   'duplicates.backfillIsins': 'Look up missing company IDs',
   'duplicates.backfilling': 'Looking up…',
   'duplicates.backfillResult': '{checked} checked, {updated} updated.',
+  'duplicates.backfillFigis': 'Look up missing OpenFIGI identity',
+  'duplicates.backfillFigisResultMore': '{checked} checked, {remaining} remaining — click again to continue.',
+  'duplicates.backfillFigisResultDone': '{checked} checked, none remaining.',
 
   // --- Position/watchlist signals -------------------------------------------
   // A fixed combination of the composite score and the allocation/target-price
@@ -285,6 +288,12 @@ export const en: Catalogue = {
   'dataHealth.subtitle':
     "For every held position: where its value comes from, as of what date, and whether its corporate actions are confirmed.",
   'dataHealth.empty': 'No open positions yet.',
+  'dataHealth.figiDuplicates.title': 'Possible duplicates (OpenFIGI identity)',
+  'dataHealth.figiDuplicates.hint':
+    "These rows share the same OpenFIGI (share-class) identifier — probably the same company tracked under two different symbols. A fact, never auto-merged: check and decide for yourself.",
+  'dataHealth.figiDuplicates.source.held': 'held',
+  'dataHealth.figiDuplicates.source.watchlist': 'watchlist',
+  'dataHealth.figiDuplicates.source.screener': 'hidden gems',
   'dataHealth.staleSince': 'last quote: {date}',
   'dataHealth.declaredSince': 'declared valuation as of: {date}',
 

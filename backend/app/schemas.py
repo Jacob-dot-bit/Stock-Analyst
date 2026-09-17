@@ -372,14 +372,35 @@ class DataHealthSummaryOut(BaseModel):
     not_applicable_count: int
 
 
+class FigiDuplicatePairOut(BaseModel):
+    """One pair of tracked instruments sharing an OpenFIGI `share_class_figi`
+    — a fact, never a merge instruction. `a_sources`/`b_sources` say where
+    each one is tracked (a subset of "held"/"watchlist"/"screener"). See
+    `symbols/duplicates.py::find_figi_duplicates` and DEVLOG
+    "Decision 3u.76"."""
+
+    a_instrument_id: int
+    a_symbol: str
+    a_name: str | None
+    a_sources: list[str]
+    b_instrument_id: int
+    b_symbol: str
+    b_name: str | None
+    b_sources: list[str]
+    share_class_figi: str
+
+
 class DataHealthOut(BaseModel):
     """Per-instrument data-quality and corporate-action trust report for
     held (open) positions only — never Watchlist or Screener. See DEVLOG
     "Decision 3u.58", superseding the category-only v1 shape ("Decision
-    3u.33"/"3u.50")."""
+    3u.33"/"3u.50"). `figi_duplicates` is a separate, additive fact — a
+    duplicate pair can span held/watchlist/screener, which doesn't fit the
+    one-row-per-held-position shape `rows` above is built around."""
 
     summary: DataHealthSummaryOut
     rows: list[DataHealthRowOut]
+    figi_duplicates: list[FigiDuplicatePairOut] = []
 
 
 class OnboardingStatusOut(BaseModel):
@@ -463,6 +484,15 @@ class BackfillIsinsOut(BaseModel):
 
     checked: int
     updated: int
+
+
+class BackfillFigisOut(BaseModel):
+    """Result of a POST /backfill-figis run — see
+    `symbols/duplicates.py::backfill_figis`. See DEVLOG "Decision 3u.76"."""
+
+    checked: int
+    resolved: int
+    remaining: int
 
 
 class BackfillAccountsOut(BaseModel):

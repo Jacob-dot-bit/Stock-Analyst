@@ -242,6 +242,9 @@ export const pl: Catalogue = {
   'duplicates.backfillIsins': 'Wyszukaj brakujące identyfikatory spółek',
   'duplicates.backfilling': 'Wyszukiwanie…',
   'duplicates.backfillResult': '{checked} sprawdzonych, {updated} zaktualizowanych.',
+  'duplicates.backfillFigis': 'Wyszukaj brakującą tożsamość OpenFIGI',
+  'duplicates.backfillFigisResultMore': '{checked} sprawdzonych, {remaining} pozostało — kliknij ponownie, aby kontynuować.',
+  'duplicates.backfillFigisResultDone': '{checked} sprawdzonych, nic nie pozostało.',
 
   // --- Sygnały pozycji/watchlisty --------------------------------------------
   // Celowo fakty, nie czasowniki — „Wzmocnij"/„Zmniejsz" wciąż brzmią jak
@@ -292,6 +295,12 @@ export const pl: Catalogue = {
   'dataHealth.subtitle':
     'Dla każdej posiadanej pozycji: skąd pochodzi jej wartość, na jaki dzień jest aktualna i czy jej corporate actions są potwierdzone.',
   'dataHealth.empty': 'Brak otwartych pozycji.',
+  'dataHealth.figiDuplicates.title': 'Możliwe duplikaty (tożsamość OpenFIGI)',
+  'dataHealth.figiDuplicates.hint':
+    'Te pozycje mają ten sam identyfikator OpenFIGI (klasa akcji) — prawdopodobnie ta sama spółka śledzona pod dwoma różnymi symbolami. Fakt, nigdy automatycznie scalany: sprawdź i zdecyduj samodzielnie.',
+  'dataHealth.figiDuplicates.source.held': 'posiadana',
+  'dataHealth.figiDuplicates.source.watchlist': 'obserwowane',
+  'dataHealth.figiDuplicates.source.screener': 'perełki',
   'dataHealth.staleSince': 'ostatnia cena: {date}',
   'dataHealth.declaredSince': 'zadeklarowana wycena na dzień: {date}',
 

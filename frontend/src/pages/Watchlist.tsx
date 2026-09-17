@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { Score, WatchlistItem, WatchlistSignal } from '../api/types'
 import { AddToWatchlistForm } from '../components/AddToWatchlistForm'
+import { BackfillFigisButton } from '../components/BackfillFigisButton'
 import { BackfillIsinsButton } from '../components/BackfillIsinsButton'
 import { WatchlistTable } from '../components/WatchlistTable'
 import { useI18n } from '../i18n'
@@ -70,6 +71,7 @@ export function Watchlist() {
         <h1>{t('watchlist.title')}</h1>
         <p>{t('watchlist.description')}</p>
         <BackfillIsinsButton onDone={() => void load()} />
+        <BackfillFigisButton onDone={() => void load()} />
       </div>
 
       {error && <div className="notice error">{error}</div>}

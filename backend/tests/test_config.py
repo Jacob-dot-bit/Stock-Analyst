@@ -51,6 +51,32 @@ class TestPlaceholderKeys:
         assert settings.edgar_enabled is False
 
 
+class TestOpenFigi:
+    """OpenFIGI works fully unauthenticated — a key only raises the batch
+    ceiling, it doesn't gate whether the feature runs at all. See DEVLOG
+    "Decision 3u.76"."""
+
+    def test_placeholder_key_is_treated_as_unset(self, monkeypatch):
+        monkeypatch.setenv("OPENFIGI_API_KEY", "changeme")
+
+        assert Settings().openfigi_api_key is None
+
+    def test_a_real_key_is_kept(self, monkeypatch):
+        monkeypatch.setenv("OPENFIGI_API_KEY", "ab12cd34")
+
+        assert Settings().openfigi_api_key == "ab12cd34"
+
+    def test_no_key_means_the_smaller_batch_ceiling(self, monkeypatch):
+        monkeypatch.delenv("OPENFIGI_API_KEY", raising=False)
+
+        assert Settings().openfigi_max_jobs_per_request == 10
+
+    def test_a_key_raises_the_batch_ceiling(self, monkeypatch):
+        monkeypatch.setenv("OPENFIGI_API_KEY", "ab12cd34")
+
+        assert Settings().openfigi_max_jobs_per_request == 100
+
+
 class TestEnvFileLocations:
     """Running commands from backend/ is natural, so .env is accepted there too."""
 

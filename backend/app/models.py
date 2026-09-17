@@ -95,6 +95,28 @@ class Instrument(Base):
     mapping_status: Mapped[str] = mapped_column(String(20), default=MappingStatus.UNRESOLVED)
 
     isin: Mapped[str | None] = mapped_column(String(12), index=True)
+
+    # Resolved via OpenFIGI (see providers/openfigi.py) — the per-listing FIGI
+    # for this exact broker symbol's exchange. Not unique, same reasoning as
+    # `isin` above: an occasional wrong/ambiguous OpenFIGI match is a real
+    # risk, and this column only ever feeds a warning, never a merge. See
+    # DEVLOG "Decision 3u.76".
+    figi: Mapped[str | None] = mapped_column(String(12), index=True)
+
+    # OpenFIGI's "share class" FIGI — identical across every exchange
+    # listing of the same real security (e.g. NKE.US and NKE.L share one
+    # `share_class_figi` even though their plain `figi` above differs). This,
+    # not `figi`, is what `symbols/duplicates.py::find_figi_duplicates`
+    # compares — a plain-FIGI match only ever means "same exact listing,"
+    # never "same company under a different broker symbol."
+    share_class_figi: Mapped[str | None] = mapped_column(String(12), index=True)
+
+    # When `backfill_figis` last attempted this instrument, regardless of
+    # whether OpenFIGI actually had a mapping — mirrors
+    # `corporate_actions_checked_at`/`dividend_checked_at`'s own "have we
+    # tried" role: a genuine non-match must not be re-queried forever.
+    figi_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
+
     name: Mapped[str | None] = mapped_column(String(200))
 
     # Category supplied by the broker: STOCK, ETF, CFD... Also "P2P" (the
