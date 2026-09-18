@@ -292,6 +292,24 @@ body {
   color: var(--text-muted);
 }
 
+/* Opt-out for a title that shares its row with a subtitle and/or an
+   action button (a collapsed "add" form's summary row, a chart's legend,
+   a set of view-toggle buttons) — the eyebrow divider above only reads
+   correctly when h2 is the sole, full-width first line of a card; forced
+   onto a shrink-wrapped flex item it renders as a short, oddly-placed
+   underline. Plain heading instead: normal case, tight margin, no
+   divider. See DEVLOG "Decision 3u.77". */
+.card h2.compact {
+  margin: 0 0 var(--space-2);
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: var(--fs-md);
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
 .settings-group {
   margin-bottom: var(--space-6);
 }

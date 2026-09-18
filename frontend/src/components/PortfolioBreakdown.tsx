@@ -77,7 +77,7 @@ export function PortfolioBreakdown() {
           marginBottom: '0.8rem',
         }}
       >
-        <h2 style={{ marginBottom: 0 }}>{t('breakdown.title')}</h2>
+        <h2 className="compact">{t('breakdown.title')}</h2>
         <div className="form-row" style={{ marginBottom: 0 }}>
           {DIMENSIONS.map((dim) => (
             <button

@@ -207,7 +207,7 @@ export function RefreshPanel({ onRefreshed, onLivePortfolio }: Props) {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
         <div>
-          <h2 style={{ marginBottom: '0.2rem' }}>{t('prices.title')}</h2>
+          <h2 className="compact">{t('prices.title')}</h2>
           <span className="muted">{t('prices.subtitle')}</span>
         </div>
         <button className="primary" disabled={busy} onClick={() => void run()}>

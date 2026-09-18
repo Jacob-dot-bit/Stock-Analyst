@@ -162,7 +162,7 @@ export function PersonalPolicyPanel() {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
         <div>
-          <h2>{t('policy.title')}</h2>
+          <h2 className="compact">{t('policy.title')}</h2>
           <p className="muted" style={{ marginTop: 0 }}>
             {t('policy.subtitle')}
           </p>

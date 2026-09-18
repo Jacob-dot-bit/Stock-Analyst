@@ -81,7 +81,7 @@ export function AddToScreenerForm({ onCreated }: Props) {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
           <div>
-            <h2 style={{ marginBottom: '0.2rem' }}>{t('gems.form.title')}</h2>
+            <h2 className="compact">{t('gems.form.title')}</h2>
             <span className="muted">{t('gems.form.subtitle')}</span>
           </div>
           <button onClick={() => setOpen(true)}>{t('common.add')}</button>

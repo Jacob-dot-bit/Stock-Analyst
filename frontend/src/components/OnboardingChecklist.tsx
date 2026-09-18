@@ -47,7 +47,7 @@ export function OnboardingChecklist() {
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h2>{t('onboarding.title')}</h2>
+        <h2 className="compact">{t('onboarding.title')}</h2>
         <button className="link" onClick={dismiss}>
           {t('onboarding.dismiss')}
         </button>

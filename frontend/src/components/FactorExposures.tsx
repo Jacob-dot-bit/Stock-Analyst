@@ -56,7 +56,7 @@ export function FactorExposures() {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
         <div>
-          <h2 style={{ marginBottom: '0.2rem' }}>{t('factors.title')}</h2>
+          <h2 className="compact">{t('factors.title')}</h2>
           <span className="muted">{t('factors.description')}</span>
         </div>
         <button disabled={importing} onClick={() => void handleImport()}>

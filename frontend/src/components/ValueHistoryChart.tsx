@@ -86,7 +86,7 @@ export function ValueHistoryChart() {
           gap: '0.5rem',
         }}
       >
-        <h2 style={{ marginBottom: 0 }}>{t('history.title')}</h2>
+        <h2 className="compact">{t('history.title')}</h2>
         <div style={{ display: 'flex', gap: '1rem', fontSize: '0.82rem' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <span className="breakdown-swatch" style={{ background: 'var(--series-1)' }} />

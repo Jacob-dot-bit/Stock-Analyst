@@ -90,7 +90,7 @@ export function AddToWatchlistForm({ onCreated }: Props) {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
           <div>
-            <h2 style={{ marginBottom: '0.2rem' }}>{t('watchlist.form.title')}</h2>
+            <h2 className="compact">{t('watchlist.form.title')}</h2>
             <span className="muted">{t('watchlist.form.subtitle')}</span>
           </div>
           <button onClick={() => setOpen(true)}>{t('common.add')}</button>

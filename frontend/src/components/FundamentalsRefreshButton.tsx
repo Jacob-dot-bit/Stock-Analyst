@@ -96,7 +96,7 @@ export function FundamentalsRefreshButton({ onRefreshed }: Props) {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
         <div>
-          <h2 style={{ marginBottom: '0.2rem' }}>{t('scores.refreshTitle')}</h2>
+          <h2 className="compact">{t('scores.refreshTitle')}</h2>
           <span className="muted">{t('scores.refreshSubtitle')}</span>
         </div>
         <button disabled={busy} onClick={() => void run()}>

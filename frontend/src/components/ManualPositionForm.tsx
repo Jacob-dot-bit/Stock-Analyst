@@ -98,7 +98,7 @@ export function ManualPositionForm({ onCreated }: Props) {
           style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}
         >
           <div>
-            <h2 style={{ marginBottom: '0.2rem' }}>{t('manual.title')}</h2>
+            <h2 className="compact">{t('manual.title')}</h2>
             <span className="muted">{t('manual.subtitle')}</span>
           </div>
           <button onClick={() => setOpen(true)}>{t('common.add')}</button>
