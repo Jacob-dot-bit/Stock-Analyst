@@ -98,7 +98,7 @@ export function Dividends() {
       {summary && summary.length === 0 && <div className="empty">{t('dividends.empty')}</div>}
 
       {summary && summary.length > 0 && latestYear !== undefined && (
-        <div className="stat-grid" style={{ marginBottom: '1.1rem' }}>
+        <div className="stat-grid" style={{ marginBottom: 'var(--space-5)' }}>
           <div className="stat">
             <div className="label">{t('dividends.heroTitle', { year: latestYear })}</div>
             <div className="value">{byCurrency(heroRows, 'gross', t, formatNumber)}</div>

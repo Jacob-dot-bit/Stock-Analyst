@@ -142,7 +142,7 @@ export function Transactions() {
       {error && <div className="notice error">{error}</div>}
 
       {data && (
-        <div className="stat-grid" style={{ marginBottom: '1.1rem' }}>
+        <div className="stat-grid" style={{ marginBottom: 'var(--space-5)' }}>
           <div className="stat">
             <div className="label">{t('transactions.summary.netDividends')}</div>
             <div className={`value ${signClass(data.summary.net_dividends)}`}>
