@@ -68,8 +68,10 @@ export function Screener() {
       <div className="page-header">
         <h1>{t('gems.title')}</h1>
         <p>{t('gems.description')}</p>
-        <BackfillIsinsButton onDone={() => void load()} />
-        <BackfillFigisButton onDone={() => void load()} />
+        <div className="page-header-actions">
+          <BackfillIsinsButton onDone={() => void load()} />
+          <BackfillFigisButton onDone={() => void load()} />
+        </div>
       </div>
 
       {error && <div className="notice error">{error}</div>}

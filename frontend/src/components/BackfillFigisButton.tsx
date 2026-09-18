@@ -39,15 +39,11 @@ export function BackfillFigisButton({ onDone }: Props) {
   }
 
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
       <button onClick={() => void handleClick()} disabled={busy}>
         {busy ? t('duplicates.backfilling') : t('duplicates.backfillFigis')}
       </button>
-      {notice && (
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
-          {notice}
-        </span>
-      )}
+      {notice && <span className="muted">{notice}</span>}
     </span>
   )
 }

@@ -222,7 +222,7 @@ export default function Settings() {
               <div className="provider-info">
                 <h3>{isContactField ? t('settings.secEdgarName') : provider.name}</h3>
                 <p>{provider.description}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                   <span className={`status-badge ${provider.enabled ? 'enabled' : 'disabled'}`}>
                     {provider.enabled ? t('settings.enabled') : t('settings.disabled')}
                   </span>
@@ -258,7 +258,7 @@ export default function Settings() {
                     disabled={busy}
                   />
                   {isContactField && (
-                    <span className="muted" style={{ fontSize: '0.72rem' }}>
+                    <span className="muted" style={{ fontSize: 'var(--fs-xs)' }}>
                       {t('settings.contactInfoFormat')}
                     </span>
                   )}
@@ -270,7 +270,6 @@ export default function Settings() {
                     testResults[provider.name] === 'testing' ||
                     (!apiKeys[provider.name] && !apiKeysStatus[provider.name])
                   }
-                  style={{ fontSize: '0.85rem', padding: '0.45rem 0.8rem' }}
                 >
                   {testResults[provider.name] === 'testing' ? t('settings.testing') : t('settings.test')}
                 </button>
@@ -298,7 +297,7 @@ export default function Settings() {
         )}
       </div>
 
-      <div className="form-row">
+      <div className="form-row" style={{ marginTop: 'var(--space-4)' }}>
         <button
           className="primary"
           onClick={handleSave}
@@ -309,141 +308,11 @@ export default function Settings() {
       </div>
 
       {notice && (
-        <div className={`card notice notice-${notice.type}`}>
+        <div className={`card notice ${notice.type}`}>
           {notice.message}
         </div>
       )}
       </section>
-
-      <style>{`
-        .providers-list {
-          display: flex;
-          flex-direction: column;
-          gap: 1.1rem;
-          margin-top: 1rem;
-        }
-
-        .provider-row {
-          display: flex;
-          flex-direction: column;
-          gap: 0.6rem;
-          padding: 0.8rem;
-          border: 1px solid var(--border);
-          border-radius: 4px;
-          background-color: var(--surface-alt);
-        }
-
-        .provider-info h3 {
-          margin: 0 0 0.25rem 0;
-          font-size: 0.95rem;
-          font-weight: 600;
-        }
-
-        .provider-info p {
-          margin: 0 0 0.5rem 0;
-          font-size: 0.85rem;
-          opacity: 0.7;
-        }
-
-        .status-badge {
-          display: inline-block;
-          padding: 0.25rem 0.5rem;
-          font-size: 0.75rem;
-          border-radius: 3px;
-          font-weight: 500;
-        }
-
-        .status-badge.enabled {
-          background-color: var(--accent);
-          color: white;
-        }
-
-        .status-badge.disabled {
-          background-color: var(--border);
-          color: var(--text);
-        }
-
-        /* A temporary, recoverable rate-limit — not a broken state, so
-           amber (same treatment Corporate Actions gives a rate-limited
-           source), never the gain/loss red. See DEVLOG "Decision 3u.69". */
-        .status-badge.cooling-down {
-          background-color: var(--warning);
-          color: white;
-        }
-
-        .coverage-note {
-          font-size: 0.78rem;
-        }
-
-        .quota-note {
-          font-size: 0.78rem;
-        }
-
-        /* Approaching a quota is a warning-shaped fact, not a failure —
-           never the gain/loss red. See DEVLOG "Decision 3u.69". */
-        .quota-note.near-limit {
-          color: var(--warning);
-          font-weight: 600;
-        }
-
-        .keyless-availability {
-          list-style: none;
-          margin: 0.6rem 0 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 0.4rem;
-        }
-
-        .keyless-availability li {
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
-          font-size: 0.85rem;
-        }
-
-        .signup-link {
-          font-size: 0.78rem;
-          color: var(--accent);
-          text-decoration: none;
-        }
-
-        .signup-link:hover {
-          text-decoration: underline;
-        }
-
-        .keyless-note {
-          margin: 1rem 0 0;
-          font-size: 0.8rem;
-        }
-
-        .form-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.6rem;
-        }
-
-        button.primary {
-          margin-top: 0.5rem;
-        }
-
-        .test-result {
-          margin: 0;
-          font-size: 0.82rem;
-        }
-
-        /* A genuine live pass/fail of the pasted key against the real
-           provider, not a categorical opinion — same justified use of
-           --positive/--negative as PriceStatusBadge's fresh/error colors.
-           Deliberately left as-is. See DEVLOG "Decision 3u.69". */
-        .test-result.valid {
-          color: var(--positive);
-        }
-
-        .test-result.invalid {
-          color: var(--negative);
-        }
-      `}</style>
     </div>
   )
 }

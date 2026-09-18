@@ -259,6 +259,17 @@ body {
   color: var(--positive);
 }
 
+/* Secondary/utility actions (backfill buttons, etc.) living in the page
+   header — previously dropped straight under the description paragraph
+   with no gap at all. See DEVLOG "Decision 3u.77". */
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+
 /* --- Blocs --- */
 
 .card {
@@ -1032,6 +1043,116 @@ input:focus, select:focus {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+
+/* --- Data providers (Settings → Sources de données) — previously a
+   page-local <style> tag with its own hardcoded radius/opacity/solid-fill
+   badges, entirely disconnected from every other screen's tokens and from
+   .tag's soft-pill convention. Moved here and rewritten onto the shared
+   scale. See DEVLOG "Decision 3u.77". --- */
+
+.providers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.provider-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface-alt);
+}
+
+.provider-info h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.provider-info p {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* Same soft-pill formula as .tag (background = the *-soft token, text =
+   the plain token) — a status pill is the same kind of fact as a tag,
+   and previously used a completely different solid-fill-with-white-text
+   treatment for no reason tied to its meaning. */
+.status-badge {
+  display: inline-block;
+  padding: 0.18rem 0.55rem;
+  font-size: var(--fs-xs);
+  border-radius: 999px;
+  font-weight: 650;
+}
+
+.status-badge.enabled { background: var(--accent-soft); color: var(--accent); }
+.status-badge.disabled { background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* A temporary, recoverable rate-limit — not a broken state, so amber
+   (same treatment Corporate Actions gives a rate-limited source), never
+   the gain/loss red. See DEVLOG "Decision 3u.69". */
+.status-badge.cooling-down { background: var(--warning-soft); color: var(--warning); }
+
+.coverage-note, .quota-note {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* Approaching a quota is a warning-shaped fact, not a failure — never
+   the gain/loss red. See DEVLOG "Decision 3u.69". */
+.quota-note.near-limit {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.keyless-availability {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.keyless-availability li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+.signup-link {
+  font-size: var(--fs-xs);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
+
+.keyless-note {
+  margin: var(--space-4) 0 0;
+  font-size: var(--fs-sm);
+}
+
+.test-result {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+/* A genuine live pass/fail of the pasted key against the real provider,
+   not a categorical opinion — same justified use of --positive/--negative
+   as PriceStatusBadge's fresh/error colors. Deliberately left as-is. See
+   DEVLOG "Decision 3u.69". */
+.test-result.valid { color: var(--positive); }
+.test-result.invalid { color: var(--negative); }
 
 .muted {
   color: var(--text-muted);
