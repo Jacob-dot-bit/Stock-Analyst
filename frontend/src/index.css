@@ -1,18 +1,21 @@
 :root {
-  --bg: #f7f8fa;
+  --bg: #f4f5f7;
   --surface: #ffffff;
-  --surface-alt: #f1f3f6;
-  --border: #dfe3e8;
-  --text: #1a1d21;
-  --text-muted: #6b727c;
-  --accent: #2f6fed;
-  --accent-soft: #e8f0fe;
-  --positive: #157a45;
-  --positive-soft: #e6f4ec;
+  --surface-alt: #eef0f4;
+  --surface-raised: #fbfcfd;
+  --border: #e3e6ec;
+  --border-strong: #cbd0d9;
+  --text: #10141c;
+  --text-muted: #666e7d;
+  --accent: #3467e0;
+  --accent-strong: #2851b8;
+  --accent-soft: #e9f0ff;
+  --positive: #147a4d;
+  --positive-soft: #e5f5ec;
   --negative: #b3261e;
   --negative-soft: #fdeceb;
-  --warning: #8a5a00;
-  --warning-soft: #fdf3e0;
+  --warning: #915b00;
+  --warning-soft: #fdf1de;
 
   /* Score bands (analysis indicator, not a verdict) — deliberately its own
      blue/gray scale, never --positive/--negative/--warning: a score is a
@@ -34,33 +37,64 @@
   --series-7: #4a3aa7; /* violet */
   --series-8: #e34948; /* red */
 
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+  /* Spacing rhythm — a fixed scale instead of ad hoc rem values, so every
+     screen's vertical/horizontal breathing room comes from the same steps.
+     See DEVLOG "Decision 3u.77". */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  /* Type scale — same reasoning as the spacing scale above. */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.3rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+
+  /* Cards get the larger radius (a softer, "designed" shape); controls,
+     tags and pills use the smaller one so buttons/inputs stay crisp. */
+  --radius-lg: 16px;
+  --radius: 9px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.03), 0 8px 20px -6px rgba(16, 24, 40, 0.09);
+  --shadow-lg: 0 4px 8px -2px rgba(16, 24, 40, 0.06), 0 16px 32px -8px rgba(16, 24, 40, 0.12);
 
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 15px;
+  -webkit-font-smoothing: antialiased;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14171c;
-    --surface: #1c2027;
-    --surface-alt: #232830;
-    --border: #333a45;
-    --text: #e8eaed;
-    --text-muted: #9aa2ae;
-    --accent: #7aa5ff;
-    --accent-soft: #1e2a44;
-    --positive: #5fd39a;
+    --bg: #0c0e13;
+    --surface: #14171e;
+    --surface-alt: #1b1f28;
+    --surface-raised: #191d25;
+    --border: #262b35;
+    --border-strong: #3a4150;
+    --text: #eef0f3;
+    --text-muted: #8a92a1;
+    --accent: #6f9bff;
+    --accent-strong: #9cbeff;
+    --accent-soft: #1c2740;
+    --positive: #4fce93;
     --positive-soft: #16302464;
     --negative: #ff8a80;
     --negative-soft: #3a1f1d64;
-    --warning: #f0c069;
+    --warning: #eab766;
     --warning-soft: #33291364;
     --score-mid: #a8c5e8;
     --score-mid-soft: #2a374d80;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px -8px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 4px 10px -2px rgba(0, 0, 0, 0.4), 0 20px 40px -12px rgba(0, 0, 0, 0.6);
 
     --series-1: #3987e5;
     --series-2: #d95926;
@@ -94,30 +128,45 @@ body {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0.9rem 1.5rem;
+  gap: var(--space-6);
+  padding: var(--space-3) var(--space-6);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
 
 .brand {
-  font-weight: 650;
+  font-weight: 700;
   font-size: 1.05rem;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.brand::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--accent);
 }
 
 .nav {
   display: flex;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 .nav a {
-  padding: 0.4rem 0.75rem;
+  padding: 0.4rem 0.8rem;
   border-radius: var(--radius);
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  transition: background 0.12s, color 0.12s;
 }
 
 .nav a:hover {
@@ -128,7 +177,7 @@ body {
 .nav a.active {
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .alerts-bell {
@@ -176,23 +225,38 @@ body {
      horizontal-scroll on screens that had plenty of space to spare. */
   max-width: 1440px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: var(--space-6);
 }
 
 .page-header {
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--space-6);
 }
 
 .page-header h1 {
-  margin: 0 0 0.25rem;
-  font-size: 1.4rem;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-xl);
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .page-header p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
+}
+
+.page-header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.page-header-meta .fresh {
+  color: var(--positive);
 }
 
 /* --- Blocs --- */
@@ -200,57 +264,80 @@ body {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  padding: 1.1rem;
-  margin-bottom: 1.1rem;
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
 }
 
 .card h2 {
-  margin: 0 0 0.75rem;
-  font-size: 0.95rem;
-  font-weight: 600;
+  margin: 0 0 var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 
 .settings-group {
-  margin-bottom: 1.8rem;
+  margin-bottom: var(--space-6);
 }
 
 .settings-group > h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.1rem;
-  font-weight: 600;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-lg);
+  font-weight: 700;
 }
 
 .settings-group > p.muted {
-  margin: 0 0 0.9rem;
-  font-size: 0.85rem;
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-sm);
 }
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
 }
 
 .stat {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.9rem 1rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4) var(--space-5);
+  overflow: hidden;
 }
 
+.stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--border-strong);
+}
+
+.stat:has(.value.positive)::before { background: var(--positive); }
+.stat:has(.value.negative)::before { background: var(--negative); }
+
 .stat .label {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .stat .value {
-  font-size: 1.45rem;
-  font-weight: 600;
-  margin-top: 0.3rem;
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  margin-top: var(--space-2);
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -289,22 +376,23 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: var(--fs-sm);
 }
 
 th, td {
   text-align: left;
-  padding: 0.6rem 0.7rem;
+  padding: 0.7rem 0.8rem;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 th {
-  font-size: 0.76rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 650;
+  border-bottom: 1px solid var(--border-strong);
 }
 
 tbody tr:hover {
@@ -343,10 +431,13 @@ td.negative { color: var(--negative); }
 
 .tag {
   display: inline-block;
-  padding: 0.12rem 0.45rem;
-  border-radius: 5px;
-  font-size: 0.72rem;
-  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  /* Pill radius — matches .score-badge/.insights-badge, previously a
+     smaller square radius here was the one real inconsistency between
+     this app's two badge families. See DEVLOG "Decision 3u.77". */
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 650;
   letter-spacing: 0.02em;
 }
 
@@ -672,9 +763,10 @@ td.negative { color: var(--negative); }
 .notice {
   border-radius: var(--radius);
   padding: 0.8rem 1rem;
-  font-size: 0.87rem;
-  margin-bottom: 1rem;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--space-4);
   border: 1px solid transparent;
+  border-left-width: 3px;
 }
 
 .notice.warning {
@@ -783,40 +875,50 @@ td.negative { color: var(--negative); }
 
 button {
   font: inherit;
-  padding: 0.45rem 0.9rem;
-  border-radius: 7px;
+  font-weight: 550;
+  padding: 0.48rem 0.95rem;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, filter 0.12s;
 }
 
-button:hover:not(:disabled) { background: var(--surface-alt); }
+button:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--border-strong); }
 button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  box-shadow: var(--shadow-sm);
 }
 
-button.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); border-color: var(--accent); }
 
 button.link {
   border: none;
   background: none;
   color: var(--accent);
   padding: 0.2rem 0.35rem;
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
+  font-weight: 500;
 }
 
 input, select {
   font: inherit;
-  padding: 0.42rem 0.6rem;
+  padding: 0.44rem 0.65rem;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .form-row {

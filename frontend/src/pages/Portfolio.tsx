@@ -80,18 +80,19 @@ export function Portfolio() {
           {data?.last_import_at &&
             ` ${t('portfolio.lastImport', { date: formatDate(data.last_import_at) })}`}
         </p>
-        {data?.last_price_refresh_at && (
-          <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
-            ✓ {t('portfolio.lastRefresh', {
-              date: formatDate(data.last_price_refresh_at),
-              time: new Date(data.last_price_refresh_at).toLocaleTimeString('fr-FR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            })}
-          </div>
-        )}
-        <div style={{ marginTop: '0.5rem' }}>
+        <div className="page-header-meta">
+          {data?.last_price_refresh_at && (
+            <span className="fresh">
+              ✓{' '}
+              {t('portfolio.lastRefresh', {
+                date: formatDate(data.last_price_refresh_at),
+                time: new Date(data.last_price_refresh_at).toLocaleTimeString('fr-FR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              })}
+            </span>
+          )}
           <Link to="/settings#donnees-portefeuille">{t('portfolio.manageData')}</Link>
         </div>
       </div>
@@ -140,7 +141,7 @@ function Totals({ data }: { data: PortfolioData }) {
 
   return (
     <>
-      <div className="stat-grid" style={{ marginBottom: '1.1rem' }}>
+      <div className="stat-grid" style={{ marginBottom: 'var(--space-5)' }}>
         <div className="stat">
           <div className="label">{t('totals.positions')}</div>
           <div className="value">{totals.positions_count}</div>
