@@ -510,6 +510,16 @@ export const fr: Catalogue = {
   'transactions.type.WITHDRAWAL': 'Retrait',
   'transactions.type.INTEREST': 'Intérêts',
   'transactions.type.OTHER': 'Autre',
+  // Mouvements agrégés Mintos Core (P2P) — volontairement distincts des
+  // libellés DEPOSIT/WITHDRAWAL/INTEREST ci-dessus, car ce sont des
+  // mouvements internes de réinvestissement automatique, pas de l'argent
+  // que l'investisseur a réellement déposé ou retiré. Voir DEVLOG
+  // "Decision 3u.39"/"Decision 3u.77".
+  'transactions.type.P2P_INVESTMENT': 'Prêt P2P (réinvestissement)',
+  'transactions.type.P2P_PRINCIPAL_REPAYMENT': 'Remboursement de capital (P2P)',
+  'transactions.type.P2P_INTEREST': 'Intérêts P2P',
+  'transactions.type.P2P_FEE': 'Frais P2P',
+  'transactions.type.P2P_SNAPSHOT': 'Valorisation P2P (relevé)',
   'transactions.actions': 'Actions',
   'transactions.manual.title': 'Transaction saisie à la main',
   'transactions.manual.subtitle':

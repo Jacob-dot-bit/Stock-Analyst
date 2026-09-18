@@ -517,6 +517,16 @@ export const pl: Catalogue = {
   'transactions.type.WITHDRAWAL': 'Wypłata',
   'transactions.type.INTEREST': 'Odsetki',
   'transactions.type.OTHER': 'Inne',
+  // Zagregowane przepływy Mintos Core (P2P) — celowo odrębne od zwykłych
+  // etykiet DEPOSIT/WITHDRAWAL/INTEREST powyżej, ponieważ są to
+  // wewnętrzne ruchy automatycznego reinwestowania, a nie środki
+  // faktycznie wpłacone lub wypłacone przez inwestora. Zob. DEVLOG
+  // "Decision 3u.39"/"Decision 3u.77".
+  'transactions.type.P2P_INVESTMENT': 'Pożyczka P2P (reinwestycja)',
+  'transactions.type.P2P_PRINCIPAL_REPAYMENT': 'Spłata kapitału (P2P)',
+  'transactions.type.P2P_INTEREST': 'Odsetki P2P',
+  'transactions.type.P2P_FEE': 'Opłata P2P',
+  'transactions.type.P2P_SNAPSHOT': 'Wycena P2P (zestawienie)',
   'transactions.actions': 'Akcje',
   'transactions.manual.title': 'Transakcja wpisana ręcznie',
   'transactions.manual.subtitle':

@@ -509,6 +509,15 @@ export const en: Catalogue = {
   'transactions.type.WITHDRAWAL': 'Withdrawal',
   'transactions.type.INTEREST': 'Interest',
   'transactions.type.OTHER': 'Other',
+  // Mintos Core (P2P) aggregate flows — deliberately distinct from the
+  // regular DEPOSIT/WITHDRAWAL/INTEREST labels above, since these are
+  // internal auto-invest movements, not cash the investor put in or took
+  // out. See DEVLOG "Decision 3u.39"/"Decision 3u.77".
+  'transactions.type.P2P_INVESTMENT': 'P2P loan (reinvested)',
+  'transactions.type.P2P_PRINCIPAL_REPAYMENT': 'Principal repayment (P2P)',
+  'transactions.type.P2P_INTEREST': 'P2P interest',
+  'transactions.type.P2P_FEE': 'P2P fee',
+  'transactions.type.P2P_SNAPSHOT': 'P2P valuation (statement)',
   'transactions.actions': 'Actions',
   'transactions.manual.title': 'Hand-entered transaction',
   'transactions.manual.subtitle':
