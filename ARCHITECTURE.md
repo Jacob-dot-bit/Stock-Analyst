@@ -980,6 +980,32 @@ not from `_aggregate`/`_compute_totals`), and `AccountTotals.valuation_note`
 can have a P&L caveat, a declared-value caveat, both, or neither; the
 "By account" table footnote list shows one bullet per note per account).
 
+**Frontend design tokens** (`frontend/src/index.css`, Decision 3u.77). One
+shared stylesheet, no component framework: CSS custom-property tokens
+plus hand-rolled utility classes (`.card`, `.stat`, `.tag`, tables,
+buttons, `.notice`) that every page reuses — refining a token here
+uplifts every screen at once, so a visual inconsistency is almost always
+a missing/wrong shared rule, not a page needing its own fix. Concretely:
+a spacing scale (`--space-1`…`--space-8`) and type scale (`--fs-xs`…
+`--fs-2xl`) instead of ad hoc rem values; `--radius-lg` (16px) for cards
+vs. `--radius` (9px) for controls/tags; layered `--shadow-sm`/`--shadow`/
+`--shadow-lg`. `.card h2` is a small-caps "section eyebrow" (uppercase,
+divider) by default — but only reads correctly when the h2 is the card's
+sole, full-width first line. A title that shares its row with a subtitle
+and/or an action button (a collapsed add-form's summary row, a chart
+legend, view-toggle buttons) must use `.card h2.compact` instead (plain
+heading, no divider) — forgetting this on a new such header renders a
+short, oddly-placed underline instead of a clean one; this exact
+regression shipped and was caught by grepping every `<h2>` in the
+codebase, not by screenshot review, since a screen's screenshot won't
+show a collapsed form's *open* state. `.tag`/`.score-badge`/
+`.insights-badge` all share one 999px-pill, soft-background-plus-colored-
+text formula (background = a `*-soft` token, text = the plain token) —
+any new status/state indicator should reuse this rather than invent a
+solid-fill or square-radius variant. Never add a page-local `<style>`
+tag (Settings once had one, entirely invisible to every other screen's
+tokens — moved into this file when found).
+
 ## External data sources (`backend/app/providers/`)
 
 One file per source behind a common interface (`base.py`): `yahoo`, `fmp`,

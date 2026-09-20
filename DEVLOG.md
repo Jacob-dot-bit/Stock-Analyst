@@ -9142,3 +9142,109 @@ network failure returns `FIGI_LOOKUP_FAILED`, not `None`);
 `test_symbol_duplicates.py` (a transient lookup failure is never marked
 checked and stays eligible for retry, distinct from the existing
 genuine-non-match-is-permanent test).
+
+## Decision 3u.77 — Visual design pass: the app "looked like a draft" (2026-09-18/20)
+
+User feedback, verbatim: "il faudrait refaire l'interface car actuellement
+il ressemble plutôt à un brouillon" (the interface should be redone, it
+currently looks more like a draft). Scoped before touching any code, via
+three explicit choices: pilot one screen first (Portfolio) rather than a
+big-bang rewrite; the complaint was lack of hierarchy/spacing, a generic
+look, and inconsistency between screens (not, e.g., colors specifically);
+direction is "épuré, fintech moderne" (clean, modern fintech — controlled
+whitespace, cards with subtle shadow, targeted accent color), not a warm/
+playful or a dense/technical alternative also offered.
+
+**The whole app already shares one design system** — a single
+`index.css` with CSS custom-property tokens and hand-rolled utility
+classes (`.card`, `.stat`, `.tag`, tables, buttons, `.notice`), no
+component framework. This mattered: refining the shared tokens once
+uplifts every screen automatically, rather than needing a per-page
+rewrite — confirmed live, screen by screen, after the first pass.
+
+**Token/primitive changes** (`frontend/src/index.css`): added a real
+spacing scale (`--space-1`…`--space-8`) and type scale (`--fs-xs`…
+`--fs-2xl`) to replace ad hoc rem values; split card radius from
+control radius (`--radius-lg: 16px` for cards, `--radius: 9px` for
+buttons/inputs — was one flat `10px` for everything); layered shadows
+(`--shadow-sm`/`--shadow`/`--shadow-lg`) instead of a single flat
+`box-shadow`; deepened the dark palette's background (`#0c0e13` vs the
+old `#14171c`) so surfaces read as genuinely elevated instead of a
+slightly-lighter gray; refined the light palette similarly. `.stat`
+tiles gained a 3px top accent bar, colored green/red via `:has(.value
+.positive)`/`:has(.value.negative)` when the metric has a sign — the
+"hero KPI" treatment Portfolio/Dividends/Transactions all get for free.
+`.card h2` became a small-caps "section eyebrow" (uppercase, muted
+color, bottom divider) instead of a plain bold label. `.tag` moved from
+a small square radius to the same 999px pill `.score-badge`/
+`.insights-badge` already used — one of the concrete "inconsistency
+between screens" instances named in the complaint.
+
+**Three real bugs found while touring every screen for the pass, none
+related to the visual tokens themselves:**
+
+1. **Settings' entire "Data provider status" section had zero shared
+   styling** — `.provider-row`/`.provider-info`/`.status-badge`/
+   `.providers-list`/`.signup-link`/`.keyless-note` were styled by a
+   page-local `<style>{...}</style>` tag at the bottom of `Settings.tsx`,
+   completely disconnected from `index.css`: its own hardcoded `3px`/
+   `4px` radius (vs. the app's `9px`/`16px`), `opacity: 0.7` instead of
+   `--text-muted`, and solid-fill white-on-color badges instead of the
+   `.tag` family's soft-pill convention everywhere else. This alone was
+   probably the single biggest concrete source of "looks like a draft"
+   on that page. Moved into `index.css`, rewritten onto the shared
+   tokens and the soft-pill formula.
+2. **The Settings save-confirmation banner never had a color, ever.**
+   `className={\`card notice notice-${notice.type}\`}` produced a class
+   literally named `notice-success`/`notice-error` (one token), while
+   the CSS selector is `.notice.success`/`.notice.error` (two classes)
+   — never matched. Every "API keys updated" or error banner on the
+   most-used Settings action rendered as plain text in a padded box, no
+   background, no border color. Fixed the template string; confirmed
+   live via the real save button and a computed-style check (`class:
+   "card notice success"`, green background/text/border as intended).
+3. **The new `.card h2` eyebrow divider broke 12 components' headers.**
+   Found via a full grep audit of every `<h2>` in the codebase, not by
+   screenshot luck — screenshots alone had already missed it (none of
+   the collapsed "add" forms happened to be open in the screens
+   captured). Any `<h2>` sharing its row with a subtitle and/or a
+   button (a collapsed add-form's summary row, `ValueHistoryChart`'s
+   legend, `PortfolioBreakdown`'s view-toggle buttons,
+   `OnboardingChecklist`'s dismiss link, `PersonalPolicyPanel`'s edit
+   button — 12 call sites total) would render the new border-bottom
+   divider only under the h2's own shrink-wrapped box, producing a
+   short underline in a random spot instead of a clean full-width line.
+   Added `.card h2.compact` (plain heading: no divider, no uppercase,
+   tight margin) and applied it at all 12 sites, replacing each one's
+   previous ad hoc `style={{ marginBottom: '0.2rem' }}` override.
+
+**Also fixed, unrelated to the visual tokens, found by the same
+full-screen tour**: five Mintos P2P transaction types
+(`P2P_INVESTMENT`/`P2P_PRINCIPAL_REPAYMENT`/`P2P_INTEREST`/`P2P_FEE`/
+`P2P_SNAPSHOT`) existed on the backend's `TxType` enum since Decision
+3u.39 but had no i18n key in any of the three locales — every P2P row
+on Transactions/`PositionDetailRow` rendered the raw key
+(`transactions.type.P2P_FEE`) instead of a label. Added all 5 keys to
+en/fr/pl (857 keys × 3 locales, parity re-confirmed).
+
+**Scope actually covered**: Portfolio (pilot — hero stat tiles,
+page-header cleanup), then every other screen (Transactions, Watchlist,
+Hidden gems, Tax prep, Risk, Journal, Settings) via the shared
+primitives plus targeted per-page fixes (`.page-header-actions` for the
+two backfill buttons that were dropped flush under the description with
+no gap on Watchlist/Screener; the Settings provider-status rewrite; the
+12-site `.compact` fix). Not touched: no new component framework, no
+webfont (kept the existing system-font stack — the hierarchy problem
+named in the complaint came from scale/weight/color/spacing, not
+typeface), no icons (deliberately, matching the "épuré" direction).
+
+**Live-verified after every commit** (this chantier's own discipline:
+commit → push → SSH pull → verify against the real running app, no
+batching): light and dark themes on Portfolio; no regressions on
+Watchlist/Settings/Screener/Tax prep/Risk/Journal; the Settings notice
+fix confirmed via a real save click plus computed styles
+(`getComputedStyle`) rather than trusting the screenshot tool alone,
+which had an unrelated pane-rendering quirk on tall pages after
+scrolling (confirmed pre-existing, not a CSS regression, by cross-
+checking `get_page_text`/computed styles matched the real DOM). `tsc
+-b`/`oxlint` clean at every step; i18n parity re-confirmed at 857 keys.
