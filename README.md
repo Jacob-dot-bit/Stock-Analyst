@@ -132,6 +132,21 @@ enabled — the fastest way to check a key is being read.
 > `.env` — signup takes an email and no card — and the fallback takes over. The app tells
 > you this in the refresh report rather than leaving you to guess.
 
+### Security
+
+A [gitleaks](https://github.com/gitleaks/gitleaks) pre-commit hook (`.githooks/`,
+config in `.gitleaks.toml`) blocks a commit if a likely secret shows up in the staged
+diff. Enable it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Requires the `gitleaks` binary on your `PATH` (`apt install gitleaks` on Kali; a static
+release binary from the [gitleaks releases page](https://github.com/gitleaks/gitleaks/releases)
+elsewhere). Without it, the hook prints a warning and lets the commit through rather than
+blocking it — see Decision 3u.78 for why.
+
 ---
 
 ## Architecture

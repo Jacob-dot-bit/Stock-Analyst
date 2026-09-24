@@ -9248,3 +9248,47 @@ which had an unrelated pane-rendering quirk on tall pages after
 scrolling (confirmed pre-existing, not a CSS regression, by cross-
 checking `get_page_text`/computed styles matched the real DOM). `tsc
 -b`/`oxlint` clean at every step; i18n parity re-confirmed at 857 keys.
+
+## Decision 3u.78 — gitleaks pre-commit hook, after giving the Hermes agent read-write access to backend/ and frontend/ (2026-09-24)
+
+The Hermes agent's sandbox (a separate, internet-connected Docker container on
+hermes-host, used for code review/fixes on this project) got `backend/` and
+`frontend/` bind-mounted read-write so it could work on real ISIN/ticker
+reliability fixes without a copy-paste round trip. A bind mount means its
+edits land directly in this working tree — there is no staging area between
+"Hermes wrote a file" and "it's sitting in `git status`" — so the actual
+checkpoint against an accidentally-committed secret is at commit time, not a
+review step beforehand. `.env`, `data/`, `backups/`, `Extractions/` are not
+mounted (real API keys and real financial data — none of it reachable from
+the sandbox), but that only covers what's excluded by construction, not a new
+file Hermes might create inside `backend/`/`frontend/` themselves.
+
+Added `.githooks/pre-commit` (a tracked hook, not the untracked default
+`.git/hooks/`, so every clone gets the same one — enable with `git config
+core.hooksPath .githooks`) running `gitleaks protect --staged`. Config in
+`.gitleaks.toml` extends gitleaks' default ruleset rather than replacing it,
+plus one project-specific allowlist for `.env.example` (placeholder key
+*names*, no real values) and `backend/tests/` (fixtures deliberately use fake
+keys like `ab12cd34ef56` to test settings parsing — flagged by the baseline
+scan below, confirmed as the expected false positive, not a leak).
+
+**Baseline scan of the full history (141 commits) came back clean** once
+that allowlist was in place — `.env` itself was never committed, only
+`.env.example`. Worth knowing since the repo is already public on GitHub:
+a clean history isn't something this hook produced, it's what was already
+true; the hook's job is keeping it that way going forward.
+
+Deliberately fails *open*, not closed: if `gitleaks` isn't on `PATH`, the
+hook prints a warning and lets the commit through rather than blocking every
+commit on a machine where it isn't installed yet. Verified both directions
+for real (not just read) on both machines this project runs on — hermes-host
+and the local dev machine — with an actual fake secret (a Stripe-shaped
+token), not a synthetic test string, staged and committed for real each time.
+
+One thing the fail-open path costs: it can't rescue you from itself. The very
+first test ran before `gitleaks` was installed locally, so the hook warned
+and let the fake-secret commit through — `git reset --hard HEAD~1` cleaned it
+up fine since it only touches history the hook itself already let land, not
+anything the hook is supposed to catch. That's expected, not a bug: the hook
+protects against secrets slipping in on a machine where it *is* set up, not
+against the gap before it is.
