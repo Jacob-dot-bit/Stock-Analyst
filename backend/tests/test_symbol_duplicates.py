@@ -13,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base
 from app.models import DiscoveryCandidate, Instrument, Position, ScreenerCandidate, WatchlistItem
 from app.providers.openfigi import FIGI_LOOKUP_FAILED, FigiMatch
-from app.symbols.duplicates import backfill_figis, find_figi_duplicates
+from app.symbols.duplicates import backfill_figis, backfill_isins, check_for_duplicate, find_figi_duplicates
 
 
 @pytest.fixture
@@ -187,3 +187,66 @@ class TestFindFigiDuplicates:
         db.commit()
 
         assert find_figi_duplicates(db) == []
+
+class _FakeFmp:
+    """Minimal `FmpProvider` stand-in for the ISIN-fallback tests."""
+
+    def __init__(self, isin: str | None):
+        self._isin = isin
+
+    def can_serve(self, ref) -> bool:
+        return True
+
+    def fetch_profile(self, ref) -> dict[str, str | None]:
+        return {"sector": "Technology", "industry": None, "country": "US", "isin": self._isin}
+
+
+class TestIsinFallbackToFmp:
+    """Wikidata (keyless, name-based) has no ISIN claim for many US small-caps
+    — Applied Digital is the live case. ISIN resolution must fall back to
+    FMP's /profile instead of leaving `isin` null."""
+
+    def test_backfill_isins_uses_fmp_when_wikidata_has_nothing(self, db, monkeypatch):
+        held = _instrument(db, "APLD.US", name="Applied Digital", provider_symbol="APLD")
+        db.add(Position(instrument_id=held.id, source="MANUAL", quantity=1, avg_price=1.0))
+        db.commit()
+
+        monkeypatch.setattr("app.symbols.duplicates.resolve_isin", lambda name, *a, **k: None)
+        monkeypatch.setattr("app.symbols.duplicates._get_fmp", lambda: _FakeFmp("US0381692070"))
+
+        result = backfill_isins(db)
+
+        assert result == {"checked": 1, "updated": 1}
+        db.refresh(held)
+        assert held.isin == "US0381692070"
+
+    def test_check_for_duplicate_uses_fmp_when_wikidata_has_nothing(self, db, monkeypatch):
+        watched = _instrument(db, "APLD.US", provider_symbol="APLD")
+        db.add(WatchlistItem(instrument_id=watched.id))
+        db.commit()
+
+        monkeypatch.setattr("app.symbols.duplicates.resolve_isin", lambda name, *a, **k: None)
+        monkeypatch.setattr("app.symbols.duplicates._get_fmp", lambda: _FakeFmp("US0381692070"))
+
+        warning = check_for_duplicate(db, watched, "Applied Digital")
+
+        assert warning is None  # no pre-existing duplicate
+        db.refresh(watched)
+        assert watched.name == "Applied Digital"  # company_name stored
+        assert watched.isin == "US0381692070"
+
+    def test_no_fmp_key_degrades_to_wikidata_only(self, db, monkeypatch):
+        """Without an FMP key the fallback is a no-op — same behavior as
+        before the fallback existed, not a crash."""
+        held = _instrument(db, "APLD.US", name="Applied Digital", provider_symbol="APLD")
+        db.add(Position(instrument_id=held.id, source="MANUAL", quantity=1, avg_price=1.0))
+        db.commit()
+
+        monkeypatch.setattr("app.symbols.duplicates.resolve_isin", lambda name, *a, **k: None)
+        monkeypatch.setattr("app.symbols.duplicates._get_fmp", lambda: None)
+
+        result = backfill_isins(db)
+
+        assert result == {"checked": 1, "updated": 0}
+        db.refresh(held)
+        assert held.isin is None

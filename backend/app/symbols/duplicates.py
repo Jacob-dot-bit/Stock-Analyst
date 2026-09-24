@@ -21,12 +21,55 @@ from sqlalchemy.orm import Session
 
 from app.models import DiscoveryCandidate, Instrument, Position, ScreenerCandidate, WatchlistItem
 from app.providers.openfigi import FIGI_LOOKUP_FAILED, FigiJob, map_instruments
+from app.providers.base import InstrumentRef, ProviderError
+from app.config import get_settings
+from app.providers.fmp import FmpProvider
 from app.providers.wikidata import resolve_isin
 
 #: Same constant discovery/service.py's own BATCH_SIZE uses — one click's
 #: worth of sequential provider calls, "click again to continue" rather
 #: than a background job. See DEVLOG "Decision 3u.76".
 FIGI_BATCH_SIZE = 20
+
+
+def _get_fmp() -> FmpProvider | None:
+    """A keyed FMP provider, or ``None`` when no key is configured.
+
+    Built fresh from settings rather than pulled off the shared price chain:
+    the chain drags in every provider (and their transitive deps) just to
+    read one ISIN, and this is a rare one-off lookup where a fresh throttle
+    is harmless. Same pattern as `enrich_sectors` in portfolio.py.
+    """
+    api_key = get_settings().fmp_api_key
+    return FmpProvider(api_key=api_key) if api_key else None
+
+
+def _isin_via_fmp(instrument: Instrument, fmp: FmpProvider | None) -> str | None:
+    """ISIN from FMP's ``/profile`` — the keyed, symbol-based second source.
+
+    Wikidata (keyless, name-based) has no ISIN claim for plenty of US
+    small-caps — e.g. Applied Digital, renamed from Applied Blockchain in
+    2022, absent from Wikidata's P946. FMP's free tier is US-only, which is
+    exactly the slice that gap lives in, so this covers it. Never raises: an
+    unkeyed/unavailable FMP, a non-US listing, or an HTTP error all come back
+    as ``None`` — same "no data, not a guess" contract as Wikidata.
+    """
+    if fmp is None or not instrument.provider_symbol:
+        return None
+    ref = InstrumentRef(
+        provider_symbol=instrument.provider_symbol,
+        isin=instrument.isin,
+        broker_symbol=instrument.broker_symbol,
+        name=instrument.name,
+        category=instrument.category,
+    )
+    if not fmp.can_serve(ref):
+        return None
+    try:
+        profile = fmp.fetch_profile(ref)
+    except ProviderError:
+        return None
+    return profile.get("isin") if profile else None
 
 
 def check_for_duplicate(db: Session, instrument: Instrument, company_name: str | None) -> str | None:
@@ -52,7 +95,7 @@ def check_for_duplicate(db: Session, instrument: Instrument, company_name: str |
         instrument.name = company_name
         db.commit()
 
-    isin = resolve_isin(company_name)
+    isin = resolve_isin(company_name) or _isin_via_fmp(instrument, _get_fmp())
     if not isin:
         return None
 
@@ -96,9 +139,10 @@ def backfill_isins(db: Session) -> dict[str, int]:
     )
     candidates = list(db.execute(query).scalars())
 
+    fmp = _get_fmp()
     updated = 0
     for instrument in candidates:
-        isin = resolve_isin(instrument.name)
+        isin = resolve_isin(instrument.name) or _isin_via_fmp(instrument, fmp)
         if isin:
             instrument.isin = isin
             updated += 1

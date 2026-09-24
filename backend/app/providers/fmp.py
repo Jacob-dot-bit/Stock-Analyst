@@ -289,6 +289,7 @@ class FmpProvider(PriceProvider):
             "sector": row.get("sector") or None,
             "industry": row.get("industry") or None,
             "country": row.get("country") or None,
+            "isin": row.get("isin") or None,
         }
 
     def search_by_name(self, query: str, limit: int = 8) -> list[dict[str, str]]:
