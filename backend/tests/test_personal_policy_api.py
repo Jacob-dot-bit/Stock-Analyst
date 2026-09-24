@@ -9,7 +9,7 @@ own configured limit, never a suggestion. See DEVLOG "Decision 3u.59".
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -183,7 +183,7 @@ class TestPolicyGaps:
         assert gaps[0]["gap_pct"] == 15.0
 
     def test_currency_range_breach_under(self, client):
-        _seed([FxRate(currency="USD", base_currency="EUR", rate_date=date.today(), rate=1.0)])
+        _seed([FxRate(currency="USD", base_currency="EUR", rate_date=datetime.now(UTC).date(), rate=1.0)])
         held_instrument("AAA.FR", currency="EUR", quantity=10, price=100.0)
         held_instrument("BBB.US", currency="USD", quantity=10, price=100.0)
         # USD is 1000 / 2000 = 50% here; ask for a 60-80% range → "under".
