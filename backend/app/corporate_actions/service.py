@@ -963,7 +963,7 @@ def detect_splits(db: Session, instrument_ids: list[int] | None = None, force: b
                 events = provider.fetch_splits(
                     ref,
                     date(1970, 1, 1),
-                    date.today(),
+                    datetime.now(UTC).date(),
                     on_attempt=lambda name: record_usage(db, name),
                     on_bytes=lambda name, n: record_bytes(db, name, n),
                 )
@@ -1179,7 +1179,7 @@ def detect_one(db: Session, instrument_id: int, provider_name: str) -> DetectOne
         events = provider.fetch_splits(
             ref,
             date(1970, 1, 1),
-            date.today(),
+            datetime.now(UTC).date(),
             on_attempt=lambda name: record_usage(db, name),
             on_bytes=lambda name, n: record_bytes(db, name, n),
         )

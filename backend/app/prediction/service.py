@@ -123,7 +123,7 @@ def backfill_history(db: Session, chain: ProviderChain, years: int = BACKFILL_YE
             report=None,
         )
 
-        today = date.today()
+        today = datetime.now(UTC).date()
         start = today - timedelta(days=years * 365)
         report = BackfillReport()
 

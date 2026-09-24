@@ -10,7 +10,7 @@ held instruments. Every read here anti-joins against both `Position` and
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
@@ -190,7 +190,7 @@ def get_screener_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
 def get_screener_sparklines(db: Session = Depends(get_db)) -> list[SparklineOut]:
     """Same shape as `GET /api/watchlist/sparklines`, joined against
     `ScreenerCandidate` instead."""
-    since = date.today() - timedelta(days=90)
+    since = datetime.now(UTC).date() - timedelta(days=90)
 
     rows = db.execute(
         select(PriceBar.instrument_id, PriceBar.bar_date, PriceBar.close)

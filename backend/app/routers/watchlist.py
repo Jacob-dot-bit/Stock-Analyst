@@ -11,7 +11,7 @@ reappear if it's ever fully sold again).
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
@@ -246,7 +246,7 @@ def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignal
 def get_watchlist_sparklines(db: Session = Depends(get_db)) -> list[SparklineOut]:
     """Same shape as `GET /api/prices/sparklines`, joined against
     `WatchlistItem` instead of `Position`."""
-    since = date.today() - timedelta(days=90)
+    since = datetime.now(UTC).date() - timedelta(days=90)
 
     rows = db.execute(
         select(PriceBar.instrument_id, PriceBar.bar_date, PriceBar.close)

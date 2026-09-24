@@ -936,7 +936,7 @@ def get_risk_drawdown(db: Session = Depends(get_db)) -> DrawdownOut:
     "Decision 3u.67".
     """
     settings = get_settings()
-    result = compute_value_history(db, settings.base_currency, date.today())
+    result = compute_value_history(db, settings.base_currency, datetime.now(UTC).date())
     dd = compute_max_drawdown(result.points)
     return DrawdownOut(
         insufficient_history=dd.insufficient_history,
@@ -1326,7 +1326,7 @@ def get_value_history(db: Session = Depends(get_db)) -> ValueHistoryOut:
     missing data.
     """
     settings = get_settings()
-    result = compute_value_history(db, settings.base_currency, date.today())
+    result = compute_value_history(db, settings.base_currency, datetime.now(UTC).date())
     return ValueHistoryOut(
         points=[
             ValueHistoryPointOut(

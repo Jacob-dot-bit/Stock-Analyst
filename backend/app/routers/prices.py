@@ -196,7 +196,7 @@ def get_sparklines(
     One request rather than one per row: the payload is closes only, and the table
     needs all of them at once to draw its sparklines.
     """
-    since = date.today() - timedelta(days=days)
+    since = datetime.now(UTC).date() - timedelta(days=days)
 
     rows = db.execute(
         select(PriceBar.instrument_id, PriceBar.bar_date, PriceBar.close)
@@ -235,7 +235,7 @@ def get_history(
     if instrument is None:
         raise HTTPException(status_code=404, detail="Instrument not found.")
 
-    since = date.today() - timedelta(days=days)
+    since = datetime.now(UTC).date() - timedelta(days=days)
     bars = list(
         db.execute(
             select(PriceBar)
