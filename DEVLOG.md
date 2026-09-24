@@ -8146,12 +8146,11 @@ remain named, scoped follow-ups, not started.
 
 The whole project (repo incl. `.git`, `data/stock_analyst.db`, both
 `.env` files) moved from this Kali laptop to a dedicated always-on
-host — done as part of a broader move of the Hermes gateway to the same
-host, since the `*/15 * * * * export_for_hermes.py` cron (Hermes'
-`portfolio-analyst` skill's only data source) couples the two projects:
+host — done as part of a broader move of the automation gateway to the same
+host, since the `*/15 * * * * export_portfolio.py` cron (the analysis agent's only data source) couples the two projects:
 without this app's backend answering on `127.0.0.1:8000`, that skill has
 nothing to read. `Stock-Analyst`'s own git remote — `github.com/Jacob-dot-bit/Stock-Analyst`,
-public, unlike Hermes' own repo — was already current, so no separate
+public, unlike the gateway's own repo — was already current, so no separate
 transfer step was needed for the code itself beyond a
 `git clone` on the new host — the manual copy this session actually did
 (`rsync`, since a stale local commit was still possible) doubled as the
@@ -8182,7 +8181,7 @@ units (`stock-analyst-backend.service`, `stock-analyst-frontend.service`,
 kernel-update reboot of the host: both came back on their own, and the
 export log kept writing successful entries straight through it with no
 manual intervention. Unit definitions and the exact setup steps live in
-the Hermes repo's `MIGRATION.md` (this project's own repo doesn't carry
+the gateway repo's `MIGRATION.md` (this project's own repo doesn't carry
 host-provisioning concerns), since the same steps apply regardless of
 which project's servers are being made persistent on that host.
 
@@ -8191,7 +8190,7 @@ loopback-only default (`VITE_DEV_HOST_ALL`) still applies unchanged on
 the new host — the frontend service sets that env var explicitly (needed
 here since the new host has no display of its own, browsed to only from
 another machine), the backend stays on `127.0.0.1` exactly as documented
-in `scripts/export_for_hermes.py`'s own module docstring.
+in `scripts/export_portfolio.py`'s own module docstring.
 
 ## Step 3u.62 — Discovery verdict filter, alongside the existing price filter (2026-09-15)
 
@@ -8319,7 +8318,7 @@ No backend change means no new tests needed beyond the existing coverage
 minimum-history-length, and the "not a recommendation" disclaimer rework
 — unchanged from 3u.63's list.
 
-## Decision 3u.65 — Personal Policy exported to Hermes, closing the AI-piloting gap found by asking the question directly (2026-09-16)
+## Decision 3u.65 — Personal Policy exported to the analysis agent, closing the AI-piloting gap found by asking the question directly (2026-09-16)
 
 User asked, exploratory: "un investisseur qui voudrait être piloté par
 IA, il aurait besoin de quoi sur notre site ?" Answered without building
@@ -8334,20 +8333,20 @@ engine that would contradict this app's whole "never tell the user what
 to do" posture everywhere except Discovery's narrow, disclosed exception.
 User agreed to pursue this direction.
 
-**Found by re-reading `scripts/export_for_hermes.py` (Decision 3u.61-era,
-commit `c08d67c5`) before writing anything**: the Hermes export already
+**Found by re-reading `scripts/export_portfolio.py` (Decision 3u.61-era,
+commit `c08d67c5`) before writing anything**: the export already
 exists and already bundles portfolio/breakdown/allocation/attention/
 data-health/lots/dividends/tax — a real, working "agent-facing snapshot"
 that answers half of what was just discussed. But it never included
 Personal Policy or its gaps — the one piece that would let an agent
 reason about the investor's *own* constraints rather than just seeing
 raw numbers. Also found: that feature's own introducing commit
-(`49d1df3`) claimed to add docs for both tax prep *and* Hermes export in
+(`49d1df3`) claimed to add docs for both tax prep *and* the export in
 its message, but its actual diff only ever documented tax prep — the
-Hermes export has had zero DEVLOG/ARCHITECTURE.md coverage since it
+export has had zero DEVLOG/ARCHITECTURE.md coverage since it
 shipped. Both gaps closed together.
 
-**Change**: `export_for_hermes.py` gains three more `_get()` calls —
+**Change**: `export_portfolio.py` gains three more `_get()` calls —
 `personal_policy`, `personal_policy_limits` (every configured limit,
 satisfied or not — deliberately not just `/policy/gaps`'s breaches-only
 view, since an agent needs to know "within bounds" is different from "no
@@ -8361,15 +8360,15 @@ endpoints return real data (a configured policy, 4 real limits, 2 real
 breaches). No new data-sensitivity concern — the export already carries
 every position's real broker symbol via the existing `portfolio` field;
 this only repeats the same already-flowing identifiers in a new field,
-into the same already-authorized destination (Hermes' own read-only
-bind mount, requested by the user in Decision-adjacent Hermes work,
+into the same already-authorized destination (the agent's own read-only
+bind mount, requested by the user in Decision-adjacent work,
 never a public or shared surface).
 
 **Not built, explicitly out of scope per the user's own agreed
 direction**: any execution/trading capability, any endpoint that lets
-Hermes *write* to this app rather than only read, and any new
+an agent *write* to this app rather than only read, and any new
 independent "recommendation" surface for an agent to consume beyond
-what Discovery already discloses. If Hermes needs to act, it acts inside
+what Discovery already discloses. If an agent needs to act, it acts inside
 the investor's own Personal Policy — this app stays read-only and
 descriptive, same posture as everywhere else.
 
@@ -8526,7 +8525,7 @@ real, previously-invisible fact about this portfolio's actual volatility
 history, now visible for the first time anywhere in the app.
 
 **Deliberately not built**: nothing execution-related, nothing that lets
-Hermes or any agent *write* to this app — read-only and descriptive, same
+any agent *write* to this app — read-only and descriptive, same
 posture as everywhere else (Decision 3u.65's own closing line). Line-item
 color-coded "risk tiers" were considered and rejected for
 `PositionConcentration` — a color implies a verdict this page explicitly
@@ -9249,19 +9248,19 @@ scrolling (confirmed pre-existing, not a CSS regression, by cross-
 checking `get_page_text`/computed styles matched the real DOM). `tsc
 -b`/`oxlint` clean at every step; i18n parity re-confirmed at 857 keys.
 
-## Decision 3u.78 — gitleaks pre-commit hook, after giving the Hermes agent read-write access to backend/ and frontend/ (2026-09-24)
+## Decision 3u.78 — gitleaks pre-commit hook, after giving the automation agent read-write access to backend/ and frontend/ (2026-09-24)
 
-The Hermes agent's sandbox (a separate, internet-connected Docker container on
-hermes-host, used for code review/fixes on this project) got `backend/` and
+The automation agent's sandbox (a separate, internet-connected Docker container on
+a dedicated host, used for code review/fixes on this project) got `backend/` and
 `frontend/` bind-mounted read-write so it could work on real ISIN/ticker
 reliability fixes without a copy-paste round trip. A bind mount means its
 edits land directly in this working tree — there is no staging area between
-"Hermes wrote a file" and "it's sitting in `git status`" — so the actual
+"the agent wrote a file" and "it's sitting in `git status`" — so the actual
 checkpoint against an accidentally-committed secret is at commit time, not a
 review step beforehand. `.env`, `data/`, `backups/`, `Extractions/` are not
 mounted (real API keys and real financial data — none of it reachable from
 the sandbox), but that only covers what's excluded by construction, not a new
-file Hermes might create inside `backend/`/`frontend/` themselves.
+file the agent might create inside `backend/`/`frontend/` themselves.
 
 Added `.githooks/pre-commit` (a tracked hook, not the untracked default
 `.git/hooks/`, so every clone gets the same one — enable with `git config
@@ -9281,7 +9280,7 @@ true; the hook's job is keeping it that way going forward.
 Deliberately fails *open*, not closed: if `gitleaks` isn't on `PATH`, the
 hook prints a warning and lets the commit through rather than blocking every
 commit on a machine where it isn't installed yet. Verified both directions
-for real (not just read) on both machines this project runs on — hermes-host
+for real (not just read) on both machines this project runs on — a dedicated host
 and the local dev machine — with an actual fake secret (a Stripe-shaped
 token), not a synthetic test string, staged and committed for real each time.
 

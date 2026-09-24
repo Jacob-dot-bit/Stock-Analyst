@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the full portfolio state for the "portfolio-analyst" Hermes skill.
+"""Export the full portfolio state as a single JSON snapshot.
 
 Calls the backend's own already-correct endpoints (not raw SQL against
 stock_analyst.db) so this export's numbers never drift from what the app itself
@@ -8,12 +8,15 @@ computes and shows — no valuation logic is reimplemented here.
 Requires the backend running locally: `uvicorn app.main:app` (or however you
 normally start it) on http://127.0.0.1:8000. The backend's own middleware only
 accepts loopback connections (see app/main.py), so this must run on the host —
-never from inside a container, which is exactly why Hermes can't call the API
-directly and instead reads the JSON file this script produces.
+not from inside a container.
 
-Usage: python3 scripts/export_for_hermes.py
+Output path: override with the `PORTFOLIO_EXPORT_PATH` environment variable
+(default `~/portfolio_export.json`).
+
+Usage: python3 scripts/export_portfolio.py
 """
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -22,12 +25,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 BASE_URL = "http://127.0.0.1:8000"
-# Deliberately NOT under ~/.hermes: that tree gets reset to owner-only permissions
-# by the Hermes container's own init on every (re)start, which broke group-shared
-# access repeatedly. This directory is bind-mounted separately (read-only, see
-# docker run's -v ~/Hermes/portfolio-data:/opt/portfolio-data:ro) so it's never
-# touched by that reset and never needs special permissions at all.
-OUT_PATH = Path.home() / "Hermes" / "portfolio-data" / "portfolio_export.json"
+OUT_PATH = Path(os.environ.get("PORTFOLIO_EXPORT_PATH", Path.home() / "portfolio_export.json"))
 BREAKDOWN_DIMENSIONS = ("category", "currency", "country", "sector")
 
 
@@ -39,14 +37,14 @@ def _get(path: str, params: dict | None = None):
         with urllib.request.urlopen(url, timeout=15) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.URLError as e:
-        print(f"export_for_hermes: FAILED {path}: {e}", file=sys.stderr)
+        print(f"export_portfolio: FAILED {path}: {e}", file=sys.stderr)
         return None
 
 
 def main() -> None:
     portfolio = _get("/api/portfolio")
     if portfolio is None:
-        print(f"export_for_hermes: backend unreachable at {BASE_URL} — is it running? Aborting.",
+        print(f"export_portfolio: backend unreachable at {BASE_URL} — is it running? Aborting.",
               file=sys.stderr)
         sys.exit(1)
 
@@ -81,7 +79,7 @@ def main() -> None:
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
-    print(f"export_for_hermes: wrote {OUT_PATH} ({OUT_PATH.stat().st_size} bytes)")
+    print(f"export_portfolio: wrote {OUT_PATH} ({OUT_PATH.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":

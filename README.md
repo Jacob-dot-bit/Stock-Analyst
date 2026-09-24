@@ -103,6 +103,13 @@ cleanly rather than failing startup.
 | `FMP_API_KEY` | Optional third US price source (250 req/day). Does **not** cover Euronext on the free tier | free |
 | `SEC_USER_AGENT` | Official US fundamentals via SEC EDGAR. Format `First Last email@example.com` — the SEC rejects anonymous requests | free |
 | `ALPHA_VANTAGE_API_KEY` | Fallback prices, plus per-instrument news + sentiment (the "Insights" row expander) | free |
+| `POLYGON_API_KEY` | US price + history source in the fallback chain | free |
+| `TIINGO_API_KEY` | US price source in the fallback chain | free |
+| `BARCHART_API_KEY` | Price source in the fallback chain | free |
+| `INTRINIO_API_KEY` | Price source in the fallback chain | free |
+| `EODHD_API_KEY` | End-of-day historical prices | free |
+| `MARKETSTACK_API_KEY` | End-of-day US prices — thin free tier (100 req/month), end of the fallback chain | free |
+| `OPENFIGI_API_KEY` | Instrument identity (ISIN/FIGI). Works unauthenticated; a key only raises the rate ceiling | free |
 | `PERPLEXITY_API_KEY` | Per-instrument AI qualitative commentary, on request — see "Insights" | **paid** |
 
 ### Tests

@@ -37,15 +37,14 @@ from app.routers import (
 #: network address: it can never appear on a real socket, only inside the test suite.
 LOOPBACK_CLIENTS = {"127.0.0.1", "::1", "testclient"}
 
-#: Narrow, single-route exception to loopback-only: the Hermes agent's sandbox
+#: Narrow, single-route exception to loopback-only: an external automation
 #: container triggers a price refresh over the docker bridge network (it cannot
 #: reach 127.0.0.1 of the host — separate network namespace). Scoped to exactly
 #: `POST /api/prices/refresh` in `loopback_only` below — every other endpoint
 #: (holdings, API keys, transactions, ...) stays loopback-only, unauthenticated,
 #: as designed (see DEVLOG "Decision 3k.1"). Also gated at the network layer:
-#: ufw only opens :8000 to this subnet while the Hermes sandbox is in
-#: "permissive" egress mode (see Hermes' set_sandbox_egress.py) — in "strict"
-#: mode the request never reaches this process at all.
+#: the firewall only opens :8000 to this subnet while that container's outbound
+#: egress is enabled — otherwise the request never reaches this process at all.
 DOCKER_BRIDGE_SUBNET = ipaddress.ip_network("172.17.0.0/16")
 
 

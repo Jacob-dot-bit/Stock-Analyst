@@ -683,12 +683,12 @@ compression. `.env`/API keys are never touched, by construction — only the
 `.db` file is ever read or written. The 10 most recent backups are kept;
 older ones are pruned on each new backup.
 
-**Hermes export (`backend/scripts/export_for_hermes.py`).** Read-only
-integration for Hermes, a separate personal AI agent running on the same
+**Portfolio export (`backend/scripts/export_portfolio.py`).** Read-only
+integration for a separate personal analysis agent running on the same
 host: a `*/15 * * * *` cron on the host calls every relevant existing
 endpoint (never raw SQL — the export's numbers can never drift from what
 the app itself shows) and writes one consolidated JSON snapshot to
-`~/Hermes/portfolio-data/portfolio_export.json`, which Hermes' own
+`~/portfolio_export.json` (or `PORTFOLIO_EXPORT_PATH`), which the agent's own
 container reads via a read-only bind mount. Runs on the host, never
 inside a container: the backend's own middleware only accepts loopback
 connections (`app/main.py`), so a containerized caller could never reach
@@ -705,7 +705,7 @@ full configured set (satisfied or not), deliberately not just
 `/policy/gaps`'s breaches-only view, since "within bounds" and "no rule
 configured" need to read differently to a consumer that never sees the
 UI. This app has, and is intended to have, no trade-execution
-capability — Hermes reads facts; nothing here ever writes back.
+capability — the agent reads facts; nothing here ever writes back.
 
 Restore refuses a schema-version mismatch rather than attempting to
 reconcile one: `alembic_version` is compared byte-for-byte between the
