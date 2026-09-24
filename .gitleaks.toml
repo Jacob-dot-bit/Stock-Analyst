@@ -1,0 +1,14 @@
+title = "Stock Analyst gitleaks config"
+
+# Keep gitleaks' full default ruleset (AWS keys, generic high-entropy secrets,
+# provider-specific patterns, ...) and only add project-specific exceptions
+# below rather than redefining rules from scratch.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe: placeholder key names / fake test fixtures, no real values"
+paths = [
+  '''\.env\.example$''',
+  '''backend/tests/.*''',
+]

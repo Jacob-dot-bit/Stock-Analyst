@@ -1,0 +1,25 @@
+#!/bin/sh
+# Blocks a commit if gitleaks finds a secret in the staged diff.
+#
+# Added 2026-09-25 after giving the Hermes agent's sandbox read-write access
+# to backend/ and frontend/ (see TROUBLESHOOTING.md in the Hermes repo, §9):
+# Hermes edits land directly in this working tree (bind mount, not a copy),
+# so whatever it writes is only caught here, at commit time, not before.
+#
+# Enable with: git config core.hooksPath .githooks   (per clone — see README)
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: gitleaks not installed, skipping secret scan (see README)" >&2
+    exit 0
+fi
+
+gitleaks protect --staged --redact --config "$(git rev-parse --show-toplevel)/.gitleaks.toml" -v
+status=$?
+
+if [ "$status" -ne 0 ]; then
+    echo >&2
+    echo "pre-commit: gitleaks found a likely secret in the staged changes — commit blocked." >&2
+    echo "Fix the finding, or if it's a false positive, add an allowlist rule to .gitleaks.toml." >&2
+fi
+
+exit $status
