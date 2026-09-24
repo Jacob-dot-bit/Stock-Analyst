@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -35,6 +36,17 @@ from app.routers import (
 #: Starlette's TestClient convention for its in-process ASGI transport, not a spoofable
 #: network address: it can never appear on a real socket, only inside the test suite.
 LOOPBACK_CLIENTS = {"127.0.0.1", "::1", "testclient"}
+
+#: Narrow, single-route exception to loopback-only: the Hermes agent's sandbox
+#: container triggers a price refresh over the docker bridge network (it cannot
+#: reach 127.0.0.1 of the host — separate network namespace). Scoped to exactly
+#: `POST /api/prices/refresh` in `loopback_only` below — every other endpoint
+#: (holdings, API keys, transactions, ...) stays loopback-only, unauthenticated,
+#: as designed (see DEVLOG "Decision 3k.1"). Also gated at the network layer:
+#: ufw only opens :8000 to this subnet while the Hermes sandbox is in
+#: "permissive" egress mode (see Hermes' set_sandbox_egress.py) — in "strict"
+#: mode the request never reaches this process at all.
+DOCKER_BRIDGE_SUBNET = ipaddress.ip_network("172.17.0.0/16")
 
 
 @asynccontextmanager
@@ -78,9 +90,16 @@ async def loopback_only(request: Request, call_next):
     API-key endpoints, unauthenticated, to the whole network. See DEVLOG "Decision 3k.1".
     """
     client_host = request.client.host if request.client else None
-    if client_host not in LOOPBACK_CLIENTS:
-        return JSONResponse({"detail": "This API only accepts local connections."}, status_code=403)
-    return await call_next(request)
+    if client_host in LOOPBACK_CLIENTS:
+        return await call_next(request)
+    if client_host and request.url.path == "/api/prices/refresh" and request.method == "POST":
+        try:
+            from_bridge = ipaddress.ip_address(client_host) in DOCKER_BRIDGE_SUBNET
+        except ValueError:
+            from_bridge = False
+        if from_bridge:
+            return await call_next(request)
+    return JSONResponse({"detail": "This API only accepts local connections."}, status_code=403)
 
 app.include_router(portfolio.router)
 app.include_router(imports.router)
