@@ -12,7 +12,7 @@ from app.db import Base
 from app.messages import PriceOutcome
 from app.models import Instrument, MappingStatus, PriceBar
 from app.prices.service import refresh_instrument, refresh_many
-from app.providers.base import Bar, ProviderChain, RateLimited, SymbolNotFound
+from app.providers.base import Bar, ProviderChain, ProviderUnavailable, RateLimited, SymbolNotFound
 from tests.test_providers import FakeProvider
 
 
@@ -103,7 +103,19 @@ class TestRefreshInstrument:
 
         assert outcome.code == PriceOutcome.SYMBOL_NOT_FOUND
         assert instrument.verified_at is None
+        assert instrument.prices_checked_at is not None
         assert instrument.mapping_status == MappingStatus.RESOLVED
+
+    def test_transient_failure_is_not_marked_checked(self, db):
+        """A network outage is retried on the next click, not masked as 'already
+        fresh' for the rest of the day — unlike a permanent wrong-symbol failure."""
+        instrument = make_instrument(db)
+        chain = ProviderChain([FakeProvider("yahoo", error=ProviderUnavailable("no route to host"))])
+
+        outcome = refresh_instrument(db, instrument, chain)
+
+        assert outcome.code == PriceOutcome.FAILED
+        assert instrument.prices_checked_at is None
 
     def test_unmapped_instrument_is_not_fetched(self, db):
         instrument = make_instrument(db, "US500", None, MappingStatus.UNRESOLVED)

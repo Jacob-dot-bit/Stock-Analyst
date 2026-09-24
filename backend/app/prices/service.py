@@ -285,13 +285,18 @@ def refresh_instrument(
             # instrument must be retried on the next run rather than skipped for a day.
             return Message(PriceOutcome.RATE_LIMITED, {"symbol": symbol, "provider": provider})
 
-        # A wrong symbol or an excluded market will not change before tomorrow, so
-        # record the attempt and stop asking for the rest of the day.
-        instrument.prices_checked_at = datetime.now(UTC)
         reason = result.attempts[-1].reason if result.attempts else None
+
+        # Only *permanent* failures are marked checked (skipped for the rest of the
+        # day): a wrong symbol or an excluded market will not change before tomorrow.
+        # Transient failures — a network outage, a provider hiccup — are left unchecked
+        # so the next refresh click retries them instead of hiding them behind an
+        # "already fresh" label for the rest of the day.
         if reason == "plan_limited":
+            instrument.prices_checked_at = datetime.now(UTC)
             return Message(PriceOutcome.PLAN_LIMITED, {"symbol": symbol, "provider": provider})
         if reason == "symbol_not_found":
+            instrument.prices_checked_at = datetime.now(UTC)
             return Message(PriceOutcome.SYMBOL_NOT_FOUND, {"symbol": symbol, "provider": provider})
         return Message(PriceOutcome.FAILED, {"symbol": symbol, "provider": provider})
 
