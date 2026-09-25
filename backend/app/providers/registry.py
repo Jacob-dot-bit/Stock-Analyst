@@ -72,39 +72,44 @@ def get_provider_chain() -> ProviderChain:
 
     return ProviderChain(
         providers=[
-            # 1. Free, worldwide, rate-limits hard but is the most reliable
-            YahooProvider(min_interval_seconds=settings.yahoo_min_interval_seconds),
-            # 2. US backstop for when Yahoo throttles — same coverage as Polygon
-            # (below) for this portfolio, but 8s/request against an 800/day quota
-            # vs Polygon's 12s against 5/minute: tried first so the common case
-            # (Yahoo cooling down, most holdings falling back) serialises through
-            # the faster, more generous of the two. See DEVLOG "Decision 3n.2".
+            # 1. Primary US source: 8s/request against an 800/day free-tier
+            # quota, tried before Polygon's 12s against 5/minute so the common
+            # case serialises through the faster, more generous of the two.
+            # See DEVLOG "Decision 3n.2".
             TwelveDataProvider(api_key=settings.twelvedata_api_key),
-            # 3. US + crypto, good alternative when Twelve Data is unavailable too
+            # 2. US + crypto, good alternative when Twelve Data is unavailable
             PolygonProvider(api_key=settings.polygon_api_key),
-            # 4. Worldwide coverage, slower tier than Polygon
+            # 3. Worldwide coverage, slower tier than Polygon
             AlphaVantageProvider(api_key=settings.alpha_vantage_api_key),
-            # 5. Euronext Paris (no key), before other European sources
+            # 4. Euronext Paris (no key), before other European sources
             BoursoramaProvider(),
-            # 6. European shares via Frankfurt (ISIN-based, no key)
+            # 5. European shares via Frankfurt (ISIN-based, no key)
             FrankfurtProvider(),
-            # 7. FMP fallback (Euronext coverage on free tier verified)
+            # 6. FMP fallback (Euronext coverage on free tier verified)
             FmpProvider(api_key=settings.fmp_api_key),
-            # 8. Quote-only (see providers/tiingo.py): free-tier historical
+            # 7. Quote-only (see providers/tiingo.py): free-tier historical
             # ranges were deprecated by Tiingo, so this contributes nothing to
             # fetch_daily and only serves fetch_quote (live-estimate refresh)
             TiingoProvider(api_key=settings.tiingo_api_key),
-            # 9. Worldwide, 400 req/day free tier
+            # 8. Worldwide, 400 req/day free tier
             BarchartProvider(api_key=settings.barchart_api_key),
-            # 10. US + Canada, 500 req/day free tier
+            # 9. US + Canada, 500 req/day free tier
             IntrinionProvider(api_key=settings.intrinio_api_key),
-            # 11. 150+ global bourses, 20 req/day free tier
+            # 10. 150+ global bourses, 20 req/day free tier
             EodhidProvider(api_key=settings.eodhd_api_key),
-            # 12. Stocks/crypto/forex, no key needed
+            # 11. Stocks/crypto/forex, no key needed
             EoddataProvider(),
-            # 13. Real API but a thin 100 req/month free tier — last of the
+            # 12. Real API but a thin 100 req/month free tier — last of the
             # keyed sources so it is only spent on what nothing else covered
             MarketstackProvider(api_key=settings.marketstack_api_key),
+            # 13. Worldwide keyless API, demoted from #1: it rate-limits by IP
+            # hard enough that a full refresh earns a 429 after the first few
+            # symbols (see providers/yahoo.py), so it only wasted every
+            # refresh's opening calls while Twelve Data carried the load.
+            # Kept as a worldwide last-ditch source ahead of Finviz's US-only
+            # scraping, in case the keyed chain is exhausted and the IP has
+            # cooled off.
+            YahooProvider(min_interval_seconds=settings.yahoo_min_interval_seconds),
             # 14. Last resort: US stocks via web scraping (fragile)
             FinvizProvider(),
         ],
