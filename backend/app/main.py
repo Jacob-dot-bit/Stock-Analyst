@@ -37,15 +37,24 @@ from app.routers import (
 #: network address: it can never appear on a real socket, only inside the test suite.
 LOOPBACK_CLIENTS = {"127.0.0.1", "::1", "testclient"}
 
-#: Narrow, single-route exception to loopback-only: an external automation
-#: container triggers a price refresh over the docker bridge network (it cannot
-#: reach 127.0.0.1 of the host — separate network namespace). Scoped to exactly
-#: `POST /api/prices/refresh` in `loopback_only` below — every other endpoint
-#: (holdings, API keys, transactions, ...) stays loopback-only, unauthenticated,
-#: as designed (see DEVLOG "Decision 3k.1"). Also gated at the network layer:
-#: the firewall only opens :8000 to this subnet while that container's outbound
-#: egress is enabled — otherwise the request never reaches this process at all.
+#: Narrow, per-route exceptions to loopback-only: an external automation
+#: container reaches these over the docker bridge network (it cannot reach
+#: 127.0.0.1 of the host — separate network namespace). Every other endpoint
+#: (holdings, transactions, API-key *values*, ...) stays loopback-only,
+#: unauthenticated, as designed (see DEVLOG "Decision 3k.1"). Each entry here
+#: must be picked deliberately — never add a route whose response could leak
+#: a secret or let that container mutate state beyond what it's meant to.
+#: Also gated at the network layer: the firewall only opens :8000 to this
+#: subnet while that container's outbound egress is enabled — otherwise the
+#: request never reaches this process at all.
 DOCKER_BRIDGE_SUBNET = ipaddress.ip_network("172.17.0.0/16")
+DOCKER_BRIDGE_ROUTE_EXCEPTIONS = frozenset({
+    ("POST", "/api/prices/refresh"),
+    # Booleans only ("configured: true/false" per provider) — never the key
+    # values themselves. The PUT at this same path (sets real key values) is
+    # deliberately NOT in this set.
+    ("GET", "/api/settings/api-keys"),
+})
 
 
 @asynccontextmanager
@@ -91,7 +100,7 @@ async def loopback_only(request: Request, call_next):
     client_host = request.client.host if request.client else None
     if client_host in LOOPBACK_CLIENTS:
         return await call_next(request)
-    if client_host and request.url.path == "/api/prices/refresh" and request.method == "POST":
+    if client_host and (request.method, request.url.path) in DOCKER_BRIDGE_ROUTE_EXCEPTIONS:
         try:
             from_bridge = ipaddress.ip_address(client_host) in DOCKER_BRIDGE_SUBNET
         except ValueError:
