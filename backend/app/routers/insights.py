@@ -23,7 +23,7 @@ from app.config import get_settings
 from app.db import get_db
 from app.messages import Message
 from app.models import Instrument
-from app.providers.perplexity import PerplexityClient
+from app.providers.llm import build_llm_client
 from app.providers.registry import get_alpha_vantage_provider
 from app.schemas import (
     CitationOut,
@@ -64,7 +64,7 @@ def get_instrument_news(instrument_id: int, db: Session = Depends(get_db)) -> Ne
 def get_instrument_commentary(instrument_id: int, db: Session = Depends(get_db)) -> InstrumentCommentaryOut:
     instrument = _get_instrument_or_404(db, instrument_id)
     settings = get_settings()
-    client = PerplexityClient(api_key=settings.perplexity_api_key or "", model=settings.perplexity_model)
+    client = build_llm_client(settings)
     row, outcome = get_commentary(db, instrument, client, settings.perplexity_cache_ttl_days)
 
     return InstrumentCommentaryOut(

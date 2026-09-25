@@ -131,6 +131,15 @@ class Settings(BaseSettings):
     perplexity_model: str = "sonar"
     perplexity_cache_ttl_days: int = 7
 
+    # --- Qualitative commentary LLM (generalized from Perplexity-only) ---
+    #: "perplexity" (default; uses the perplexity_* fields above) or
+    #: "openai_compatible" (uses llm_api_key/llm_model/llm_base_url — covers
+    #: DeepSeek, OpenAI, Groq, ... anything speaking the OpenAI wire format).
+    llm_provider: str = "perplexity"
+    llm_api_key: str | None = None
+    llm_model: str = "deepseek-chat"
+    llm_base_url: str = "https://api.deepseek.com"
+
     # --- CORS: the Vite dev server origin ---
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
@@ -147,6 +156,7 @@ class Settings(BaseSettings):
         "eodhd_api_key",
         "marketstack_api_key",
         "openfigi_api_key",
+        "llm_api_key",
         mode="after",
     )
     @classmethod

@@ -17,11 +17,11 @@ from sqlalchemy.orm import Session
 from app.messages import CommentaryOutcome, Message
 from app.models import Instrument, InstrumentCommentary
 from app.providers.base import ProviderError, RateLimited
-from app.providers.perplexity import PerplexityClient
+from app.providers.llm import CommentaryClient
 
 
 def get_commentary(
-    db: Session, instrument: Instrument, client: PerplexityClient, ttl_days: int
+    db: Session, instrument: Instrument, client: CommentaryClient, ttl_days: int
 ) -> tuple[InstrumentCommentary | None, Message]:
     cached = db.get(InstrumentCommentary, instrument.id)
 
