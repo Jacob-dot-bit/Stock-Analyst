@@ -9291,3 +9291,21 @@ up fine since it only touches history the hook itself already let land, not
 anything the hook is supposed to catch. That's expected, not a bug: the hook
 protects against secrets slipping in on a machine where it *is* set up, not
 against the gap before it is.
+
+## Decision 3u.79 — The composite score's track record in the app (2026-10-03)
+
+The point-in-time score backtest (`app/backtest/service.py`) was CLI-only
+(`scripts/backtest.py`). It is now exposed as `POST /api/scoring/backtest`
+(`horizon_months`, default 12; `years`, default 5) and shown on the Pépites
+page as "Score track record": quartile mean/median forward returns, the
+top-minus-bottom spread, and a per-month spread strip with a hit rate (share
+of months where the top quartile beat the bottom). The window ends one
+horizon before the latest stored bar so every month has a forward return.
+
+The service now also returns each rebalance date's spread, the hit rate, and
+how many distinct instruments were scored. The panel flags results with
+fewer than 12 months or 20 instruments as too thin, and always states the
+two biases that remain: the universe is the instruments already in the app
+(picked partly with hindsight), and monthly rebalances with a 12-month
+horizon overlap, so months are not independent trials. Recomputed live on
+every click, like `/scores`; nothing is persisted.
