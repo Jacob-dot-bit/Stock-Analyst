@@ -11,6 +11,7 @@ import Settings from './pages/Settings'
 import { TaxPrep } from './pages/TaxPrep'
 import { Transactions } from './pages/Transactions'
 import { Watchlist } from './pages/Watchlist'
+import { Weekly } from './pages/Weekly'
 
 export default function App() {
   const { t } = useI18n()
@@ -21,6 +22,7 @@ export default function App() {
         <span className="brand">{t('app.title')}</span>
         <nav className="nav">
           <NavLink to="/portfolio">{t('nav.portfolio')}</NavLink>
+          <NavLink to="/week">{t('nav.weekly')}</NavLink>
           <NavLink to="/transactions">{t('nav.transactions')}</NavLink>
           <NavLink to="/watchlist">{t('nav.watchlist')}</NavLink>
           <NavLink to="/gems">{t('nav.gems')}</NavLink>
@@ -37,6 +39,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/portfolio" replace />} />
           <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/week" element={<Weekly />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/dividends" element={<Dividends />} />
           <Route path="/settings" element={<Settings />} />

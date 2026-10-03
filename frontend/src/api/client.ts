@@ -62,6 +62,7 @@ import type {
   ValueHistory,
   WatchlistItem,
   WatchlistSignal,
+  WeeklySummary,
 } from './types'
 
 /** Surface the backend's error message rather than an opaque "500". */
@@ -187,6 +188,8 @@ export const api = {
   getPersonalPolicyGaps: () => request<PersonalPolicyGap[]>('/api/portfolio/policy/gaps'),
 
   getAttention: () => request<AttentionItem[]>('/api/portfolio/attention'),
+
+  getWeeklySummary: () => request<WeeklySummary>('/api/weekly-summary'),
 
   getDataHealth: () => request<DataHealth>('/api/portfolio/data-health'),
 

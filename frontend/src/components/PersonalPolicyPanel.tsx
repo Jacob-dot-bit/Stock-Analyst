@@ -7,6 +7,7 @@ import type {
   PersonalPolicyLimit,
   PersonalPolicyLimitDimension,
 } from '../api/types'
+import { rangeLabel } from '../format'
 import { useI18n } from '../i18n'
 
 const LIMIT_DIMENSIONS: PersonalPolicyLimitDimension[] = ['line', 'sector', 'country', 'currency', 'category', 'declared_valuation']
@@ -46,13 +47,6 @@ function isPolicyEmpty(policy: PersonalPolicy): boolean {
     !policy.risk_tolerance_note &&
     policy.loss_capacity_pct === null
   )
-}
-
-function rangeLabel(minPct: number | null, maxPct: number | null, formatNumber: (v: number) => string): string {
-  if (minPct !== null && maxPct !== null) return `${formatNumber(minPct)}–${formatNumber(maxPct)}%`
-  if (maxPct !== null) return `≤ ${formatNumber(maxPct)}%`
-  if (minPct !== null) return `≥ ${formatNumber(minPct)}%`
-  return '—'
 }
 
 /**

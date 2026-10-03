@@ -10,3 +10,12 @@ export function signClass(value: number | null | undefined): string {
   if (value === null || value === undefined || value === 0) return ''
   return value > 0 ? 'positive' : 'negative'
 }
+
+/** A configured min/max percentage range as "10–20%", "≤ 20%" or "≥ 10%";
+ * `formatNumber` is the caller's locale-bound formatter. */
+export function rangeLabel(minPct: number | null, maxPct: number | null, formatNumber: (v: number) => string): string {
+  if (minPct !== null && maxPct !== null) return `${formatNumber(minPct)}–${formatNumber(maxPct)}%`
+  if (maxPct !== null) return `≤ ${formatNumber(maxPct)}%`
+  if (minPct !== null) return `≥ ${formatNumber(minPct)}%`
+  return '—'
+}

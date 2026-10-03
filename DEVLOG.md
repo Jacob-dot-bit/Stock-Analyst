@@ -9291,3 +9291,48 @@ up fine since it only touches history the hook itself already let land, not
 anything the hook is supposed to catch. That's expected, not a bug: the hook
 protects against secrets slipping in on a machine where it *is* set up, not
 against the gap before it is.
+
+## Decision 3u.79 — "This week": one weekly view over limits, allocation, scores, watchlist and journal (2026-10-03)
+
+The app already answers each of these questions on its own page — personal
+policy gaps (3u.59), allocation targets (3u.15), score/allocation signals
+(3u.19), watchlist target prices, journal review dates (3u.68) — but a weekly
+check-in meant visiting five places. The Portfolio page's "to review today"
+card (3u.25) is the quick glance; this is the longer weekly read, so it gets
+its own page rather than growing that card into five sections.
+
+**No new computation.** New `routers/weekly.py`, `GET /api/weekly-summary`,
+calls the existing endpoint functions directly (`get_personal_policy_gaps`,
+`get_allocation`, `get_position_signals`, `get_attention`,
+`get_watchlist_signals`) and only filters and joins their output, so the
+weekly view can't drift from the pages it summarises. Sections:
+
+- policy gaps, as-is;
+- allocation rows in `under`/`over` only;
+- position signals `reinforce`/`reduce` only, with symbol, name and the
+  instrument's weight (summed across accounts) added so a row reads on its
+  own. Rendered with the existing fact labels ("Low score · over-allocated"),
+  never the verb, plus a standing note that the gap belongs to the whole
+  asset class, not that one line (3u.19's addendum);
+- watchlist items at/below target (any score — same rule as the nav bell),
+  or within `NEAR_TARGET_PCT` (5%) above it with a high score;
+- journal entries with no outcome yet whose review date has passed or falls
+  within `WINDOW_DAYS` (7);
+- the data-quality kinds of `/attention` (price error/stale, unresolved
+  symbols), as a reliability footer: every figure above depends on them.
+
+**Deliberately not built:** "what changed since last week". Nothing stores
+score or allocation history, so a comparison would need a weekly snapshot
+table first; a separate decision if it's wanted.
+
+Frontend: `pages/Weekly.tsx` at `/week`, nav entry right after Portfolio,
+one card per section with a link to the page that owns the data, an empty
+state per section, and the usual "not a suggestion to buy or sell" notice.
+`rangeLabel` moved from `PersonalPolicyPanel.tsx` to `format.ts` so both
+share it. i18n in en/fr/pl.
+
+Tests: `test_weekly_summary_api.py` (7) — empty database, policy/allocation
+filtering, aligned-signals-only with weight, weight summed across accounts,
+watchlist kinds and exclusions, journal window boundaries (day 7 in, day 8
+out, reviewed entries out), data-reliability kinds only. Live-checked in a
+browser in English and French against a seeded demo database.

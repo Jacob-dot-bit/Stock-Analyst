@@ -1073,3 +1073,50 @@ export interface DetectOneResult {
   already_known: number
   actions: CorporateAction[]
 }
+
+export interface WeeklyPositionFlag {
+  instrument_id: number
+  symbol: string
+  name: string | null
+  signal: 'reinforce' | 'reduce'
+  composite_score: number | null
+  score_band: ScoreBand
+  category: string | null
+  allocation_state: 'under' | 'over'
+  gap_pct: number
+  weight_percent: number | null
+}
+
+export type WeeklyWatchlistFlagKind = 'target_reached' | 'near_target_high_score'
+
+export interface WeeklyWatchlistFlag {
+  instrument_id: number
+  symbol: string
+  name: string | null
+  kind: WeeklyWatchlistFlagKind
+  composite_score: number | null
+  score_band: ScoreBand
+  distance_to_target_pct: number
+  target_entry_price: number
+}
+
+export interface WeeklyJournalDue {
+  id: number
+  symbol: string | null
+  thesis: string
+  entry_date: string
+  review_date: string
+  overdue: boolean
+}
+
+/** `GET /api/weekly-summary` — see DEVLOG "Decision 3u.79". */
+export interface WeeklySummary {
+  as_of: string
+  window_end: string
+  policy_gaps: PersonalPolicyGap[]
+  allocation_gaps: AllocationRow[]
+  position_flags: WeeklyPositionFlag[]
+  watchlist_flags: WeeklyWatchlistFlag[]
+  journal_due: WeeklyJournalDue[]
+  data_reliability: AttentionItem[]
+}

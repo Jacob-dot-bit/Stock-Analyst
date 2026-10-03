@@ -28,6 +28,7 @@ from app.routers import (
     tax,
     transactions,
     watchlist,
+    weekly,
     settings as settings_router,
 )
 
@@ -126,6 +127,7 @@ app.include_router(backup.router)
 app.include_router(corporate_actions.router)
 app.include_router(tax.router)
 app.include_router(journal.router)
+app.include_router(weekly.router)
 
 
 @app.get("/api/health", tags=["system"])
