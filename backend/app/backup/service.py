@@ -64,6 +64,18 @@ def _live_db_path() -> Path:
     return Path(url.removeprefix("sqlite:///"))
 
 
+def _created_at(path: Path) -> datetime:
+    """When the backup was taken, read from its filename. Not the file's
+    mtime: `shutil.copy2` carries the *live* database's mtime over, so every
+    backup of an unchanged database shared one timestamp and "newest first"
+    came out in arbitrary order."""
+    stamp = path.stem.removeprefix(_FILENAME_PREFIX)
+    try:
+        return datetime.strptime(stamp, _TIMESTAMP_FORMAT).replace(tzinfo=UTC)
+    except ValueError:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+
+
 def _read_alembic_version(db_path: Path) -> str | None:
     """Reads `alembic_version` directly via `sqlite3`, not through the app's
     own SQLAlchemy engine — this must work on an arbitrary backup file that
@@ -94,8 +106,7 @@ def create_backup() -> BackupInfo:
     for stale in existing[: max(0, len(existing) - MAX_BACKUPS)]:
         stale.unlink()
 
-    stat = destination.stat()
-    return BackupInfo(filename=filename, created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC), size_bytes=stat.st_size)
+    return BackupInfo(filename=filename, created_at=_created_at(destination), size_bytes=destination.stat().st_size)
 
 
 def list_backups() -> list[BackupInfo]:
@@ -103,10 +114,7 @@ def list_backups() -> list[BackupInfo]:
         return []
     infos = []
     for path in BACKUP_DIR.glob(f"{_FILENAME_PREFIX}*.db"):
-        stat = path.stat()
-        infos.append(
-            BackupInfo(filename=path.name, created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC), size_bytes=stat.st_size)
-        )
+        infos.append(BackupInfo(filename=path.name, created_at=_created_at(path), size_bytes=path.stat().st_size))
     infos.sort(key=lambda b: b.created_at, reverse=True)
     return infos
 
