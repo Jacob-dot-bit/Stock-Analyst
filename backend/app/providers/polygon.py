@@ -2,7 +2,7 @@
 
 Polygon.io rebranded to Massive (see DEVLOG "Bug 2.5" for the signup-site
 redirect this was first noticed from). Verified via Massive's official
-`llms.txt`-linked docs, fetched mid-session, that the rebrand runs deeper than
+API docs that the rebrand runs deeper than
 the marketing site: their documented, current host is ``api.massive.com`` —
 ``api.polygon.io`` is not mentioned anywhere in it and isn't guaranteed to
 keep working (the same trap Frankfurter's old host eventually fell into).

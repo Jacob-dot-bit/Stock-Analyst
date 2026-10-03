@@ -842,9 +842,9 @@ export const fr: Catalogue = {
   'scores.droppedReason.missing_fx_rate': 'Taux de change indisponible',
   'scores.droppedReason.insufficient_history': "Historique insuffisant pour l'instant",
 
-  // --- Analyses : actualités/sentiment + commentaire IA (phase 6) -----------
-  'insights.badgeLabel': 'Actus & IA',
-  'insights.badgeTooltip': "Afficher l'actualité récente, le sentiment et le commentaire IA",
+  // --- Analyses : actualités/sentiment (phase 6) ----------------------------
+  'insights.badgeLabel': 'Actus',
+  'insights.badgeTooltip': "Afficher l'actualité récente et le sentiment",
   'insights.newsTitle': 'Actualités & sentiment',
   'insights.noNews': 'Aucune actualité récente trouvée pour cet instrument.',
   'insights.sentimentTooltip':
@@ -855,10 +855,6 @@ export const fr: Catalogue = {
   'insights.sentiment.somewhatBearish': 'Ton plutôt défavorable',
   'insights.sentiment.bearish': 'Ton nettement défavorable',
   'insights.sentiment.unknown': 'Ton non disponible',
-  'insights.commentaryTitle': 'Commentaire IA',
-  'insights.commentaryDisclaimer':
-    "Synthèse générée à partir des données disponibles, potentiellement incomplète — ne constitue pas un conseil en investissement.",
-  'insights.askPerplexity': 'Obtenir un commentaire IA',
 
   'news.updated': '{symbol} : {articles} article(s) trouvé(s).',
   'news.alreadyFresh': '{symbol} : déjà à jour (cache de {days} jour(s)).',
@@ -867,12 +863,6 @@ export const fr: Catalogue = {
   'news.noProvider': "{symbol} : Alpha Vantage n'est pas configuré (clé API manquante).",
   'news.rateLimited': '{symbol} : Alpha Vantage limite les requêtes. Réessaie dans un instant.',
   'news.failed': '{symbol} : échec de la récupération ({error}).',
-
-  'commentary.updated': '{symbol} : commentaire récupéré.',
-  'commentary.alreadyFresh': '{symbol} : déjà à jour (cache de {days} jour(s)).',
-  'commentary.noProvider': "{symbol} : Perplexity n'est pas configuré (clé API manquante).",
-  'commentary.rateLimited': '{symbol} : Perplexity limite les requêtes. Réessaie dans un instant.',
-  'commentary.failed': '{symbol} : échec de la récupération ({error}).',
 
   // --- Dividendes --------------------------------------------------------
   'dividends.title': 'Dividendes',

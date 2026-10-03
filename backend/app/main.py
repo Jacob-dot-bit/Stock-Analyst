@@ -150,6 +150,5 @@ def health() -> dict:
             "twelvedata": bool(settings.twelvedata_api_key),
             "fmp": bool(settings.fmp_api_key),
             "edgar": settings.edgar_enabled,
-            "perplexity": settings.perplexity_enabled,
         },
     }

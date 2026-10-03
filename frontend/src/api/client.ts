@@ -30,7 +30,6 @@ import type {
   ImportBatch,
   ImportPreview,
   Instrument,
-  InstrumentCommentary,
   JournalEntry,
   Liquidity,
   Lot,
@@ -507,6 +506,4 @@ export const api = {
   getInstrumentNews: (instrumentId: number) =>
     request<NewsSentiment>(`/api/insights/${instrumentId}/news`, { method: 'POST' }),
 
-  getInstrumentCommentary: (instrumentId: number) =>
-    request<InstrumentCommentary>(`/api/insights/${instrumentId}/commentary`, { method: 'POST' }),
 }

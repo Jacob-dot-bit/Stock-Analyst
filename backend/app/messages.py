@@ -125,19 +125,6 @@ class NewsOutcome:
     FAILED = "news.failed"  # {symbol, error}
 
 
-class CommentaryOutcome:
-    """Result of trying to fetch one instrument's Perplexity commentary
-    (`analysis/commentary_service.py`). See DEVLOG "Decision 0.3": one
-    instrument at a time, on explicit request, cached — never mass screening.
-    """
-
-    UPDATED = "commentary.updated"  # {symbol}
-    ALREADY_FRESH = "commentary.alreadyFresh"  # {symbol, days}
-    NO_PROVIDER = "commentary.noProvider"  # {symbol}
-    RATE_LIMITED = "commentary.rateLimited"  # {symbol}
-    FAILED = "commentary.failed"  # {symbol, error}
-
-
 class PerformanceNote:
     """A caveat on a position's `broker_net_pl`/`broker_net_pl_pct` when
     they come from an approximation rather than a true cost basis — stored

@@ -18,7 +18,6 @@ from app.providers.eodhd import EodhidProvider
 from app.providers.fmp import FmpProvider
 from app.providers.intrinio import IntrinionProvider
 from app.providers.marketstack import MarketstackProvider
-from app.providers.perplexity import PerplexityClient
 from app.providers.polygon import PolygonProvider
 from app.providers.registry import get_alpha_vantage_provider, get_edgar_provider, get_provider_chain
 from app.providers.tiingo import TiingoProvider
@@ -92,7 +91,6 @@ class ApiKeysStatus(BaseModel):
     twelvedata: bool
     fmp: bool
     sec_user_agent: bool
-    perplexity: bool
 
 
 @router.get("/providers", response_model=list[ProviderStatus])
@@ -117,8 +115,6 @@ async def get_provider_status() -> list[ProviderStatus]:
         "finviz": "Finviz (US stocks via scraping, fragile)",
         "sec_user_agent": "SEC EDGAR (US company fundamentals for the Value/Growth/Quality "
         "scores — free, no signup, just a contact identifier)",
-        "perplexity": "Perplexity Sonar (qualitative commentary, one instrument at a time — "
-        "paid, ~$5-14 per 1000 requests)",
     }
 
     # Where to sign up for a free key. Every key here is one of the fields
@@ -150,9 +146,6 @@ async def get_provider_status() -> list[ProviderStatus]:
         # User-Agent requirement, not a registration page. See DEVLOG
         # "Decision 3s.1".
         "sec_user_agent": "https://www.sec.gov/os/webmaster-faq#developers",
-        # Verified live: perplexity.ai/settings/api is where a key is
-        # generated/managed today.
-        "perplexity": "https://www.perplexity.ai/settings/api",
     }
 
     statuses = []
@@ -183,21 +176,6 @@ async def get_provider_status() -> list[ProviderStatus]:
         )
     )
 
-    # Same reasoning as sec_user_agent above: Perplexity is qualitative
-    # commentary (`app/providers/perplexity.py`), not a price source, so
-    # `get_provider_chain()` never sees it either — without this manual
-    # append, `perplexity_api_key` (already accepted by the endpoints below)
-    # had no card on the Settings page to be entered/tested through at all.
-    statuses.append(
-        ProviderStatus(
-            name="perplexity",
-            enabled=get_settings().perplexity_enabled,
-            description=descriptions["perplexity"],
-            signup_url=signup_urls["perplexity"],
-            has_api_key=True,
-        )
-    )
-
     return statuses
 
 
@@ -217,7 +195,6 @@ async def get_api_keys_status() -> ApiKeysStatus:
         twelvedata=bool(settings.twelvedata_api_key),
         fmp=bool(settings.fmp_api_key),
         sec_user_agent=bool(settings.sec_user_agent),
-        perplexity=bool(settings.perplexity_api_key),
     )
 
 
@@ -264,32 +241,6 @@ async def verify_api_key(payload: VerifyKeyRequest) -> VerifyKeyResponse:
         # `registrant` (e.g. "Apple Inc.") already ends in a period as often
         # as not — no second one appended, unlike the other outcome messages.
         return VerifyKeyResponse(valid=True, message=f"Accepted — SEC EDGAR resolved AAPL to {registrant}")
-
-    # Same reasoning as sec_user_agent above: Perplexity isn't a
-    # `PriceProvider` either, so it can't go through the generic path below.
-    # Tested with one minimal, cheap real call (max_tokens=16) rather than a
-    # separate lighter-weight endpoint — this is the only code path that
-    # actually reaches Perplexity, so it's worth exercising directly.
-    if payload.provider == "perplexity":
-        key = payload.api_key.strip() if payload.api_key else None
-        if not key:
-            key = get_settings().perplexity_api_key
-        if not key:
-            return VerifyKeyResponse(valid=False, message="No key to test — type one or save one first.")
-        client = PerplexityClient(api_key=key, model=get_settings().perplexity_model)
-        try:
-            commentary = client.ask_about("AAPL", name="Apple Inc.", max_tokens=16)
-        except RateLimited:
-            return VerifyKeyResponse(
-                valid=True, message="Key looks valid, but Perplexity is rate-limiting right now."
-            )
-        except ProviderError as exc:
-            return VerifyKeyResponse(valid=False, message=f"Key rejected: {exc}")
-        except Exception as exc:  # noqa: BLE001 - surfaced to the user, not swallowed
-            return VerifyKeyResponse(valid=False, message=f"Could not reach Perplexity: {exc}")
-        return VerifyKeyResponse(
-            valid=True, message=f"Key works — Sonar responded ({len(commentary.content)} chars)."
-        )
 
     provider_cls = TESTABLE_PROVIDERS.get(payload.provider)
     if provider_cls is None:
@@ -349,7 +300,6 @@ class UpdateApiKeysRequest(BaseModel):
     twelvedata: str | None = None
     fmp: str | None = None
     sec_user_agent: str | None = None
-    perplexity: str | None = None
 
 
 class UpdateApiKeysResponse(BaseModel):
@@ -385,7 +335,6 @@ async def update_api_keys(payload: UpdateApiKeysRequest) -> UpdateApiKeysRespons
             "twelvedata": "TWELVEDATA_API_KEY",
             "fmp": "FMP_API_KEY",
             "sec_user_agent": "SEC_USER_AGENT",
-            "perplexity": "PERPLEXITY_API_KEY",
         }
 
         for field, env_key in mapping.items():

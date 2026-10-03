@@ -1562,20 +1562,6 @@ class NewsSentimentOut(BaseModel):
     outcome: MessageOut
 
 
-class CitationOut(BaseModel):
-    url: str
-    title: str | None = None
-
-
-class InstrumentCommentaryOut(BaseModel):
-    instrument_id: int
-    fetched_at: datetime | None
-    model: str
-    content: str
-    citations: list[CitationOut]
-    outcome: MessageOut
-
-
 class FactorImportOut(BaseModel):
     """Result of `POST /api/factors/import` — a one-off (or occasional
     re-run) fetch of Kenneth French's daily factor series. See DEVLOG

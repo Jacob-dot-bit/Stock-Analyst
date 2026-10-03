@@ -850,9 +850,9 @@ export const pl: Catalogue = {
   'scores.droppedReason.missing_fx_rate': 'Kurs wymiany niedostępny',
   'scores.droppedReason.insufficient_history': 'Na razie za mało historii',
 
-  // --- Analizy: aktualności/sentyment + komentarz AI (etap 6) --------------
-  'insights.badgeLabel': 'Newsy i AI',
-  'insights.badgeTooltip': 'Pokaż ostatnie wiadomości, sentyment i komentarz AI',
+  // --- Analizy: aktualności/sentyment (etap 6) -----------------------------
+  'insights.badgeLabel': 'Newsy',
+  'insights.badgeTooltip': 'Pokaż ostatnie wiadomości i sentyment',
   'insights.newsTitle': 'Wiadomości i sentyment',
   'insights.noNews': 'Nie znaleziono ostatnich wiadomości dla tego instrumentu.',
   'insights.sentimentTooltip':
@@ -863,10 +863,6 @@ export const pl: Catalogue = {
   'insights.sentiment.somewhatBearish': 'Raczej negatywny ton',
   'insights.sentiment.bearish': 'Wyraźnie negatywny ton',
   'insights.sentiment.unknown': 'Ton niedostępny',
-  'insights.commentaryTitle': 'Komentarz AI',
-  'insights.commentaryDisclaimer':
-    'Podsumowanie wygenerowane na podstawie dostępnych danych, potencjalnie niepełnych — nie stanowi rekomendacji inwestycyjnej.',
-  'insights.askPerplexity': 'Pobierz komentarz AI',
 
   'news.updated': '{symbol}: znaleziono {articles} artykuł(y/ów).',
   'news.alreadyFresh': '{symbol}: już aktualne (cache {days} dni).',
@@ -875,12 +871,6 @@ export const pl: Catalogue = {
   'news.noProvider': '{symbol}: Alpha Vantage nie jest skonfigurowane (brak klucza API).',
   'news.rateLimited': '{symbol}: Alpha Vantage ogranicza zapytania. Spróbuj ponownie za chwilę.',
   'news.failed': '{symbol}: pobieranie nie powiodło się ({error}).',
-
-  'commentary.updated': '{symbol}: pobrano komentarz.',
-  'commentary.alreadyFresh': '{symbol}: już aktualne (cache {days} dni).',
-  'commentary.noProvider': '{symbol}: Perplexity nie jest skonfigurowane (brak klucza API).',
-  'commentary.rateLimited': '{symbol}: Perplexity ogranicza zapytania. Spróbuj ponownie za chwilę.',
-  'commentary.failed': '{symbol}: pobieranie nie powiodło się ({error}).',
 
   // --- Dywidendy -----------------------------------------------------------
   'dividends.title': 'Dywidendy',

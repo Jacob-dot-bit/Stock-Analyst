@@ -32,7 +32,7 @@ node_modules/
 dist/
 .vite/
 
-# Local run logs from scripts/ (e.g. scripts/export_for_hermes.py) — operational
+# Local run logs from scripts/ (e.g. scripts/export_portfolio.py) — operational
 # noise, never source, never committed.
 *.log
 

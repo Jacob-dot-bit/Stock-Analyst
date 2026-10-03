@@ -801,20 +801,6 @@ export interface NewsSentiment {
   outcome: ApiMessage
 }
 
-export interface Citation {
-  url: string
-  title: string | null
-}
-
-export interface InstrumentCommentary {
-  instrument_id: number
-  fetched_at: string | null
-  model: string
-  content: string
-  citations: Citation[]
-  outcome: ApiMessage
-}
-
 export interface FundamentalsRefreshReport {
   outcomes: ApiMessage[]
   updated: number

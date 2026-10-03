@@ -1,8 +1,7 @@
 """Cache-check-then-fetch-then-persist for Alpha Vantage news/sentiment.
 
 Same shape as `prices/fx_service.py::get_rate`, but an N-day TTL instead of
-today-only — free source, no cost pressure, so a shorter TTL than
-Perplexity's is fine.
+today-only — free source, no cost pressure, so a short TTL is fine.
 """
 
 from __future__ import annotations
@@ -19,8 +18,7 @@ from app.prices.provider_usage import record_usage
 from app.providers.alpha_vantage import AlphaVantageProvider
 from app.providers.base import InstrumentRef, ProviderError, RateLimited
 
-#: Free source, no cost pressure — worth refetching daily, unlike
-#: Perplexity's 7-day cost-driven TTL.
+#: Free source, no cost pressure — worth refetching daily.
 NEWS_CACHE_TTL_DAYS = 1
 
 

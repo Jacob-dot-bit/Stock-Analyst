@@ -838,9 +838,9 @@ export const en: Catalogue = {
   'scores.droppedReason.missing_fx_rate': 'Exchange rate unavailable',
   'scores.droppedReason.insufficient_history': 'Not enough history yet',
 
-  // --- Insights: news/sentiment + AI commentary (phase 6) -------------------
-  'insights.badgeLabel': 'News & AI',
-  'insights.badgeTooltip': 'Show recent news, sentiment and AI commentary',
+  // --- Insights: news/sentiment (phase 6) -----------------------------------
+  'insights.badgeLabel': 'News',
+  'insights.badgeTooltip': 'Show recent news and sentiment',
   'insights.newsTitle': 'News & sentiment',
   'insights.noNews': 'No recent news found for this instrument.',
   'insights.sentimentTooltip': "Tone of this article per its provider (Alpha Vantage) — not the app's own view of this instrument.",
@@ -850,10 +850,6 @@ export const en: Catalogue = {
   'insights.sentiment.somewhatBearish': 'Somewhat unfavorable tone',
   'insights.sentiment.bearish': 'Clearly unfavorable tone',
   'insights.sentiment.unknown': 'Tone unavailable',
-  'insights.commentaryTitle': 'AI commentary',
-  'insights.commentaryDisclaimer':
-    "Generated from the data available, possibly incomplete — not an investment recommendation.",
-  'insights.askPerplexity': 'Get AI commentary',
 
   'news.updated': '{symbol}: {articles} article(s) found.',
   'news.alreadyFresh': '{symbol}: already up to date ({days}-day cache).',
@@ -862,12 +858,6 @@ export const en: Catalogue = {
   'news.noProvider': '{symbol}: Alpha Vantage is not configured (missing an API key).',
   'news.rateLimited': '{symbol}: Alpha Vantage is rate-limiting. Try again shortly.',
   'news.failed': '{symbol}: retrieval failed ({error}).',
-
-  'commentary.updated': '{symbol}: commentary fetched.',
-  'commentary.alreadyFresh': '{symbol}: already up to date ({days}-day cache).',
-  'commentary.noProvider': '{symbol}: Perplexity is not configured (missing an API key).',
-  'commentary.rateLimited': '{symbol}: Perplexity is rate-limiting. Try again shortly.',
-  'commentary.failed': '{symbol}: retrieval failed ({error}).',
 
   // --- Dividends -----------------------------------------------------------
   'dividends.title': 'Dividends',

@@ -886,11 +886,7 @@ class NewsSentiment(Base):
 
     Free but quota-shared with price fetches — same API key/account, same
     `Throttle` (see `providers/registry.py::get_alpha_vantage_provider`).
-    Deliberately its own table, not merged with `InstrumentCommentary`:
-    different shape (structured articles vs. freeform prose) and a much
-    softer TTL, since this source costs nothing to refetch. Never read by
-    `scoring/service.py` — commentary, not a scoring input, same principle
-    as DEVLOG "Decision 0.3".
+    Never read by `scoring/service.py` — context, not a scoring input.
     """
 
     __tablename__ = "news_sentiments"
@@ -903,26 +899,6 @@ class NewsSentiment(Base):
     #: No synthetic aggregate score stored here — "never guess a number":
     #: any average is computed at read time, if ever needed.
     articles: Mapped[list] = mapped_column(JSON, default=list)
-
-
-class InstrumentCommentary(Base):
-    """Cached Perplexity Sonar qualitative synthesis, one row per instrument.
-
-    7-day default TTL (`settings.perplexity_cache_ttl_days`) is DEVLOG
-    "Decision 0.3"'s hard cost-control choice, not a freshness judgment.
-    Comments on the score; `scoring/service.py` never reads this table.
-    """
-
-    __tablename__ = "instrument_commentaries"
-
-    instrument_id: Mapped[int] = mapped_column(ForeignKey("instruments.id"), primary_key=True)
-    fetched_at: Mapped[datetime] = mapped_column(DateTime)
-    #: Which Sonar variant produced this — same "where did this come from"
-    #: reasoning as PriceBar.provider.
-    model: Mapped[str] = mapped_column(String(40))
-    content: Mapped[str] = mapped_column(Text)
-    #: [{url, title}], Perplexity's own order.
-    citations: Mapped[list] = mapped_column(JSON, default=list)
 
 
 class FactorReturn(Base):

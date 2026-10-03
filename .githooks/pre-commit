@@ -1,10 +1,10 @@
 #!/bin/sh
 # Blocks a commit if gitleaks finds a secret in the staged diff.
 #
-# Added 2026-09-25 after giving the Hermes agent's sandbox read-write access
-# to backend/ and frontend/ (see TROUBLESHOOTING.md in the Hermes repo, §9):
-# Hermes edits land directly in this working tree (bind mount, not a copy),
-# so whatever it writes is only caught here, at commit time, not before.
+# Added 2026-09-25 after giving an automation container read-write access to
+# backend/ and frontend/: its edits land directly in this working tree (bind
+# mount, not a copy), so whatever it writes is only caught here, at commit
+# time, not before.
 #
 # Enable with: git config core.hooksPath .githooks   (per clone — see README)
 
