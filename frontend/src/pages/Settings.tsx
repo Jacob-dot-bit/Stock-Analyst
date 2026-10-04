@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Instrument, ProviderAvailability } from '../api/types'
 import { BackupPanel } from '../components/BackupPanel'
@@ -25,6 +25,16 @@ interface Notice {
 }
 
 type TestResult = 'testing' | { valid: boolean; message: string }
+
+// One tab per group. The ids are the existing hash anchors, so links such as
+// "Manage data" (Portfolio.tsx) and the unresolved-instruments item
+// (AttentionCard.tsx) open the right tab directly.
+const SECTIONS = [
+  { id: 'donnees-portefeuille', title: 'settings.groupPortfolioData.title' },
+  { id: 'integrite-corrections', title: 'settings.groupIntegrity.title' },
+  { id: 'sauvegarde', title: 'settings.groupBackup.title' },
+  { id: 'sources-donnees', title: 'settings.groupDataSources.title' },
+] as const
 
 export default function Settings() {
   const { t } = useI18n()
@@ -71,15 +81,7 @@ export default function Settings() {
     loadSettings()
   }, [loadUnresolved])
 
-  // No existing precedent for hash-anchor scrolling in this codebase — added
-  // here so links like "Gérer les données" (Portfolio.tsx) and the
-  // unresolved-instruments item (AttentionCard.tsx) land on the right group
-  // instead of just the top of a page that keeps growing longer.
-  useEffect(() => {
-    if (!location.hash) return
-    const target = document.getElementById(location.hash.slice(1))
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [location.hash, loading])
+  const activeSection = SECTIONS.find((section) => `#${section.id}` === location.hash)?.id ?? SECTIONS[0].id
 
   const handleSave = useCallback(async () => {
     setBusy(true)
@@ -171,148 +173,172 @@ export default function Settings() {
         <p>{t('settings.subtitle')}</p>
       </div>
 
-      <section className="settings-group" id="donnees-portefeuille">
-        <h2>{t('settings.groupPortfolioData.title')}</h2>
-        <p className="muted">{t('settings.groupPortfolioData.subtitle')}</p>
+      {/* A long page of four unrelated groups, split into tabs; each tab is a
+          plain link to its hash, so it can be bookmarked and the browser's
+          back button moves between them. */}
+      <nav className="page-tabs" aria-label={t('settings.title')}>
+        {SECTIONS.map((section) => (
+          <Link
+            key={section.id}
+            to={{ hash: section.id }}
+            replace
+            aria-current={activeSection === section.id ? 'page' : undefined}
+          >
+            {t(section.title)}
+          </Link>
+        ))}
+      </nav>
 
-        <ImportPanel kind="xtb" onImported={() => {}} />
-        <ImportPanel kind="mintos" onImported={() => {}} />
-        <ImportPanel kind="mintos-investments" onImported={() => {}} />
-        <ImportPanel kind="amundi" onImported={() => {}} />
-        <ImportPanel kind="amundi-synthese" onImported={() => {}} />
-        <FundamentalsRefreshButton onRefreshed={() => {}} />
-        <ManualPositionForm onCreated={() => {}} />
-      </section>
+      {activeSection === 'donnees-portefeuille' && (
+        <section className="settings-group" id="donnees-portefeuille">
+          <h2>{t('settings.groupPortfolioData.title')}</h2>
+          <p className="muted">{t('settings.groupPortfolioData.subtitle')}</p>
 
-      <section className="settings-group" id="integrite-corrections">
-        <h2>{t('settings.groupIntegrity.title')}</h2>
-        <p className="muted">{t('settings.groupIntegrity.subtitle')}</p>
-
-        <DataHealthPanel />
-        <UnresolvedPanel instruments={unresolvedInstruments} onUpdated={() => void loadUnresolved()} />
-        <CorporateActionsPanel />
-      </section>
-
-      <section className="settings-group" id="sauvegarde">
-        <h2>{t('settings.groupBackup.title')}</h2>
-
-        <BackupPanel />
-      </section>
-
-      <section className="settings-group" id="sources-donnees">
-        <h2>{t('settings.groupDataSources.title')}</h2>
-        <p className="muted">{t('settings.groupDataSources.subtitle')}</p>
-
-      <div className="card">
-        <p>{t('settings.description')}</p>
-      </div>
-
-      <div className="card">
-        <h2>{t('settings.providerStatus')}</h2>
-
-        <div className="providers-list">
-          {keyedProviders.map((provider) => {
-            // Not a secret like the others — it's a contact identifier SEC
-            // EDGAR requires on every request, sent openly in a header. A
-            // password-masked field would just hide typos in your own email.
-            const isContactField = provider.name === 'sec_user_agent'
-
-            return (
-            <div key={provider.name} className="provider-row">
-              <div className="provider-info">
-                <h3>{isContactField ? t('settings.secEdgarName') : provider.name}</h3>
-                <p>{provider.description}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-                  <span className={`status-badge ${provider.enabled ? 'enabled' : 'disabled'}`}>
-                    {provider.enabled ? t('settings.enabled') : t('settings.disabled')}
-                  </span>
-                  <ProviderAvailabilityInfo availability={availabilityByName.get(provider.name)} />
-                  {provider.signup_url && (
-                    <a href={provider.signup_url} target="_blank" rel="noopener noreferrer" className="signup-link">
-                      {isContactField ? t('settings.learnMore') : t('settings.getFreeKey')} ↗
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-row" style={{ alignItems: 'flex-end' }}>
-                <div className="field">
-                  <label htmlFor={`key-${provider.name}`}>
-                    {isContactField ? t('settings.contactInfo') : t('settings.apiKey')}
-                  </label>
-                  <input
-                    id={`key-${provider.name}`}
-                    type={isContactField ? 'text' : 'password'}
-                    style={isContactField ? { width: '300px' } : undefined}
-                    placeholder={
-                      apiKeysStatus[provider.name]
-                        ? isContactField
-                          ? t('settings.contactInfoSet')
-                          : '●●●●●●●●●●●●'
-                        : isContactField
-                          ? t('settings.noContactInfo')
-                          : t('settings.noKey')
-                    }
-                    value={apiKeys[provider.name] || ''}
-                    onChange={(e) => handleKeyChange(provider.name, e.target.value)}
-                    disabled={busy}
-                  />
-                  {isContactField && (
-                    <span className="muted" style={{ fontSize: 'var(--fs-xs)' }}>
-                      {t('settings.contactInfoFormat')}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => void handleTest(provider.name)}
-                  disabled={
-                    busy ||
-                    testResults[provider.name] === 'testing' ||
-                    (!apiKeys[provider.name] && !apiKeysStatus[provider.name])
-                  }
-                >
-                  {testResults[provider.name] === 'testing' ? t('settings.testing') : t('settings.test')}
-                </button>
-              </div>
-
-              <TestResultLine result={testResults[provider.name]} />
-            </div>
-            )
-          })}
-        </div>
-
-        <p className="muted keyless-note">
-          {t('settings.keylessNote', { names: keylessProviders.map((p) => p.name).join(', ') })}
-        </p>
-
-        {keylessProviders.length > 0 && (
-          <ul className="keyless-availability">
-            {keylessProviders.map((provider) => (
-              <li key={provider.name}>
-                <span>{provider.name}</span>
-                <ProviderAvailabilityInfo availability={availabilityByName.get(provider.name)} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="form-row" style={{ marginTop: 'var(--space-4)' }}>
-        <button
-          className="primary"
-          onClick={handleSave}
-          disabled={busy}
-        >
-          {busy ? t('common.saving') : t('common.save')}
-        </button>
-      </div>
-
-      {notice && (
-        <div className={`card notice ${notice.type}`}>
-          {notice.message}
-        </div>
+          <ImportPanel kind="xtb" onImported={() => {}} />
+          <ImportPanel kind="mintos" onImported={() => {}} />
+          <ImportPanel kind="mintos-investments" onImported={() => {}} />
+          <ImportPanel kind="amundi" onImported={() => {}} />
+          <ImportPanel kind="amundi-synthese" onImported={() => {}} />
+          <FundamentalsRefreshButton onRefreshed={() => {}} />
+          <ManualPositionForm onCreated={() => {}} />
+        </section>
       )}
-      </section>
+
+      {activeSection === 'integrite-corrections' && (
+        <section className="settings-group" id="integrite-corrections">
+          <h2>{t('settings.groupIntegrity.title')}</h2>
+          <p className="muted">{t('settings.groupIntegrity.subtitle')}</p>
+
+          <DataHealthPanel />
+          <UnresolvedPanel instruments={unresolvedInstruments} onUpdated={() => void loadUnresolved()} />
+          <CorporateActionsPanel />
+        </section>
+      )}
+
+      {activeSection === 'sauvegarde' && (
+        <section className="settings-group" id="sauvegarde">
+          <h2>{t('settings.groupBackup.title')}</h2>
+
+          <BackupPanel />
+        </section>
+      )}
+
+      {activeSection === 'sources-donnees' && (
+        <section className="settings-group" id="sources-donnees">
+          <h2>{t('settings.groupDataSources.title')}</h2>
+          <p className="muted">{t('settings.groupDataSources.subtitle')}</p>
+
+        <div className="card">
+          <p>{t('settings.description')}</p>
+        </div>
+
+        <div className="card">
+          <h2>{t('settings.providerStatus')}</h2>
+
+          <div className="providers-list">
+            {keyedProviders.map((provider) => {
+              // Not a secret like the others — it's a contact identifier SEC
+              // EDGAR requires on every request, sent openly in a header. A
+              // password-masked field would just hide typos in your own email.
+              const isContactField = provider.name === 'sec_user_agent'
+
+              return (
+              <div key={provider.name} className="provider-row">
+                <div className="provider-info">
+                  <h3>{isContactField ? t('settings.secEdgarName') : provider.name}</h3>
+                  <p>{provider.description}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                    <span className={`status-badge ${provider.enabled ? 'enabled' : 'disabled'}`}>
+                      {provider.enabled ? t('settings.enabled') : t('settings.disabled')}
+                    </span>
+                    <ProviderAvailabilityInfo availability={availabilityByName.get(provider.name)} />
+                    {provider.signup_url && (
+                      <a href={provider.signup_url} target="_blank" rel="noopener noreferrer" className="signup-link">
+                        {isContactField ? t('settings.learnMore') : t('settings.getFreeKey')} ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-row" style={{ alignItems: 'flex-end' }}>
+                  <div className="field">
+                    <label htmlFor={`key-${provider.name}`}>
+                      {isContactField ? t('settings.contactInfo') : t('settings.apiKey')}
+                    </label>
+                    <input
+                      id={`key-${provider.name}`}
+                      type={isContactField ? 'text' : 'password'}
+                      style={isContactField ? { width: '300px' } : undefined}
+                      placeholder={
+                        apiKeysStatus[provider.name]
+                          ? isContactField
+                            ? t('settings.contactInfoSet')
+                            : '●●●●●●●●●●●●'
+                          : isContactField
+                            ? t('settings.noContactInfo')
+                            : t('settings.noKey')
+                      }
+                      value={apiKeys[provider.name] || ''}
+                      onChange={(e) => handleKeyChange(provider.name, e.target.value)}
+                      disabled={busy}
+                    />
+                    {isContactField && (
+                      <span className="muted" style={{ fontSize: 'var(--fs-xs)' }}>
+                        {t('settings.contactInfoFormat')}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => void handleTest(provider.name)}
+                    disabled={
+                      busy ||
+                      testResults[provider.name] === 'testing' ||
+                      (!apiKeys[provider.name] && !apiKeysStatus[provider.name])
+                    }
+                  >
+                    {testResults[provider.name] === 'testing' ? t('settings.testing') : t('settings.test')}
+                  </button>
+                </div>
+
+                <TestResultLine result={testResults[provider.name]} />
+              </div>
+              )
+            })}
+          </div>
+
+          <p className="muted keyless-note">
+            {t('settings.keylessNote', { names: keylessProviders.map((p) => p.name).join(', ') })}
+          </p>
+
+          {keylessProviders.length > 0 && (
+            <ul className="keyless-availability">
+              {keylessProviders.map((provider) => (
+                <li key={provider.name}>
+                  <span>{provider.name}</span>
+                  <ProviderAvailabilityInfo availability={availabilityByName.get(provider.name)} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="form-row" style={{ marginTop: 'var(--space-4)' }}>
+          <button
+            className="primary"
+            onClick={handleSave}
+            disabled={busy}
+          >
+            {busy ? t('common.saving') : t('common.save')}
+          </button>
+        </div>
+
+        {notice && (
+          <div className={`card notice ${notice.type}`}>
+            {notice.message}
+          </div>
+        )}
+        </section>
+      )}
     </div>
   )
 }
