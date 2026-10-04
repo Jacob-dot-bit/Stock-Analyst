@@ -9304,6 +9304,19 @@ two biases that remain: the universe is the instruments already in the app
 horizon overlap, so months are not independent trials. Recomputed live on
 every click, like `/scores`; nothing is persisted.
 
+Follow-up fixes after review (2026-10-04):
+- **Splits.** Closes are now split-adjusted at read time (`price_factor_from`,
+  RAW histories only): forward returns use today's share basis, and the score
+  on each rebalance date uses that date's basis, so a split inside a horizon
+  is no longer read as a -90% return.
+- **Historical FX.** Valuation metrics use the FX rate on the rebalance date
+  (`get_rate_range`, one fetch per currency pair), not today's rate.
+- **Universe.** The endpoint and CLI test only the user's own instruments
+  (held, watchlisted, screened), excluding the S&P 500 discovery pool and the
+  chart benchmark, so the panel's selection-bias disclaimer stays accurate.
+- **Accessibility.** The per-month bars are mirrored in a visually hidden
+  table for screen readers.
+
 ## Decision 3u.80 — "This week": one weekly view over limits, allocation, scores, watchlist and journal (2026-10-03)
 
 The app already answers each of these questions on its own page — personal
@@ -9343,10 +9356,12 @@ state per section, and the usual "not a suggestion to buy or sell" notice.
 `rangeLabel` moved from `PersonalPolicyPanel.tsx` to `format.ts` so both
 share it. i18n in en/fr/pl.
 
-Tests: `test_weekly_summary_api.py` (7) — empty database, policy/allocation
+Tests: `test_weekly_summary_api.py` (8) — empty database, policy/allocation
 filtering, aligned-signals-only with weight, weight summed across accounts,
 watchlist kinds and exclusions, journal window boundaries (day 7 in, day 8
-out, reviewed entries out), data-reliability kinds only. Live-checked in a
+out, reviewed entries out), data-reliability kinds only, and one portfolio
+valuation per request (the summary stores it under
+`portfolio.FIGURES_SNAPSHOT_KEY` so every composed section reuses it). Live-checked in a
 browser in English and French against a seeded demo database.
 
 ## Decision 3u.81 — Qualitative commentary provider removed (2026-10-03)

@@ -799,6 +799,7 @@ export const pl: Catalogue = {
   'scoreTrack.q3': 'Środek górny',
   'scoreTrack.q2': 'Środek dolny',
   'scoreTrack.q1': 'Dolna ćwiartka',
+  'scoreTrack.month': 'Miesiąc',
   'scoreTrack.perPeriod': 'Górna minus dolna ćwiartka, miesiąc po miesiącu',
 
   'factors.title': 'Ekspozycja czynnikowa (model czteroczynnikowy Carharta)',
