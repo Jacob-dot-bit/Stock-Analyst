@@ -9406,3 +9406,23 @@ additions make a fairer test possible:
   `backfill_history`) pulls price history for instruments that have
   fundamentals but no bars yet, since the scorer needs ~2 years of closes
   before an instrument can be ranked.
+
+## Decision 3u.84 — Dark theme by default, light theme on a toggle (2026-10-04)
+
+The interface followed the operating system's color scheme, so the same
+install looked different from one machine to the next. Dark is now the
+default everywhere, and a sun/moon button next to the language selector
+switches to light. The choice is stored under `stock-analyst.theme` in
+localStorage (same convention as the locale), and a small inline script in
+`index.html` applies it before the first paint so a light-theme user never
+sees a dark flash.
+
+- Tokens: the dark values moved onto `:root`; the light ones live under
+  `:root[data-theme='light']`. Components still only reference tokens, so
+  no component changed to support the second theme.
+- `--accent-fill` / `--on-accent`: the readable dark-mode `--accent` is too
+  light to carry white text, which made the primary button hard to read in
+  dark mode. Filled surfaces now use their own pair.
+- Polish on top: sticky translucent top bar, segmented nav, larger page
+  titles, cards with a subtle top highlight, table headers on a tinted band,
+  focus rings, and a reduced-motion guard for the few transitions added.
