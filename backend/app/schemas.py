@@ -1611,6 +1611,7 @@ class ScoreBacktestOut(BaseModel):
     point-in-time track record (`app/backtest/service.py`). Unrounded, and
     empty rather than guessed when the stored history is too thin."""
 
+    universe: Literal["mine", "wide"] = "mine"
     start: date
     end: date
     horizon_months: int

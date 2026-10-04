@@ -185,6 +185,16 @@ def user_universe_ids(db: Session) -> list[int]:
     return sorted(ids)
 
 
+def wide_universe_ids(db: Session) -> list[int]:
+    """The user's own instruments plus every instrument with stored
+    fundamentals (e.g. the S&P 500 discovery pool): a broader, less
+    hand-picked universe. The chart benchmark has no fundamentals, so it
+    stays out unless the user holds or watches it."""
+    ids = set(user_universe_ids(db))
+    ids.update(db.execute(select(Fundamental.instrument_id).distinct()).scalars())
+    return sorted(ids)
+
+
 def _universe(db: Session, instrument_ids: list[int] | None) -> list[Instrument]:
     query = select(Instrument).where(Instrument.category.in_(ANALYSABLE_CATEGORIES))
     if instrument_ids is not None:

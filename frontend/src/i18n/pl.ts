@@ -784,6 +784,11 @@ export const pl: Catalogue = {
     'Za mało zapisanej historii, by przetestować ocenę: potrzeba około dwóch lat dziennych cen przed testowanym okresem, dla co najmniej 8 instrumentów naraz. Pomóc może uzupełnienie historii cen i odświeżenie danych fundamentalnych.',
   'scoreTrack.disclaimer':
     'Test obejmuje instrumenty już obecne w aplikacji (posiadane, na watchliście, w perełkach), wybrane częściowo z perspektywy czasu, więc wynik wygląda lepiej niż na neutralnym zbiorze. Przy kilkumiesięcznym horyzoncie miesiące się nakładają i nie są niezależnymi testami. Przeszłe wyniki niczego nie gwarantują.',
+  'scoreTrack.universe': 'Testowane spółki',
+  'scoreTrack.universeMine': 'Moje spółki (posiadane, watchlista, perełki)',
+  'scoreTrack.universeWide': 'Moje spółki + wszystkie spółki z danymi fundamentalnymi',
+  'scoreTrack.disclaimerWide':
+    'Test obejmuje wszystkie spółki z zapisanymi danymi fundamentalnymi (np. obecną listę S&P 500), więc jest mniej wybrany ręcznie niż Twoje spółki, ale brakuje firm, które wypadły z listy lub zbankrutowały, co nadal upiększa wynik. Przy kilkumiesięcznym horyzoncie miesiące się nakładają i nie są niezależnymi testami. Przeszłe wyniki niczego nie gwarantują.',
   'scoreTrack.window': 'Testowane miesiące',
   'scoreTrack.horizon': 'Zwrot mierzony przez',
   'scoreTrack.months': { one: '{count} miesiąc', few: '{count} miesiące', many: '{count} miesięcy' },

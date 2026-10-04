@@ -10,9 +10,24 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.backtest import service as backtest_service
-from app.backtest.service import _concepts_as_of, _forward_return, _HistoricalFx, run_backtest, user_universe_ids
+from app.backtest.service import (
+    _concepts_as_of,
+    _forward_return,
+    _HistoricalFx,
+    run_backtest,
+    user_universe_ids,
+    wide_universe_ids,
+)
 from app.db import Base
-from app.models import CorporateAction, Instrument, PriceBar, PriceHistoryStatus, ScreenerCandidate, WatchlistItem
+from app.models import (
+    CorporateAction,
+    Fundamental,
+    Instrument,
+    PriceBar,
+    PriceHistoryStatus,
+    ScreenerCandidate,
+    WatchlistItem,
+)
 from app.scoring.config import MetricConfig, PillarConfig, ScoringConfig
 
 TODAY = date(2025, 1, 1)
@@ -206,3 +221,23 @@ class TestUserUniverse:
         db.commit()
 
         assert user_universe_ids(db) == sorted([watched.id, screened.id])
+
+    def test_wide_adds_instruments_with_fundamentals(self, db):
+        watched = _instrument(db, "WATCH.US")
+        pool = _instrument(db, "POOL.US")
+        _instrument(db, "BENCH.US")  # no fundamentals, not picked
+        db.add(WatchlistItem(instrument_id=watched.id))
+        db.add(
+            Fundamental(
+                instrument_id=pool.id,
+                concept="revenue",
+                fiscal_year=2024,
+                period_end=date(2024, 12, 31),
+                value=1.0,
+                currency="USD",
+                tag="Revenues",
+            )
+        )
+        db.commit()
+
+        assert wide_universe_ids(db) == sorted([watched.id, pool.id])

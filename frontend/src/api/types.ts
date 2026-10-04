@@ -867,9 +867,14 @@ export interface BacktestReport {
   single_class_warning: boolean
 }
 
+/** `mine`: held, watchlisted and screened instruments. `wide`: also every
+ * instrument with stored fundamentals. */
+export type ScoreBacktestUniverse = 'mine' | 'wide'
+
 /** Result of `POST /api/scoring/backtest` — the composite score's
  * point-in-time track record. Quartile 4 holds the highest scores. */
 export interface ScoreBacktest {
+  universe: ScoreBacktestUniverse
   start: string
   end: string
   horizon_months: number

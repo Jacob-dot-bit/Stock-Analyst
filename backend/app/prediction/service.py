@@ -30,7 +30,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Instrument, PriceBar
+from app.models import Fundamental, Instrument, PriceBar
 from app.prices.provider_usage import record_usage
 from app.prices.service import _store_bars
 from app.providers.base import InstrumentRef, ProviderChain
@@ -93,17 +93,25 @@ def get_backfill_progress() -> BackfillProgress:
         return replace(_progress)
 
 
-def _already_priced_instruments(db: Session) -> list[Instrument]:
+def _backfill_instruments(db: Session, with_fundamentals: bool = False) -> list[Instrument]:
     """The phase-1 universe: instruments that already have at least one
     cached bar — not the full, much larger Discovery candidate pool, to
-    keep this a bounded, quick-to-run pull rather than an hours-long one."""
-    ids = list(db.execute(select(PriceBar.instrument_id).distinct()).scalars())
+    keep this a bounded, quick-to-run pull rather than an hours-long one.
+
+    `with_fundamentals` also adds every instrument with stored fundamentals,
+    priced or not: the score backtest needs ~2 years of closes for each of
+    them before they can be ranked."""
+    ids = set(db.execute(select(PriceBar.instrument_id).distinct()).scalars())
+    if with_fundamentals:
+        ids.update(db.execute(select(Fundamental.instrument_id).distinct()).scalars())
     if not ids:
         return []
     return list(db.execute(select(Instrument).where(Instrument.id.in_(ids))).scalars())
 
 
-def backfill_history(db: Session, chain: ProviderChain, years: int = BACKFILL_YEARS) -> BackfillReport | None:
+def backfill_history(
+    db: Session, chain: ProviderChain, years: int = BACKFILL_YEARS, with_fundamentals: bool = False
+) -> BackfillReport | None:
     """Fetch `years` of daily history for every already-priced instrument,
     one call per instrument covering the whole window (the provider accepts
     an arbitrary start/end range — this isn't "one call per day"). Returns
@@ -112,7 +120,7 @@ def backfill_history(db: Session, chain: ProviderChain, years: int = BACKFILL_YE
         return None
 
     try:
-        instruments = _already_priced_instruments(db)
+        instruments = _backfill_instruments(db, with_fundamentals)
         _set_progress(
             running=True,
             total=len(instruments),

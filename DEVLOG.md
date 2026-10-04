@@ -9390,3 +9390,19 @@ Doc changes, no code changes:
 - ARCHITECTURE: `POST /api/scoring/backtest` in the endpoint list, `backtest/` in the
   directory map, the full page list, and a note on the older price-only prediction
   backtest saying the score backtest handles fundamentals with a filing lag instead.
+
+## Decision 3u.83 — A wider universe for the score backtest (2026-10-04)
+
+The first real run (the user's own ~14 instruments per month, Sept 2023 to
+Sept 2025) found the top score quartile *under*performing the bottom one at
+3, 6 and 12 months: too small a sample to judge, and hand-picked. Two
+additions make a fairer test possible:
+
+- `universe=wide` on `POST /api/scoring/backtest` (and `--universe wide` on
+  `scripts/backtest.py`, plus a selector in the panel) adds every instrument
+  with stored fundamentals to the user's own. The wide disclaimer names the
+  bias that remains: today's index list misses companies that dropped out.
+- `scripts/backfill_prices.py --with-fundamentals` (and the same flag on
+  `backfill_history`) pulls price history for instruments that have
+  fundamentals but no bars yet, since the scorer needs ~2 years of closes
+  before an instrument can be ranked.

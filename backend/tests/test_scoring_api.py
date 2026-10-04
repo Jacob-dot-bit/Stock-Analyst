@@ -200,3 +200,40 @@ class TestScoreBacktest:
         assert body["top_minus_bottom"] > 0
         assert body["hit_rate"] == pytest.approx(1.0)
         assert all(p["rebalance_date"] <= body["end"] for p in body["periods"])
+
+    def test_wide_universe_includes_instruments_with_fundamentals(self, client):
+        last = date(2025, 1, 1)
+        instruments = [
+            Instrument(broker_symbol=f"{kind}{i}.US", category="STOCK", currency="USD", country="US")
+            for kind in ("UP", "DOWN")
+            for i in range(5)
+        ]
+        _seed(client, instruments)
+        # None watchlisted: the default universe is empty, the wide one is not.
+        rows = [
+            Fundamental(
+                instrument_id=inst.id,
+                concept="revenue",
+                fiscal_year=2020,
+                period_end=date(2020, 12, 31),
+                value=1.0,
+                currency="USD",
+                tag="Revenues",
+            )
+            for inst in instruments
+        ]
+        for inst in instruments:
+            factor = 1.001 if inst.broker_symbol.startswith("UP") else 0.999
+            for n in range(900):
+                rows.append(
+                    PriceBar(instrument_id=inst.id, bar_date=last - timedelta(days=899 - n), close=100.0 * factor**n)
+                )
+        _seed(client, rows)
+
+        mine = client.post("/api/scoring/backtest", params={"horizon_months": 1, "years": 1}).json()
+        wide = client.post("/api/scoring/backtest", params={"horizon_months": 1, "years": 1, "universe": "wide"}).json()
+
+        assert mine["universe"] == "mine"
+        assert mine["instruments_scored"] == 0
+        assert wide["universe"] == "wide"
+        assert wide["instruments_scored"] == 10

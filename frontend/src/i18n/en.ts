@@ -772,6 +772,11 @@ export const en: Catalogue = {
     'Not enough stored history to test the score yet: it needs about two years of daily prices before the test window, for at least 8 instruments at once. Backfilling price history and refreshing fundamentals can help.',
   'scoreTrack.disclaimer':
     'This tests the score on the instruments already in this app (held, watchlisted, screened), which you picked partly with hindsight, so the result flatters more than a neutral universe would. Months overlap with a multi-month horizon, so they are not independent tests. Past results say nothing certain about the future.',
+  'scoreTrack.universe': 'Stocks tested',
+  'scoreTrack.universeMine': 'My stocks (held, watchlist, screener)',
+  'scoreTrack.universeWide': 'My stocks + all stocks with fundamentals',
+  'scoreTrack.disclaimerWide':
+    'This includes every stock with stored fundamentals (e.g. today\'s S&P 500 list), so it is less hand-picked than your own stocks, but companies that left the list or went bankrupt are missing, which still flatters the result. Months overlap with a multi-month horizon, so they are not independent tests. Past results say nothing certain about the future.',
   'scoreTrack.window': 'Months tested',
   'scoreTrack.horizon': 'Return measured over',
   'scoreTrack.months': { one: '{count} month', other: '{count} months' },
