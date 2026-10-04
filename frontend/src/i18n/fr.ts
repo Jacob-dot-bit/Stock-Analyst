@@ -16,6 +16,8 @@ export const fr: Catalogue = {
     other: '{count} éléments de la watchlist ont atteint leur prix cible',
   },
   'language.label': 'Langue',
+  'theme.switchToLight': 'Passer au thème clair',
+  'theme.switchToDark': 'Passer au thème sombre',
   'app.disclaimer':
     "Cet outil produit des indicateurs à partir de données publiques ; ce ne sont pas des conseils en investissement. Les décisions restent les vôtres.",
 
