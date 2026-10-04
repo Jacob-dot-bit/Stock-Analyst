@@ -13,6 +13,8 @@ backend/app/
   prices/        Daily-bar history, live quotes, FX, provider-quota tracking
   fundamentals/  SEC EDGAR + ESEF fetch/cache
   scoring/       Composite score computation (config, metrics, service)
+  backtest/      Point-in-time backtest of the composite score (service.py),
+                 behind POST /api/scoring/backtest and scripts/backtest.py
   symbols/       Broker-symbol ↔ provider-symbol mapping/resolution
   providers/     One file per external data source, behind a common interface
   analysis/      Per-instrument on-request enrichment: news_service.py (Alpha
@@ -22,7 +24,8 @@ backend/app/
                  empty.
 
 frontend/src/
-  pages/         One per route (Portfolio, Transactions, Watchlist, Screener, Settings)
+  pages/         One per route (Weekly, Portfolio, Transactions, Dividends, Watchlist,
+                 Screener, Risques, Journal, TaxPrep, Settings)
   components/    Shared + page-specific React components
   hooks/         useHiddenColumns (column-visibility persistence)
   api/           types.ts (response shapes) + client.ts (fetch wrappers)
@@ -100,6 +103,7 @@ frontend/src/
 - `POST /fundamentals/refresh?force=` — EDGAR-then-ESEF fundamentals fetch for held stocks; sequential, locked.
 - `GET  /fundamentals/refresh/status` — live progress (`FundamentalsProgress`).
 - `GET  /scores` — every held STOCK/ETF's composite score, computed live from cached data.
+- `POST /backtest?horizon_months=&years=` — the score's track record (`backtest/service.py`, DEVLOG "Decision 3u.79"): recomputes the composite on each monthly rebalance date from point-in-time inputs only (fundamentals whose fiscal period ended `FILING_LAG_DAYS` = 120 days before the date, split-adjusted closes up to the date, FX at the date) and buckets forward returns by score quartile. Reuses `scoring/service.py`'s pillar/composite helpers, so it always tests the current `scoring.yaml`. Universe is the user's own instruments (`user_universe_ids`: held, watchlisted, screened — never the discovery pool or the benchmark); an instrument needs `MIN_HISTORY_BARS` (504) before it is scorable. The window ends one horizon before the latest stored bar. Returns quartile mean/median, top-minus-bottom spread, per-month spreads and hit rate. Recomputed live, nothing persisted. Same engine as the CLI `python -m scripts.backtest --start --end --horizon`.
 
 ### `/api/watchlist` (`routers/watchlist.py`)
 - `POST ""` — add a symbol (rejects an already-held or already-watched instrument, 400; rejects a symbol no price provider recognizes, 422 — see "Reject-on-add guardrail" below). Optional `company_name` powers a best-effort same-company duplicate warning — see "ISIN duplicate detection" below; never blocks the add.
@@ -129,7 +133,7 @@ frontend/src/
 - `POST /backfill-dividends` — one-off, resumable catch-up (same batched "click again" convention as `/refresh`) that re-fetches fundamentals for already-evaluated candidates not yet checked for the `dividend_per_share` concept (`DiscoveryCandidate.dividend_checked_at IS NULL` — deliberately "has this been tried," not "did it find data," so a genuine non-payer is never re-selected forever) — `/refresh`'s own `verified_at`-gated batch would otherwise never revisit them. See DEVLOG "Decision 3u.73"/"Decision 3u.74".
 
 ### `/api/prediction` (`routers/prediction.py`)
-- `POST /backfill-history` — phase 1 of a real, backtestable Discovery prediction (DEVLOG "Decision 3u.22"): pulls `prediction/service.py::BACKFILL_YEARS` (5) years of daily bars for every already-priced instrument, one call per instrument covering the whole window. Price-only, deliberately: `Fundamental` rows hold only each concept's latest known figure, not a dated history, so a fundamentals-based backtest today would be lookahead bias (using information that didn't exist yet at the date being tested). `PriceBar` is naturally point-in-time safe, so it's the only input this phase (and the model phase after it) touches. Runs synchronously, same "blocks for the duration, poll status separately" convention as `POST /api/scoring/fundamentals/refresh`.
+- `POST /backfill-history` — phase 1 of a real, backtestable Discovery prediction (DEVLOG "Decision 3u.22"): pulls `prediction/service.py::BACKFILL_YEARS` (5) years of daily bars for every already-priced instrument, one call per instrument covering the whole window. Price-only, deliberately: `Fundamental` rows hold only each concept's latest known figure, not a dated history, so a fundamentals-based backtest today would be lookahead bias (using information that didn't exist yet at the date being tested). (The later score backtest, `POST /api/scoring/backtest`, works around this with per-fiscal-year figures plus a 120-day filing lag; this model stays price-only.) `PriceBar` is naturally point-in-time safe, so it's the only input this phase (and the model phase after it) touches. Runs synchronously, same "blocks for the duration, poll status separately" convention as `POST /api/scoring/fundamentals/refresh`.
 - `GET  /backfill-history/status` — live progress of the backfill currently in flight, or the last completed one.
 - `POST /backtest` — phase 2 (DEVLOG "Decision 3u.23"): trains a `scikit-learn` `LogisticRegression` on `prediction/features.py`'s price-only features (momentum, SMA ratios, realized volatility), split strictly chronologically (train on the earlier 70% by date, test on the later 30% — never a random split, which would leak future market conditions into training). Recomputed live on every call, not persisted, matching `compute_scores`'s own always-recompute convention. Reports honest metrics — accuracy plus the mean *realized* forward return of the "predicted up" vs "predicted down" buckets — and two explicit warning flags (`low_sample_warning`, `single_class_warning`) rather than a bare number that could misread as more confident than it is. Wired into the Discovery UI as an aggregate report only (`BacktestPanel.tsx`) — deliberately never a per-instrument prediction label, given the model's own real accuracy (~0.54, barely above chance, one test period). See DEVLOG "Decision 3u.66".
 

@@ -9370,3 +9370,23 @@ The optional paid per-instrument commentary (the separate button in the Insights
 removed, together with its settings fields, its cache table (dropped by an Alembic
 migration) and its tests. It was never part of the score, so no scoring behaviour changes.
 News/sentiment from Alpha Vantage stays exactly as it was in Decision 3u.12.
+
+## Step 3u.82 — Docs caught up with the score backtest, the weekly view and the commentary removal (2026-10-04)
+
+The two 2026-09-25 commits landed without a DEVLOG entry, and README/ARCHITECTURE
+lagged the features built on them. For the record:
+
+- `434c51c` added the point-in-time score backtest (`app/backtest/service.py`,
+  CLI `scripts/backtest.py`). 3u.79 put it in the app and fixed its accuracy.
+- `ee059fa` made the qualitative commentary's provider configurable (Perplexity, or
+  any OpenAI-compatible chat endpoint through `providers/llm.py`). It lasted about a
+  week: 3u.81 removed the whole commentary feature, that provider layer included,
+  so no LLM setting is left in `.env.example` or `config.py`.
+
+Doc changes, no code changes:
+- README: a "Backtesting the score" section (what point-in-time means here, the panel
+  and the CLI, the two biases), a "This week" section, status rows 7 and 8, and an
+  architecture tree that matches today's directories and pages.
+- ARCHITECTURE: `POST /api/scoring/backtest` in the endpoint list, `backtest/` in the
+  directory map, the full page list, and a note on the older price-only prediction
+  backtest saying the score backtest handles fundamentals with a filing lag instead.
