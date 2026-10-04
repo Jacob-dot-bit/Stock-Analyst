@@ -24,14 +24,21 @@ export function SortableHeader<K extends string>({
   title?: string
 }) {
   const active = sort.key === sortKeyName
+  // The click target is a real <button> inside the <th> (not an onClick on
+  // the cell itself), so the header is reachable with Tab and activates with
+  // Enter/Space; aria-sort tells a screen reader which column orders the rows.
   return (
     <th
       className={`sortable${className ? ` ${className}` : ''}${active ? ' sorted' : ''}`}
       title={title}
-      onClick={() => onSort(sortKeyName)}
+      aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
-      {label}
-      <span className="sort-arrow">{active ? (sort.direction === 'asc' ? '▲' : '▼') : ''}</span>
+      <button type="button" className="sort-button" onClick={() => onSort(sortKeyName)}>
+        {label}
+        <span className="sort-arrow" aria-hidden="true">
+          {active ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+        </span>
+      </button>
     </th>
   )
 }

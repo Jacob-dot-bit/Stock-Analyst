@@ -101,7 +101,9 @@ export function AllocationTargets() {
                 <th className="num" title={t('allocation.gapTooltip')}>
                   {t('allocation.gap')}
                 </th>
-                <th />
+                <th>
+                  <span className="visually-hidden">{t('common.actions')}</span>
+                </th>
                 <th>{t('allocation.amount')}</th>
               </tr>
             </thead>

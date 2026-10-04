@@ -257,7 +257,9 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                 <SortableHeader label={t('table.account')} sortKeyName="account" sort={sort} onSort={handleSort} />
               )}
               {!hidden.has('insights') && <th>{t('table.insights')}</th>}
-              <th />
+              <th>
+                <span className="visually-hidden">{t('common.actions')}</span>
+              </th>
             </tr>
           </thead>
           <tbody>

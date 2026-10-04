@@ -175,7 +175,9 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
                 <SortableHeader label={t('watchlist.addedOn')} sortKeyName="added" sort={sort} onSort={handleSort} />
               )}
               {!hidden.has('insights') && <th>{t('table.insights')}</th>}
-              <th />
+              <th>
+                <span className="visually-hidden">{t('common.actions')}</span>
+              </th>
             </tr>
           </thead>
           <tbody>

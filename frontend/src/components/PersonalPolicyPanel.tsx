@@ -352,7 +352,9 @@ export function PersonalPolicyPanel() {
                 <th>{t('policy.limits.dimension')}</th>
                 <th>{t('policy.limits.target')}</th>
                 <th className="num">{t('policy.limits.range')}</th>
-                <th />
+                <th>
+                  <span className="visually-hidden">{t('common.actions')}</span>
+                </th>
               </tr>
             </thead>
             <tbody>

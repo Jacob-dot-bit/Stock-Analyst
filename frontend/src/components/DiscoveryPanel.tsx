@@ -508,7 +508,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   <th className="num">{t('discovery.debtRatio')}</th>
                   <th className="num">{t('discovery.dividendYield')}</th>
                   <th>{t('discovery.recommendationColumn')}</th>
-                  <th />
+                  <th>
+                    <span className="visually-hidden">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -591,7 +593,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                         <th>{t('table.instrument')}</th>
                         <th className="num">{t('table.price')}</th>
                         <th>{t('discovery.recommendationColumn')}</th>
-                        <th />
+                        <th>
+                          <span className="visually-hidden">{t('common.actions')}</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>{filteredResults.map((c) => candidateRow(c, false))}</tbody>

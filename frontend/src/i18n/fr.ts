@@ -30,6 +30,7 @@ export const fr: Catalogue = {
   'common.delete': 'Supprimer',
   'common.edit': 'Modifier',
   'common.loading': 'Chargement…',
+  'common.actions': 'Actions',
   'common.notComputable': 'non calculable',
   'common.notApplicable': 'non applicable',
   'common.none': '—',

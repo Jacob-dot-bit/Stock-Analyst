@@ -38,6 +38,7 @@ export const pl: Catalogue = {
   'common.delete': 'Usuń',
   'common.edit': 'Edytuj',
   'common.loading': 'Ładowanie…',
+  'common.actions': 'Akcje',
   'common.notComputable': 'nie do obliczenia',
   'common.notApplicable': 'nie dotyczy',
   'common.none': '—',

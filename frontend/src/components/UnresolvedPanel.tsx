@@ -57,7 +57,9 @@ export function UnresolvedPanel({ instruments, onUpdated }: Props) {
             <tr>
               <th>{t('unresolved.brokerSymbol')}</th>
               <th>{t('unresolved.providerSymbol')}</th>
-              <th />
+              <th>
+                <span className="visually-hidden">{t('common.actions')}</span>
+              </th>
             </tr>
           </thead>
           <tbody>

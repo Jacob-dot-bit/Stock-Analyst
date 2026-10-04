@@ -37,6 +37,7 @@ export const en: Catalogue = {
   'common.delete': 'Delete',
   'common.edit': 'Edit',
   'common.loading': 'Loading…',
+  'common.actions': 'Actions',
   'common.notComputable': 'not computable',
   'common.notApplicable': 'not applicable',
   'common.none': '—',

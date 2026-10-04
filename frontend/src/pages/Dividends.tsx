@@ -163,7 +163,7 @@ export function Dividends() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2>{t('dividends.detailTitle')}</h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+            <select aria-label={t('dividends.year')} value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
               <option value="">{t('dividends.allYears')}</option>
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -171,7 +171,7 @@ export function Dividends() {
                 </option>
               ))}
             </select>
-            <select value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+            <select aria-label={t('dividends.account')} value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
               <option value="">{t('dividends.allAccounts')}</option>
               {accounts.map((a) => (
                 <option key={a} value={a}>

@@ -100,7 +100,9 @@ export function BackupPanel() {
               <tr>
                 <th>{t('backup.date')}</th>
                 <th className="num">{t('backup.size')}</th>
-                <th />
+                <th>
+                  <span className="visually-hidden">{t('common.actions')}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
