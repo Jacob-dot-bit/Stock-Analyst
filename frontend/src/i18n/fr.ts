@@ -776,6 +776,11 @@ export const fr: Catalogue = {
     'Pas encore assez d’historique pour tester le score : il faut environ deux ans de cours quotidiens avant la période testée, pour au moins 8 instruments à la fois. Compléter l’historique des prix et actualiser les fondamentaux peut aider.',
   'scoreTrack.disclaimer':
     'Ce test porte sur les instruments déjà présents dans l’application (détenus, en watchlist, en pépites), choisis en partie avec le recul : le résultat est donc plus flatteur qu’il ne le serait sur un univers neutre. Avec un horizon de plusieurs mois, les mois se chevauchent et ne sont pas des tests indépendants. Les résultats passés ne garantissent rien pour l’avenir.',
+  'scoreTrack.universe': 'Titres testés',
+  'scoreTrack.universeMine': 'Mes titres (détenus, watchlist, pépites)',
+  'scoreTrack.universeWide': 'Mes titres + tous les titres avec fondamentaux',
+  'scoreTrack.disclaimerWide':
+    'Ce test inclut tous les titres dont les fondamentaux sont stockés (par ex. la liste actuelle du S&P 500) : il est moins choisi à la main que vos propres titres, mais les sociétés sorties de la liste ou en faillite manquent, ce qui flatte encore le résultat. Avec un horizon de plusieurs mois, les mois se chevauchent et ne sont pas des tests indépendants. Les résultats passés ne garantissent rien pour l’avenir.',
   'scoreTrack.window': 'Mois testés',
   'scoreTrack.horizon': 'Rendement mesuré sur',
   'scoreTrack.months': { one: '{count} mois', other: '{count} mois' },

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.backtest.service import run_backtest, user_universe_ids
+from app.backtest.service import run_backtest, user_universe_ids, wide_universe_ids
 from app.db import get_db
 from app.fundamentals.service import fetch_fundamentals, get_fundamentals_progress
 from app.models import Instrument, Position, PriceBar
@@ -133,6 +134,9 @@ def get_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
 def score_backtest(
     horizon_months: int = Query(12, ge=1, le=36, description="Forward-return horizon in months."),
     years: int = Query(5, ge=1, le=20, description="How many years of rebalance dates to test."),
+    universe: Literal["mine", "wide"] = Query(
+        "mine", description="`mine`: held, watchlisted and screened instruments. `wide`: also every instrument with fundamentals."
+    ),
     db: Session = Depends(get_db),
 ) -> ScoreBacktestOut:
     """The composite score's track record: recompute it point-in-time on each
@@ -140,7 +144,8 @@ def score_backtest(
     returns across score quartiles. The window ends `horizon_months` before
     the latest stored bar, so every rebalance date has a forward return to
     measure. The universe is the user's own instruments (held, watchlisted,
-    screened), matching the panel's selection-bias disclaimer. Recomputed
+    screened) by default, or `wide` to add every instrument with stored
+    fundamentals. Recomputed
     live, like `/scores` — nothing is persisted."""
     latest = db.execute(select(func.max(PriceBar.bar_date))).scalar()
     if latest is None:
@@ -153,9 +158,10 @@ def score_backtest(
         start=start,
         end=end,
         horizon_months=horizon_months,
-        instrument_ids=user_universe_ids(db),
+        instrument_ids=wide_universe_ids(db) if universe == "wide" else user_universe_ids(db),
     )
     return ScoreBacktestOut(
+        universe=universe,
         start=start,
         end=end,
         horizon_months=result.horizon_months,

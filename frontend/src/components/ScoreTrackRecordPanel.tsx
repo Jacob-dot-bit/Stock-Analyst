@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api/client'
-import type { ScoreBacktest } from '../api/types'
+import type { ScoreBacktest, ScoreBacktestUniverse } from '../api/types'
 import { useI18n } from '../i18n'
 
 /** Below either threshold the result is shown, but flagged as too thin to
@@ -19,12 +19,13 @@ export function ScoreTrackRecordPanel() {
   const [busy, setBusy] = useState(false)
   const [report, setReport] = useState<ScoreBacktest | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [universe, setUniverse] = useState<ScoreBacktestUniverse>('mine')
 
   async function run() {
     setBusy(true)
     setError(null)
     try {
-      setReport(await api.runScoreBacktest())
+      setReport(await api.runScoreBacktest(universe))
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -43,6 +44,13 @@ export function ScoreTrackRecordPanel() {
         {t('scoreTrack.description')}
       </p>
       <div className="form-row">
+        <label>
+          {t('scoreTrack.universe')}{' '}
+          <select value={universe} onChange={(e) => setUniverse(e.target.value as ScoreBacktestUniverse)}>
+            <option value="mine">{t('scoreTrack.universeMine')}</option>
+            <option value="wide">{t('scoreTrack.universeWide')}</option>
+          </select>
+        </label>
         <button disabled={busy} onClick={() => void run()}>
           {busy ? t('scoreTrack.running') : t('scoreTrack.run')}
         </button>
@@ -63,7 +71,7 @@ export function ScoreTrackRecordPanel() {
       {report && report.observations > 0 && (
         <div style={{ marginTop: '0.8rem' }}>
           <div className="notice warning" style={{ marginBottom: '0.8rem' }}>
-            {t('scoreTrack.disclaimer')}
+            {t(report.universe === 'wide' ? 'scoreTrack.disclaimerWide' : 'scoreTrack.disclaimer')}
           </div>
 
           <dl className="position-detail-facts">

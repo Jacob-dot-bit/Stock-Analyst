@@ -16,7 +16,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import Instrument, PriceBar
+from app.models import Fundamental, Instrument, PriceBar
 from app.prediction import service as prediction_service
 from app.prediction.service import backfill_history, get_backfill_progress
 from app.providers.base import Bar, ProviderChain
@@ -84,6 +84,32 @@ class TestAlreadyPricedUniverse:
 
         assert report.updated == 1
         assert report.failed == 0
+
+    def test_with_fundamentals_adds_unpriced_instruments_that_have_fundamentals(self, client):
+        priced = Instrument(broker_symbol="AAA.US", provider_symbol="AAA", category="STOCK", currency="USD", country="US")
+        with_fund = Instrument(broker_symbol="BBB.US", provider_symbol="BBB", category="STOCK", currency="USD", country="US")
+        neither = Instrument(broker_symbol="CCC.US", provider_symbol="CCC", category="STOCK", currency="USD", country="US")
+        _seed([priced, with_fund, neither])
+        _seed(
+            [
+                PriceBar(instrument_id=priced.id, bar_date=date.today(), open=1, high=1, low=1, close=1, volume=1),
+                Fundamental(
+                    instrument_id=with_fund.id,
+                    concept="revenue",
+                    fiscal_year=2024,
+                    period_end=date(2024, 12, 31),
+                    value=1.0,
+                    currency="USD",
+                    tag="Revenues",
+                ),
+            ]
+        )
+
+        chain = ProviderChain([FakeProvider("test", bars=_bars(5))])
+        db = next(app.dependency_overrides[get_db]())
+
+        assert backfill_history(db, chain).updated == 1
+        assert backfill_history(db, chain, with_fundamentals=True).updated == 2
 
     def test_a_universe_with_no_priced_instruments_updates_nothing(self, client):
         chain = ProviderChain([FakeProvider("test", bars=_bars(5))])

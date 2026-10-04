@@ -53,6 +53,7 @@ import type {
   RefreshStatus,
   Score,
   ScoreBacktest,
+  ScoreBacktestUniverse,
   ScreenerCandidate,
   Sparkline,
   SymbolSearchResult,
@@ -500,7 +501,8 @@ export const api = {
 
   runBacktest: () => request<BacktestReport>('/api/prediction/backtest', { method: 'POST' }),
 
-  runScoreBacktest: () => request<ScoreBacktest>('/api/scoring/backtest', { method: 'POST' }),
+  runScoreBacktest: (universe: ScoreBacktestUniverse = 'mine') =>
+    request<ScoreBacktest>(`/api/scoring/backtest?universe=${universe}`, { method: 'POST' }),
 
   importFactorData: () => request<FactorImportResult>('/api/factors/import', { method: 'POST' }),
 
