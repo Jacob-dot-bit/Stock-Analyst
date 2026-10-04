@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { AlertsBell } from './components/AlertsBell'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { ThemeToggle } from './components/ThemeToggle'
 import { useI18n } from './i18n'
 import { Dividends } from './pages/Dividends'
 import { Journal } from './pages/Journal'
@@ -32,7 +33,10 @@ export default function App() {
           <NavLink to="/settings">{t('settings.title')}</NavLink>
         </nav>
         <AlertsBell />
-        <LanguageSwitcher />
+        <div className="topbar-controls">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="content">

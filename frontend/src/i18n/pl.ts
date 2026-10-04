@@ -24,6 +24,8 @@ export const pl: Catalogue = {
     many: '{count} pozycji z watchlisty osiągnęło cenę docelową',
   },
   'language.label': 'Język',
+  'theme.switchToLight': 'Przełącz na jasny motyw',
+  'theme.switchToDark': 'Przełącz na ciemny motyw',
   'app.disclaimer':
     'To narzędzie generuje wskaźniki na podstawie danych publicznych; nie jest to doradztwo inwestycyjne. Decyzje pozostają po Twojej stronie.',
 

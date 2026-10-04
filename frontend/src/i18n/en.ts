@@ -23,6 +23,8 @@ export const en: Catalogue = {
     other: '{count} watchlist items at or below their target price',
   },
   'language.label': 'Language',
+  'theme.switchToLight': 'Switch to light theme',
+  'theme.switchToDark': 'Switch to dark theme',
   'app.disclaimer':
     'This tool produces indicators from public data; it is not investment advice. The decisions remain yours.',
 

@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stock Analyst</title>
+    <script>
+      // Applied before the stylesheet paints, so a light-theme user never sees a dark flash.
+      try {
+        if (localStorage.getItem('stock-analyst.theme') === 'light') document.documentElement.dataset.theme = 'light'
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
