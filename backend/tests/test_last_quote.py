@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import LastQuote, PriceBar
+from app.models import FxRate, LastQuote, PriceBar
 from app.providers.base import Bar, ProviderChain
 from tests.test_providers import FakeProvider
 
@@ -27,6 +27,12 @@ def client(monkeypatch, tmp_path):
     )
     Base.metadata.create_all(engine)
     TestingSession = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    # AAPL.US is priced in USD and the base currency is EUR: without a cached
+    # rate for today, `get_fx_rate` goes to the network, and offline (CI) it
+    # returns None, so every position silently fell back to "broker".
+    with TestingSession() as session:
+        session.add(FxRate(currency="USD", base_currency="EUR", rate_date=datetime.now(UTC).date(), rate=1.0))
+        session.commit()
 
     def override_get_db():
         session = TestingSession()
