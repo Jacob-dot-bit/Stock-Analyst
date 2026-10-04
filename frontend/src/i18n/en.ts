@@ -438,6 +438,8 @@ export const en: Catalogue = {
   'history.capped':
     'History starts on {date} — the depth of cached price history, not the date of your first purchase.',
   'history.empty': 'Not enough data yet (lots or cached prices) to reconstruct a history.',
+  'history.tooFew': 'Only one day of history so far. The chart appears once there are at least two.',
+  'history.chartLabel': 'Portfolio value chart from {from} to {to}. Use the left and right arrow keys to read each day.',
 
   'table.unrealized': 'Unrealised ({currency})',
   'table.performance': 'Perf.',

@@ -445,6 +445,8 @@ export const pl: Catalogue = {
   'history.capped':
     'Historia zaczyna się {date} — to głębokość zapisanej historii cen, nie data pierwszego zakupu.',
   'history.empty': 'Za mało danych (lotów lub zapisanych cen), aby zrekonstruować historię.',
+  'history.tooFew': 'Na razie jest tylko jeden dzień historii. Wykres pojawi się, gdy będą co najmniej dwa.',
+  'history.chartLabel': 'Wykres wartości portfela od {from} do {to}. Użyj strzałek w lewo i w prawo, aby odczytać każdy dzień.',
 
   'table.unrealized': 'Niezrealizowany ({currency})',
   'table.performance': 'Zwrot',

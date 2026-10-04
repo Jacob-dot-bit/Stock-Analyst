@@ -882,6 +882,104 @@ td.negative { color: var(--negative); }
   font-size: 0.8rem;
 }
 
+/* --- Line charts (ValueHistoryChart) --- */
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Drawn at its measured pixel width (no viewBox stretching), so the axis
+   text stays at --fs-xs on any screen. The min-height holds the space while
+   the first measurement is taken. */
+.chart-plot {
+  position: relative;
+  min-height: 240px;
+  margin-top: var(--space-3);
+  border-radius: var(--radius);
+  touch-action: pan-y;
+}
+
+.chart-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart-axis-label {
+  font-size: var(--fs-xs);
+  fill: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  min-width: 170px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-sm);
+}
+
+.chart-tooltip-date {
+  margin-bottom: var(--space-1);
+  font-weight: 650;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chart-tooltip-value {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.chart-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* Loading placeholder: a shimmering block the same shape as the content
+   it stands in for, so the layout doesn't jump when the data arrives. */
+.skeleton {
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--surface-alt) 0%, var(--border) 50%, var(--surface-alt) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-chart { height: 240px; margin-top: var(--space-3); }
+
+@keyframes skeleton-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 /* --- Messages --- */
 
 .notice {
