@@ -867,6 +867,22 @@ export interface BacktestReport {
   single_class_warning: boolean
 }
 
+/** Result of `POST /api/scoring/backtest` — the composite score's
+ * point-in-time track record. Quartile 4 holds the highest scores. */
+export interface ScoreBacktest {
+  start: string
+  end: string
+  horizon_months: number
+  rebalance_count: number
+  observations: number
+  instruments_scored: number
+  buckets: { quartile: number; count: number; mean_return: number | null; median_return: number | null }[]
+  top_minus_bottom: number | null
+  /** Share of rebalance months where the top quartile beat the bottom one. */
+  hit_rate: number | null
+  periods: { rebalance_date: string; scored: number; spread: number | null }[]
+}
+
 export interface FactorImportResult {
   imported: number
   already_present: number
@@ -1095,7 +1111,7 @@ export interface WeeklyJournalDue {
   overdue: boolean
 }
 
-/** `GET /api/weekly-summary` — see DEVLOG "Decision 3u.79". */
+/** `GET /api/weekly-summary` — see DEVLOG "Decision 3u.80". */
 export interface WeeklySummary {
   as_of: string
   window_end: string

@@ -5,6 +5,7 @@ for why this only ever touches `PriceBar` (DEVLOG "Decision 3u.22").
 
 from __future__ import annotations
 
+import threading
 from datetime import date, timedelta
 
 import pytest
@@ -46,7 +47,7 @@ def client():
     # The module-level lock/progress are process-global state, not
     # per-request — reset between tests so one test's run doesn't leave the
     # lock held (or `running=True`) for the next.
-    prediction_service._backfill_lock = type(prediction_service._backfill_lock)()
+    prediction_service._backfill_lock = threading.Lock()
     prediction_service._progress = prediction_service.BackfillProgress()
 
 

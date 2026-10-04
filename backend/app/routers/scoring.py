@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.backtest.service import run_backtest
 from app.db import get_db
 from app.fundamentals.service import fetch_fundamentals, get_fundamentals_progress
-from app.models import Instrument, Position
+from app.models import Instrument, Position, PriceBar
 from app.providers.registry import get_edgar_provider, get_esef_provider
 from app.schemas import (
     FundamentalsRefreshReportOut,
     FundamentalsRefreshStatusOut,
     MetricScoreOut,
     PillarScoreOut,
+    ScoreBacktestBucketOut,
+    ScoreBacktestOut,
+    ScoreBacktestPeriodOut,
     ScoreOut,
 )
 from app.scoring.config import get_scoring_config
@@ -121,3 +127,34 @@ def get_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
     results = compute_scores(db, instruments, config)
 
     return [score_to_out(result) for result in results]
+
+
+@router.post("/backtest", response_model=ScoreBacktestOut)
+def score_backtest(
+    horizon_months: int = Query(12, ge=1, le=36, description="Forward-return horizon in months."),
+    years: int = Query(5, ge=1, le=20, description="How many years of rebalance dates to test."),
+    db: Session = Depends(get_db),
+) -> ScoreBacktestOut:
+    """The composite score's track record: recompute it point-in-time on each
+    monthly rebalance date (`app/backtest/service.py`) and compare forward
+    returns across score quartiles. The window ends `horizon_months` before
+    the latest stored bar, so every rebalance date has a forward return to
+    measure. Recomputed live, like `/scores` — nothing is persisted."""
+    latest = db.execute(select(func.max(PriceBar.bar_date))).scalar()
+    if latest is None:
+        latest = date.today()
+    end = latest - timedelta(days=30 * horizon_months)
+    start = end - timedelta(days=365 * years)
+    result = run_backtest(db, get_scoring_config(), start=start, end=end, horizon_months=horizon_months)
+    return ScoreBacktestOut(
+        start=start,
+        end=end,
+        horizon_months=result.horizon_months,
+        rebalance_count=result.rebalance_count,
+        observations=result.observations,
+        instruments_scored=result.instruments_scored,
+        buckets=[ScoreBacktestBucketOut(**vars(b)) for b in result.buckets],
+        top_minus_bottom=result.top_minus_bottom,
+        hit_rate=result.hit_rate,
+        periods=[ScoreBacktestPeriodOut(**vars(p)) for p in result.periods],
+    )

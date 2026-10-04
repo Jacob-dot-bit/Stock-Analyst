@@ -5,6 +5,7 @@ import { AddToScreenerForm } from '../components/AddToScreenerForm'
 import { BackfillFigisButton } from '../components/BackfillFigisButton'
 import { BackfillIsinsButton } from '../components/BackfillIsinsButton'
 import { DiscoveryPanel } from '../components/DiscoveryPanel'
+import { ScoreTrackRecordPanel } from '../components/ScoreTrackRecordPanel'
 import { ScreenerTable } from '../components/ScreenerTable'
 import { useI18n } from '../i18n'
 
@@ -125,6 +126,8 @@ export function Screener() {
       </div>
 
       <DiscoveryPanel onAdded={() => void load()} priceMin={priceMin} priceMax={priceMax} />
+
+      <ScoreTrackRecordPanel />
     </>
   )
 }

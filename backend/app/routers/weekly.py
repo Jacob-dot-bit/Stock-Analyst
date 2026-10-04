@@ -5,7 +5,7 @@ policy gaps, allocation gaps, position/watchlist signals, journal review
 dates, price freshness — into a single read. No new computation and no
 trade suggestion: every row is a fact the user can already find on its own
 page, gathered here so a weekly check-in starts in one place. See DEVLOG
-"Decision 3u.79".
+"Decision 3u.80".
 
 Calls the other routers' endpoint functions directly rather than duplicating
 their logic, so this view can never drift from the pages it summarises.

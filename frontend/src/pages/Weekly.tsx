@@ -31,7 +31,7 @@ function Empty({ text }: { text: string }) {
  * where score and allocation line up, watchlist targets, journal reviews,
  * and the data freshness every one of those depends on. Descriptive only,
  * like the rest of the app: nothing here is phrased as a trade. See DEVLOG
- * "Decision 3u.79".
+ * "Decision 3u.80".
  */
 export function Weekly() {
   const { t, formatNumber, formatSignedPercent, formatDate } = useI18n()

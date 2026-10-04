@@ -124,3 +124,15 @@ class TestRunBacktest:
         assert result.top_minus_bottom is not None
         assert result.top_minus_bottom > 0
         assert result.buckets[3].mean_return > result.buckets[0].mean_return
+        # Every ranked date has a positive spread, so the hit rate is 100%.
+        assert result.periods
+        assert all(p.scored == 12 for p in result.periods)
+        assert result.hit_rate == pytest.approx(1.0)
+        assert result.instruments_scored == 12
+
+    def test_empty_universe_returns_no_periods(self, db):
+        result = run_backtest(db, _technical_config(), start=date(2024, 1, 1), end=date(2024, 6, 1))
+
+        assert result.observations == 0
+        assert result.periods == []
+        assert result.hit_rate is None

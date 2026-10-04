@@ -767,6 +767,32 @@ export const fr: Catalogue = {
   'backtest.avgReturnDown': 'Rendement réalisé moyen — baisse prédite',
   'backtest.lowSampleWarning': 'La période de test a trop peu d’échantillons pour faire confiance à cette précision.',
 
+  'scoreTrack.title': 'Historique du score',
+  'scoreTrack.description':
+    'Un score composite élevé mène-t-il vraiment à de meilleurs rendements ? Pour chaque mois passé, le score est recalculé avec uniquement ce qui était connu à ce moment-là (les fondamentaux ne comptent qu’une fois publiés, les prix seulement jusqu’à ce jour), les instruments sont répartis en quatre groupes selon leur score, puis on compare les rendements qui ont suivi.',
+  'scoreTrack.run': 'Vérifier l’historique',
+  'scoreTrack.running': 'Calcul en cours…',
+  'scoreTrack.empty':
+    'Pas encore assez d’historique pour tester le score : il faut environ deux ans de cours quotidiens avant la période testée, pour au moins 8 instruments à la fois. Compléter l’historique des prix et actualiser les fondamentaux peut aider.',
+  'scoreTrack.disclaimer':
+    'Ce test porte sur les instruments déjà présents dans l’application (détenus, en watchlist, en pépites), choisis en partie avec le recul : le résultat est donc plus flatteur qu’il ne le serait sur un univers neutre. Avec un horizon de plusieurs mois, les mois se chevauchent et ne sont pas des tests indépendants. Les résultats passés ne garantissent rien pour l’avenir.',
+  'scoreTrack.window': 'Mois testés',
+  'scoreTrack.horizon': 'Rendement mesuré sur',
+  'scoreTrack.months': { one: '{count} mois', other: '{count} mois' },
+  'scoreTrack.instruments': 'Instruments notés',
+  'scoreTrack.spread': 'Quart supérieur moins quart inférieur (rendement moyen)',
+  'scoreTrack.hitRate': 'Mois où le quart supérieur a battu le quart inférieur',
+  'scoreTrack.thinWarning': 'Trop peu d’instruments ou de mois pour tirer une conclusion de ce résultat.',
+  'scoreTrack.quartile': 'Groupe de score',
+  'scoreTrack.count': 'Observations',
+  'scoreTrack.meanReturn': 'Rendement moyen',
+  'scoreTrack.medianReturn': 'Rendement médian',
+  'scoreTrack.q4': 'Quart supérieur',
+  'scoreTrack.q3': 'Milieu haut',
+  'scoreTrack.q2': 'Milieu bas',
+  'scoreTrack.q1': 'Quart inférieur',
+  'scoreTrack.perPeriod': 'Quart supérieur moins quart inférieur, mois par mois',
+
   'factors.title': 'Exposition factorielle (modèle à 4 facteurs de Carhart)',
   'factors.description':
     "Explicatif, pas prédictif : ce qui a historiquement piloté le rendement journalier de chaque position — Marché, Taille, Valeur et Momentum — à partir des données factorielles publiques de Kenneth French. Positions détenues uniquement, appariées par région (un titre américain contre les facteurs US, un titre européen contre ceux d'Europe).",
@@ -1155,7 +1181,7 @@ export const fr: Catalogue = {
     "Agrégat de prêts P2P Mintos — des dizaines de fragments de prêts sans cours individuel, valorisés uniquement par un solde global déclaré par Mintos.",
   'positionDetail.notPriceableReasonValue.employee_savings_fund':
     "Fonds d'épargne salariale Amundi — pas de cotation de marché, sa valeur provient uniquement du relevé annuel Amundi.",
-  // --- Cette semaine (DEVLOG "Decision 3u.79") ------------------------------
+  // --- Cette semaine (DEVLOG "Decision 3u.80") ------------------------------
   'weekly.title': 'Cette semaine',
   'weekly.subtitle': 'Vos limites, cibles d\'allocation, scores, liste de suivi et journal au même endroit, au {date}.',
   'weekly.subtitleLoading': 'Vos limites, cibles d\'allocation, scores, liste de suivi et journal au même endroit.',

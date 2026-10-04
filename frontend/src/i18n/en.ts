@@ -763,6 +763,32 @@ export const en: Catalogue = {
   'backtest.avgReturnDown': 'Avg. realized return — predicted down',
   'backtest.lowSampleWarning': 'The test period has too few samples to trust this accuracy figure.',
 
+  'scoreTrack.title': 'Score track record',
+  'scoreTrack.description':
+    'Does a high composite score actually lead to better returns? For each past month, the score is recomputed using only what was known then (fundamentals count only once filed, prices only up to that day), instruments are split into four groups by score, and the returns that followed are compared.',
+  'scoreTrack.run': 'Check the track record',
+  'scoreTrack.running': 'Computing…',
+  'scoreTrack.empty':
+    'Not enough stored history to test the score yet: it needs about two years of daily prices before the test window, for at least 8 instruments at once. Backfilling price history and refreshing fundamentals can help.',
+  'scoreTrack.disclaimer':
+    'This tests the score on the instruments already in this app (held, watchlisted, screened), which you picked partly with hindsight, so the result flatters more than a neutral universe would. Months overlap with a multi-month horizon, so they are not independent tests. Past results say nothing certain about the future.',
+  'scoreTrack.window': 'Months tested',
+  'scoreTrack.horizon': 'Return measured over',
+  'scoreTrack.months': { one: '{count} month', other: '{count} months' },
+  'scoreTrack.instruments': 'Instruments scored',
+  'scoreTrack.spread': 'Top minus bottom quarter (avg. return)',
+  'scoreTrack.hitRate': 'Months where the top quarter beat the bottom',
+  'scoreTrack.thinWarning': 'Too few instruments or months to read anything into this result yet.',
+  'scoreTrack.quartile': 'Score group',
+  'scoreTrack.count': 'Observations',
+  'scoreTrack.meanReturn': 'Avg. return',
+  'scoreTrack.medianReturn': 'Median return',
+  'scoreTrack.q4': 'Top quarter',
+  'scoreTrack.q3': 'Upper-middle',
+  'scoreTrack.q2': 'Lower-middle',
+  'scoreTrack.q1': 'Bottom quarter',
+  'scoreTrack.perPeriod': 'Top minus bottom quarter, month by month',
+
   'factors.title': 'Factor exposure (Carhart four-factor model)',
   'factors.description':
     'Explanatory, not predictive: what has historically driven each holding\'s daily returns — Market, Size, Value, and Momentum — from Kenneth French\'s public factor data. Held positions only, region-matched (a US holding against US factors, a European one against Europe\'s).',
@@ -1145,7 +1171,7 @@ export const en: Catalogue = {
     'Mintos P2P loan aggregate — dozens of loan fragments with no individual quote, valued only as one overall balance declared by Mintos.',
   'positionDetail.notPriceableReasonValue.employee_savings_fund':
     "Amundi employee savings fund — no market quote; its value comes only from Amundi's annual statement.",
-  // --- This week (DEVLOG "Decision 3u.79") ---------------------------------
+  // --- This week (DEVLOG "Decision 3u.80") ---------------------------------
   'weekly.title': 'This week',
   'weekly.subtitle': 'Your limits, allocation targets, scores, watchlist and journal in one place, as of {date}.',
   'weekly.subtitleLoading': 'Your limits, allocation targets, scores, watchlist and journal in one place.',
