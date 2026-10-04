@@ -1533,3 +1533,33 @@ class FactorLoadingsOut(BaseModel):
     alpha_p_value: float | None = None
     #: "no_region_match" | "insufficient_history" | `None` (regression ran).
     not_applicable_reason: str | None = None
+
+
+class ScoreBacktestBucketOut(BaseModel):
+    quartile: int
+    count: int
+    mean_return: float | None = None
+    median_return: float | None = None
+
+
+class ScoreBacktestPeriodOut(BaseModel):
+    rebalance_date: date
+    scored: int
+    spread: float | None = None
+
+
+class ScoreBacktestOut(BaseModel):
+    """Result of `POST /api/scoring/backtest` — the composite score's
+    point-in-time track record (`app/backtest/service.py`). Unrounded, and
+    empty rather than guessed when the stored history is too thin."""
+
+    start: date
+    end: date
+    horizon_months: int
+    rebalance_count: int
+    observations: int
+    instruments_scored: int
+    buckets: list[ScoreBacktestBucketOut]
+    top_minus_bottom: float | None = None
+    hit_rate: float | None = None
+    periods: list[ScoreBacktestPeriodOut]

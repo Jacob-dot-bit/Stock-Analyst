@@ -774,6 +774,32 @@ export const pl: Catalogue = {
   'backtest.avgReturnDown': 'Śr. zrealizowany zwrot — przewidywany spadek',
   'backtest.lowSampleWarning': 'Okres testowy ma zbyt mało próbek, by ufać tej wartości skuteczności.',
 
+  'scoreTrack.title': 'Historia skuteczności oceny',
+  'scoreTrack.description':
+    'Czy wysoka ocena łączna naprawdę prowadzi do lepszych zwrotów? Dla każdego minionego miesiąca ocena jest przeliczana wyłącznie na podstawie tego, co było wtedy wiadome (dane fundamentalne liczą się dopiero po publikacji, ceny tylko do tego dnia), instrumenty są dzielone na cztery grupy według oceny, a następnie porównywane są późniejsze zwroty.',
+  'scoreTrack.run': 'Sprawdź historię',
+  'scoreTrack.running': 'Obliczanie…',
+  'scoreTrack.empty':
+    'Za mało zapisanej historii, by przetestować ocenę: potrzeba około dwóch lat dziennych cen przed testowanym okresem, dla co najmniej 8 instrumentów naraz. Pomóc może uzupełnienie historii cen i odświeżenie danych fundamentalnych.',
+  'scoreTrack.disclaimer':
+    'Test obejmuje instrumenty już obecne w aplikacji (posiadane, na watchliście, w perełkach), wybrane częściowo z perspektywy czasu, więc wynik wygląda lepiej niż na neutralnym zbiorze. Przy kilkumiesięcznym horyzoncie miesiące się nakładają i nie są niezależnymi testami. Przeszłe wyniki niczego nie gwarantują.',
+  'scoreTrack.window': 'Testowane miesiące',
+  'scoreTrack.horizon': 'Zwrot mierzony przez',
+  'scoreTrack.months': { one: '{count} miesiąc', few: '{count} miesiące', many: '{count} miesięcy' },
+  'scoreTrack.instruments': 'Ocenione instrumenty',
+  'scoreTrack.spread': 'Górna minus dolna ćwiartka (śr. zwrot)',
+  'scoreTrack.hitRate': 'Miesiące, w których górna ćwiartka pobiła dolną',
+  'scoreTrack.thinWarning': 'Za mało instrumentów lub miesięcy, by wyciągać wnioski z tego wyniku.',
+  'scoreTrack.quartile': 'Grupa oceny',
+  'scoreTrack.count': 'Obserwacje',
+  'scoreTrack.meanReturn': 'Śr. zwrot',
+  'scoreTrack.medianReturn': 'Mediana zwrotu',
+  'scoreTrack.q4': 'Górna ćwiartka',
+  'scoreTrack.q3': 'Środek górny',
+  'scoreTrack.q2': 'Środek dolny',
+  'scoreTrack.q1': 'Dolna ćwiartka',
+  'scoreTrack.perPeriod': 'Górna minus dolna ćwiartka, miesiąc po miesiącu',
+
   'factors.title': 'Ekspozycja czynnikowa (model czteroczynnikowy Carharta)',
   'factors.description':
     'Wyjaśniające, nie predykcyjne: co historycznie napędzało dzienny zwrot każdej pozycji — Rynek, Wielkość, Wartość i Momentum — na podstawie publicznych danych czynnikowych Kennetha Frencha. Tylko pozycje posiadane, dopasowane regionalnie (instrument amerykański wobec czynników US, europejski wobec czynników Europy).',

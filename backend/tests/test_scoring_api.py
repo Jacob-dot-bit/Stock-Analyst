@@ -160,3 +160,41 @@ class TestRefreshStatus:
         assert "running" in status
         assert "total" in status
         assert "done" in status
+
+
+class TestScoreBacktest:
+    def test_empty_database_returns_empty_track_record(self, client):
+        response = client.post("/api/scoring/backtest")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["observations"] == 0
+        assert body["periods"] == []
+        assert body["hit_rate"] is None
+
+    def test_window_ends_one_horizon_before_latest_bar(self, client):
+        last = date(2025, 1, 1)
+        rows = []
+        instruments = [
+            Instrument(broker_symbol=f"{kind}{i}.US", category="STOCK", currency="USD", country="US")
+            for kind in ("UP", "DOWN")
+            for i in range(5)
+        ]
+        _seed(client, instruments)
+        for inst in instruments:
+            factor = 1.001 if inst.broker_symbol.startswith("UP") else 0.999
+            for n in range(900):
+                rows.append(
+                    PriceBar(instrument_id=inst.id, bar_date=last - timedelta(days=899 - n), close=100.0 * factor**n)
+                )
+        _seed(client, rows)
+
+        response = client.post("/api/scoring/backtest", params={"horizon_months": 1, "years": 1})
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["end"] == (last - timedelta(days=30)).isoformat()
+        assert body["instruments_scored"] == 10
+        assert body["top_minus_bottom"] > 0
+        assert body["hit_rate"] == pytest.approx(1.0)
+        assert all(p["rebalance_date"] <= body["end"] for p in body["periods"])

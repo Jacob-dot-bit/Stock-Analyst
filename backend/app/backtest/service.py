@@ -52,12 +52,30 @@ class Bucket:
 
 
 @dataclass
+class Period:
+    """One rebalance date's top-minus-bottom quartile spread — the per-date
+    view that shows whether the average spread is steady or one lucky month."""
+
+    rebalance_date: date
+    scored: int
+    spread: float | None
+
+
+@dataclass
 class BacktestResult:
     horizon_months: int
     rebalance_count: int
     observations: int
     buckets: list[Bucket] = field(default_factory=list)
     top_minus_bottom: float | None = None
+    #: Rebalance dates that had a big enough cross-section to be ranked.
+    periods: list[Period] = field(default_factory=list)
+    #: Share of `periods` (with a defined spread) where the top quartile beat
+    #: the bottom one. Monthly rebalances with a multi-month horizon overlap,
+    #: so these are not independent trials.
+    hit_rate: float | None = None
+    #: Distinct instruments that were scored on at least one rebalance date.
+    instruments_scored: int = 0
 
 
 def run_backtest(
@@ -87,6 +105,8 @@ def run_backtest(
     closes_by_id = _closes_by_id(db, ids)
 
     observations: dict[int, list[float]] = {1: [], 2: [], 3: [], 4: []}
+    periods: list[Period] = []
+    seen_ids: set[int] = set()
     for rebalance in rebalance_dates:
         scored: list[tuple[int, float]] = []
         for instrument in instruments:
@@ -109,11 +129,18 @@ def run_backtest(
 
         scored.sort(key=lambda pair: pair[1])
         n = len(scored)
+        seen_ids.update(instrument_id for instrument_id, _ in scored)
+        date_returns: dict[int, list[float]] = {1: [], 4: []}
         for rank, (instrument_id, _composite) in enumerate(scored):
             quartile = 1 + (rank * 4) // n
             fwd = _forward_return(closes_by_id.get(instrument_id, []), rebalance, horizon_months)
             if fwd is not None:
                 observations[quartile].append(fwd)
+                if quartile in date_returns:
+                    date_returns[quartile].append(fwd)
+        top_mean, bottom_mean = _mean(date_returns[4]), _mean(date_returns[1])
+        period_spread = (top_mean - bottom_mean) if (top_mean is not None and bottom_mean is not None) else None
+        periods.append(Period(rebalance_date=rebalance, scored=n, spread=period_spread))
 
     buckets = [
         Bucket(quartile=q, count=len(returns), mean_return=_mean(returns), median_return=_median(returns))
@@ -122,6 +149,8 @@ def run_backtest(
     top = buckets[-1].mean_return if buckets else None
     bottom = buckets[0].mean_return if buckets else None
     spread = (top - bottom) if (top is not None and bottom is not None) else None
+    defined = [p.spread for p in periods if p.spread is not None]
+    hit_rate = (sum(1 for s in defined if s > 0) / len(defined)) if defined else None
 
     return BacktestResult(
         horizon_months=horizon_months,
@@ -129,6 +158,9 @@ def run_backtest(
         observations=sum(len(r) for r in observations.values()),
         buckets=buckets,
         top_minus_bottom=spread,
+        periods=periods,
+        hit_rate=hit_rate,
+        instruments_scored=len(seen_ids),
     )
 
 

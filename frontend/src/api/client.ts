@@ -53,6 +53,7 @@ import type {
   RefreshReport,
   RefreshStatus,
   Score,
+  ScoreBacktest,
   ScreenerCandidate,
   Sparkline,
   SymbolSearchResult,
@@ -496,6 +497,8 @@ export const api = {
     request<PredictionBackfillStatus>('/api/prediction/backfill-history/status'),
 
   runBacktest: () => request<BacktestReport>('/api/prediction/backtest', { method: 'POST' }),
+
+  runScoreBacktest: () => request<ScoreBacktest>('/api/scoring/backtest', { method: 'POST' }),
 
   importFactorData: () => request<FactorImportResult>('/api/factors/import', { method: 'POST' }),
 
