@@ -17,8 +17,8 @@
   --accent-soft: #1b2642;
   /* Filled surfaces (primary button) use their own pair: the readable
      --accent above is too light to carry white text in dark mode. */
-  --accent-fill: #4f7cff;
-  --accent-fill-hover: #6189ff;
+  --accent-fill: #3461d6;
+  --accent-fill-hover: #3d6ae6;
   --on-accent: #ffffff;
   --positive: #4fce93;
   --positive-soft: #16302464;
