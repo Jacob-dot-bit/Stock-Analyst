@@ -67,8 +67,6 @@ class Settings(BaseSettings):
     benchmark_name: str | None = "S&P 500 (SPY)"
 
     # --- Optional API keys (phase 2 onwards) ---
-    perplexity_api_key: str | None = None
-
     # Keyed fallback for price history, used when Yahoo throttles.
     twelvedata_api_key: str | None = None
     # Candidate for Euronext coverage, which the Twelve Data free tier lacks.
@@ -127,26 +125,12 @@ class Settings(BaseSettings):
     # needs a deploy. See DEVLOG "Decision 3r.1".
     scoring_config_path: Path = BACKEND_DIR / "scoring.yaml"
 
-    # --- Cost guardrails for Perplexity (phase 6) ---
-    perplexity_model: str = "sonar"
-    perplexity_cache_ttl_days: int = 7
-
-    # --- Qualitative commentary LLM (generalized from Perplexity-only) ---
-    #: "perplexity" (default; uses the perplexity_* fields above) or
-    #: "openai_compatible" (uses llm_api_key/llm_model/llm_base_url — covers
-    #: DeepSeek, OpenAI, Groq, ... anything speaking the OpenAI wire format).
-    llm_provider: str = "perplexity"
-    llm_api_key: str | None = None
-    llm_model: str = "deepseek-chat"
-    llm_base_url: str = "https://api.deepseek.com"
-
     # --- CORS: the Vite dev server origin ---
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @field_validator(
         "twelvedata_api_key",
         "fmp_api_key",
-        "perplexity_api_key",
         "sec_user_agent",
         "polygon_api_key",
         "alpha_vantage_api_key",
@@ -156,7 +140,6 @@ class Settings(BaseSettings):
         "eodhd_api_key",
         "marketstack_api_key",
         "openfigi_api_key",
-        "llm_api_key",
         mode="after",
     )
     @classmethod
@@ -174,10 +157,6 @@ class Settings(BaseSettings):
         if not cleaned or cleaned.lower() in PLACEHOLDER_VALUES:
             return None
         return cleaned
-
-    @property
-    def perplexity_enabled(self) -> bool:
-        return bool(self.perplexity_api_key)
 
     @property
     def edgar_enabled(self) -> bool:

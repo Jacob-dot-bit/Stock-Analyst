@@ -29,7 +29,6 @@ os.environ.setdefault("BASE_CURRENCY", "EUR")
 #: Credentials a developer may legitimately have in their own .env.
 CREDENTIAL_VARS = (
     "TWELVEDATA_API_KEY",
-    "PERPLEXITY_API_KEY",
     "SEC_USER_AGENT",
 )
 

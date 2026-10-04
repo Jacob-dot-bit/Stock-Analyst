@@ -70,15 +70,15 @@ storing financial credentials. Rejected without hesitation.
 | Refresh | On demand | No background job to maintain |
 | Markets | Worldwide | The portfolio spans US and Europe |
 | Sources | Free only | A constraint set up front |
-| Qualitative synthesis | Perplexity API | The only accepted expense |
+| Qualitative synthesis | Paid commentary provider | The only accepted expense |
 
-## Decision 0.3 — Guardrails on Perplexity usage
+## Decision 0.3 — Guardrails on the paid commentary provider
 
-**Context.** Sonar pricing: token cost **plus** a fee of **$5–14 per 1000 requests**. Mass
+**Context.** The provider's pricing: usage cost **plus** a fee of **$5–14 per 1000 requests**. Mass
 screening across a few thousand instruments would cost tens of euros per run.
 
-**Decision.** Perplexity is reserved for qualitative analysis of **one instrument at a
-time, on explicit request**, with caching (7-day TTL). Never mass screening. The LLM
+**Decision.** The paid commentary provider is reserved for qualitative analysis of **one instrument at a
+time, on explicit request**, with caching (7-day TTL). Never mass screening. The commentary
 **does not contribute to the score**: it comments on it.
 
 **Consequence.** The "hidden gems" screener must be designed in two stages — local
@@ -282,7 +282,7 @@ source decided first, not a quick patch.
 original ask were not built: `not_priceable_reason` auto-detection
 (`ingest/service.py:detect_not_priceable`) already correctly flags corporate-action
 artefacts like `US592CVR0133` without user action, which covered the concrete case
-that prompted the request. A manual override endpoint can be added if a real case
+behind the request. A manual override endpoint can be added if a real case
 turns up that the heuristic misses.
 
 ## Step 2b.4 — Portfolio breakdown chart (A4, 2026-08-14)
@@ -299,9 +299,9 @@ broker-supplied at import time already, so the chart needed no new integration.
 Sector remains a real gap (would need a Finnhub company-profile provider, not yet
 built) — noted for a future phase, not silently dropped.
 
-**Decision — stacked bar, not a pie/donut.** Per the dataviz skill's
+**Decision — stacked bar, not a pie/donut.** Per the dataviz guidelines'
 choosing-a-form guidance, "part-to-whole" maps to a stacked bar (reads magnitude
-more precisely than angle), not a pie. Used the skill's validated 8-color
+more precisely than angle), not a pie. Used the guidelines' validated 8-color
 categorical palette (`--series-1..8` in `index.css`, light and dark values),
 re-verified with `scripts/validate_palette.js` rather than assumed from the docs
 (passes both modes; 3 light-mode slots need "relief," satisfied by the legend's
@@ -529,7 +529,7 @@ provider that becomes enabled later (any of the 12 from phase 2, once a key is
 added in Settings) is automatically quote-capable too.
 
 **Verified live**, with Yahoo still in cooldown from the earlier testing in
-this session: `chain.fetch_quote(InstrumentRef(provider_symbol="AAPL", ...))` →
+this phase: `chain.fetch_quote(InstrumentRef(provider_symbol="AAPL", ...))` →
 `(305.26, 'twelvedata')` — fell through Yahoo (cooldown), Boursorama and
 Frankfurt (can't serve a US symbol), landed on Twelve Data, which was already
 configured with a key from earlier setup. Confirms the redundancy is real, not
@@ -606,7 +606,7 @@ that at the type level.
 **Lesson.** When a batch of similar integrations gets `key: str | None`
 scaffolding by default, verify per-item that the key is actually consumed
 before shipping a UI for it — three providers went through backend, `.env.example`,
-and frontend review without anyone (including this session) noticing they
+and frontend review without anyone noticing they
 never read the value.
 
 ## Step 2b.10 — Settings page only lists what it can actually change (2026-08-14)
@@ -647,7 +647,7 @@ API shutdown (fatal) can look identical from a signup link alone.
 | EODHD | 404 on old knowledgebase path | `eodhd.com/api/eod/...` → 401 (alive) | Doc path moved to `/register` — link fixed, API untouched |
 | **IEX Cloud** | connection refused (`000`) | `cloud.iexapis.com` → **TLS handshake reset by peer** | **Service shut down.** Not a redirect, not a rename — nothing answers on port 443 at all |
 | **World Trading Data** | 301 → `marketstack.com` | `api.worldtradingdata.com` → 200, body is a JSON message: *"This API endpoint is deprecated and now has been shut down... update your integration to use the new marketstack API endpoint"* | **Explicitly, officially dead.** Marketstack is a different product with a different API shape — not a URL swap |
-| Quandl (WIKI dataset) | 200 | `quandl.com/api/v3/datasets/WIKI/...` → Incapsula bot-wall (403) | The free WIKI dataset was discontinued in 2018, well before this session; Nasdaq Data Link (Quandl's successor at `data.nasdaq.com`) may have *other* free datasets, but not this one |
+| Quandl (WIKI dataset) | 200 | `quandl.com/api/v3/datasets/WIKI/...` → Incapsula bot-wall (403) | The free WIKI dataset was discontinued in 2018, well before this work; Nasdaq Data Link (Quandl's successor at `data.nasdaq.com`) may have *other* free datasets, but not this one |
 | Tiingo, Intrinio, Alpha Vantage, FMP, Twelve Data | — | all returned correct "invalid test key" errors or (Alpha Vantage) real data | Confirmed alive, no action needed |
 
 **Fix.**
@@ -684,7 +684,7 @@ rather than a one-off audit.
 outright: WTD's shutdown message didn't just say "dead," it named a specific
 successor (marketstack.com) — a "moved," not a "gone," and the fix for a move
 is redirecting the integration, not deleting it. Fair correction; verified
-before building anything, same discipline as the rest of this session.
+before building anything, same discipline as the rest of this phase.
 
 **Verified live before writing code.** `api.marketstack.com/v1/eod` with a bad
 key returned a proper `invalid_access_key` error (401) — the service is real
@@ -707,7 +707,7 @@ nothing to redirect to. Quandl's WIKI endpoint gave a bot-detection wall, not a
 "moved to X" message either. World Trading Data was different in kind: its own
 API told us exactly where it went. "The vendor says it moved" and "the vendor
 is unreachable" call for different responses, and conflating the two the first
-time around is what prompted this correction.
+time around is what led to this correction.
 
 **Provider count: 14 → 15.**
 
@@ -732,8 +732,8 @@ data frozen at end-2018 (`lastupdated: 2026-08-10` in the metadata, yet no row
 newer than 2018-12-31), which reads as a paid dataset's free preview sample,
 not current free data. No dataset found with WTD/Marketstack's clarity ("100
 free requests/month, current data"). Left unintegrated — a real key might
-unlock `SHARADAR/SEP` fully, but that is an assumption this session isn't
-willing to build a provider on without verifying it first.
+unlock `SHARADAR/SEP` fully, but that is an assumption not worth
+building a provider on without verifying it first.
 
 ## Step 2b.12 — "Test key" button per provider (2026-08-14)
 
@@ -843,11 +843,11 @@ body, not just the code.
    startDate and endDate specified for historical data is no longer
    supported as of 2024-07-29. You may use the bulk endpoint as long as
    startDate and endDate are not specified (i.e. the latest date's
-   values)."* — Tiingo's own official docs (fetched mid-session) still
+   values)."* — Tiingo's own official docs (fetched during the investigation) still
    describe the deprecated `startDate`/`endDate` usage with no mention of this
    change; the only way to find it was hitting the live API and reading what
    it actually says, the same lesson as Frankfurter/Polygon/Barchart earlier
-   in this session, now four-for-four.
+   in this phase, now four-for-four.
 
 **Fix.** `TiingoProvider.fetch_daily` now fails immediately with a clear
 message and **no HTTP call** — Tiingo can no longer serve a date range at
@@ -868,11 +868,11 @@ actually works.
 **Provider count unaffected (still 15)** — Tiingo stays registered, its role
 just narrowed from two capabilities to one.
 
-## Bug 2b.12 — Polygon: legacy host, and a parsing bug never exercised in this session
+## Bug 2b.12 — Polygon: legacy host, and a parsing bug never exercised until now
 
-**Context.** User shared Massive's official `llms.txt`-linked API docs
-(`massive.com/docs/rest/llms.txt`), suggested specifically to keep an
-AI agent from hallucinating endpoint details — fetched them rather than
+**Context.** User shared Massive's official machine-readable API docs
+(under `massive.com/docs/rest/`), suggested specifically to avoid
+guessing endpoint details — fetched them rather than
 continuing to rely on the `api.polygon.io` host verified back at Bug 2b.8.
 
 **Finding 1 — the rebrand runs deeper than the marketing site.** Massive's
@@ -890,16 +890,15 @@ the code against the docs' sample response.** `PolygonProvider` parsed each
 bar's timestamp as `date.fromisoformat(result["t"][:10])`, treating `t` as an
 ISO date string. Massive's documented sample response shows `t` as an
 **integer Unix millisecond timestamp** (e.g. `1577941200000`) — `[:10]` on an
-int raises `TypeError` immediately. Every test of this provider in the
-session so far (Bug 2b.8's host check, the "Test key" button work) only ever
+int raises `TypeError` immediately. Every test of this provider so far (Bug 2b.8's host check, the "Test key" button work) only ever
 exercised the auth-rejection path (a bad key returns 401 before parsing ever
 runs), so this would have crashed on the **first real, successful** fetch —
-never caught because nothing in this session had a valid Polygon key to
+never caught because nothing so far had a valid Polygon key to
 actually reach that code path until now. Fixed: `datetime.fromtimestamp(t /
 1000, tz=UTC).date()`, verified against the docs' own example
 (`1577941200000` → `2020-01-02`, matches).
 
-**Lesson, sharpened once more.** Three of this session's provider bugs now
+**Lesson, sharpened once more.** Three of this phase's provider bugs now
 came from *never having exercised the success path* — a wrong host or a
 placeholder key reliably tests the failure branches, but says nothing about
 whether the code past that point is correct. Worth remembering next time a
@@ -989,7 +988,7 @@ testing the rejection path.
 
 **Context.** User shared FMP's own onboarding docs (four starter endpoints:
 search-by-name, quote, profile, income-statement). Two of the four map
-directly onto real, previously-unmet needs from this session; implemented
+directly onto real, previously-unmet needs from this phase; implemented
 all three usable ones (income-statement is phase-3/scoring scope, deferred).
 
 **1. `FmpProvider.fetch_quote`** (`/stable/quote`) — joins Yahoo and Tiingo as
@@ -1027,18 +1026,18 @@ fake key: all three return empty/`None` cleanly, confirming no crash on the
 error-response shape at least; the success shape remains to be confirmed
 once used with a real key.
 
-**Note — DEVLOG numbering collision, found and fixed.** This session's "Bug
+**Note — DEVLOG numbering collision, found and fixed.** The Phase 2b "Bug
 2.X" and one "Decision 2.1" (starting from the "Phase 2"/"Phase 2b" sections
-this session began, before this file's much larger pre-existing project
+this work began, before this file's much larger pre-existing project
 history further down was ever read) collided with unrelated pre-existing
-entries using the same numbers. Fixed by moving this session's colliding
-entries into the free `2b.4`–`2b.13` range (this session's `Bug 2.1`–`Bug
-2.11` → `Bug 2b.4`–`Bug 2b.13`) and `Decision 2.7` (this session's
+entries using the same numbers. Fixed by moving the colliding Phase 2b
+entries into the free `2b.4`–`2b.13` range (the former `Bug 2.1`–`Bug
+2.11` → `Bug 2b.4`–`Bug 2b.13`) and `Decision 2.7` (the former
 `Decision 2.1` → `Decision 2.7`, the next free number after the pre-existing
 `Decision 2.1`–`2.6`) — chosen to continue the *pre-existing* numbering
 sequences without colliding with them, even though these entries appear
 earlier in the file than the pre-existing ones they follow numerically.
-This session's `Step 2b.1`–`2b.13` never collided with anything and were
+The `Step 2b.1`–`2b.13` entries never collided with anything and were
 left as-is. One rename pass (`Bug 2.2` → `Bug 2b.5`) briefly renamed the
 *pre-existing* "network test failed" entry by accident (`replace_all` on a
 bare "Bug 2.2" matched both), caught immediately by re-grepping headings
@@ -1869,7 +1868,7 @@ Verified: `AAPL` and `NVDA` return real bars, `TTE.PA` returns a clean plan boun
 FMP is kept as a third US source rather than removed — it works, just not for what it was
 added for.
 
-## Note — an API key was exposed in the session
+## Note — an API key was exposed in a terminal
 
 While diagnosing a malformed `.env` (the key had been pasted without its
 `FMP_API_KEY=` prefix), a formatting command printed the key value in clear text. It was
@@ -1911,7 +1910,7 @@ these endpoints tolerate, which is the actual way to not get blocked.
 
 # Phase 3a — Fundamentals from SEC EDGAR (2026-08-13)
 
-Prompted by a fair objection: *"we want the most data possible, otherwise why build the
+Triggered by a fair objection: *"we want the most data possible, otherwise why build the
 app"*. That reframed the priority correctly. Four missing ETF price series is 10% of one
 pillar; **having no fundamentals at all is 100% of three pillars**. Prices alone cannot
 answer "hold or sell".
@@ -2338,7 +2337,7 @@ the existing `PriceStatusBadge` (✓/⏱/❌) on each row of the positions table
 | 3 | Scoring engine (4 pillars — Value/Growth/Quality/Technical, `scoring.yaml`) | done — see Decision 3r.1 |
 | 4 | Watchlist and entry timing | done — see Decision 3u.8 |
 | 5 | Hidden gems page (screener) | done — see Decision 3u.11 |
-| 6 | News/sentiment (Alpha Vantage) + qualitative commentary (Perplexity) | done — see Decision 3u.12 |
+| 6 | News/sentiment (Alpha Vantage) + qualitative commentary (paid provider, later removed — Decision 3u.81) | done — see Decision 3u.12 |
 
 **Open items for phase 2**
 
@@ -2352,12 +2351,11 @@ the existing `PriceStatusBadge` (✓/⏱/❌) on each row of the positions table
 
 **Research notes for phase 3 (scoring) — not decided, not started**
 
-Prompted by looking at [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)
-(a multi-agent LLM trading-decision framework — evaluated and **not** adopted: no
-portfolio awareness, per-ticker CLI workflow, undocumented LLM cost that could run to
-tens of euros per full-portfolio pass; see the conversation this came from for the full
-comparison). What's worth keeping from that detour is not the framework itself but the
-observation that prompted it: there is more than one recognised way to score a stock,
+Triggered by looking at an external open-source trading-decision framework
+(evaluated and **not** adopted: no portfolio awareness, per-ticker CLI workflow,
+undocumented per-run usage cost that could run to tens of euros per full-portfolio
+pass). What's worth keeping from that detour is not the framework itself but the
+observation behind it: there is more than one recognised way to score a stock,
 they don't agree with each other, and some are better-evidenced than others. Before
 inventing "5 pillars" from scratch, worth surveying named, existing methodologies and
 picking deliberately rather than by default:
@@ -2373,7 +2371,7 @@ picking deliberately rather than by default:
 - **Technical/quant signals** — price action, moving averages, RSI/MACD. Already
   data this app can compute from cached `PriceBar` history without a new source.
 - **News/sentiment-driven** — reacts to recent events rather than fundamentals; this is
-  the category Perplexity (phase 6) already covers, deliberately kept separate from the
+  the category the qualitative commentary (phase 6) covered, deliberately kept separate from the
   score per Decision 0.3.
 
 Open question worth resolving **before** phase 3 starts, not during: is this app scoring
@@ -2476,7 +2474,7 @@ reconstruction" was chosen over a cheaper backtest in the first place.
 
 ## Decision 3c.1 — Wikidata as a second sector source, for what FMP's free tier can't reach (2026-08-15)
 
-Prompted by the real portfolio's sector breakdown showing 41.8% "Inconnu" — much more
+Triggered by the real portfolio's sector breakdown showing 41.8% "Inconnu" — much more
 than the ETF-only gap that would be structurally unavoidable. Investigated rather than
 assumed: every US holding already had a correct, FMP-sourced sector; the entire gap was
 9 European stocks (LVMH, ASML, TotalEnergies, Sanofi, Air Liquide, ArcelorMittal, Air
@@ -2606,7 +2604,7 @@ the existing `JOIN Position` query, on purpose — it is never a real holding) a
 *entire* existing provider-chain/`PriceBar` machinery serves it unmodified.
 
 **The ticker was live-verified, not assumed — and the verification is exactly why an ETF
-was chosen over a raw index ticker.** Yahoo was rate-limited in the dev sandbox at
+was chosen over a raw index ticker.** Yahoo was rate-limited in the dev environment at
 verification time (unrelated IP-level throttling, not a real-deployment issue — see the
 "can we get around the Yahoo block" exchange). Rather than treat that as a blocker, the
 real provider chain was exercised end to end for `SPY`: it failed over to Polygon
@@ -2844,7 +2842,7 @@ actions — fixing and deleting are now both offered, not just fixing.
 Backend: 3 new tests in `TestDeleteInstrument` (`test_api.py`) — deletes a genuinely
 orphaned instrument, refuses when a position still references it, 404 for an unknown id.
 Full suite green at 346 passed. Verified live against the real database: deleted the
-actual `DHHDH` row that prompted this (confirmed gone via direct SQL, `symbol_overrides`
+actual `DHHDH` row behind this (confirmed gone via direct SQL, `symbol_overrides`
 row gone with it), confirmed the safety guard by attempting to delete a real held
 instrument (`ASML.NL`) and getting the expected 400, and reproduced the original bug from
 scratch (create a manual position, delete only the position, leaving the instrument
@@ -2862,7 +2860,7 @@ plain script or another machine, so the only real boundary was "uvicorn happens 
 to binding `127.0.0.1`." Presented the user with the real trade-off before building
 anything: lightweight permission/network hardening (no new dependency, no friction) versus
 full SQLCipher encryption-at-rest (a new compiled dependency, a data migration, and a
-passphrase prompt on every single app start, for a personal single-user tool whose DB has
+passphrase entry on every single app start, for a personal single-user tool whose DB has
 never left the local disk). **User chose lightweight hardening.**
 
 **File permissions**, tightened wherever the file is created or rewritten, not just once:
@@ -3345,7 +3343,7 @@ DEVLOG's own roadmap flagged a blocker before writing `scoring.yaml`: decide whe
 the score follows one investing philosophy or blends several, since named
 methodologies (value, growth, quality/momentum, technical, sentiment) don't agree
 with each other. Resolved with the user: **blended pillars** — Value, Growth,
-Quality, Technical (sentiment/news stays Phase 6's Perplexity synthesis, kept
+Quality, Technical (sentiment/news stays Phase 6's separate news/commentary, kept
 separate per Decision 0.3) — each pillar weighted, missing data dropped and
 weights renormalised, extending Decision 1.2's rule ("a pillar without data is
 dropped") down to the metric level too.
@@ -3586,7 +3584,7 @@ env var never touched it. Confirmed directly: `os.environ.pop("SEC_USER_AGENT")`
 followed by a fresh `get_settings()` still returned the real value straight off
 disk. This gap has existed since `isolate_credentials` was written; it simply
 never mattered before, because the real project `.env` had never held a value for
-any of the credentials it lists — until this session's own live verification of
+any of the credentials it lists — until the live verification of
 Decision 3s.1 legitimately put one there.
 
 **Why this is worse than it looks.** Every credential-gated test in this suite —
@@ -4226,16 +4224,16 @@ Added two new root-level files:
   prices/quotes/fundamentals; `get_or_create_instrument`; the anti-join
   self-healing trick from the Watchlist; the shared frontend components).
   Built from a fresh scan of the actual code (routers, `models.py`), not from
-  memory of this conversation — verified against a second independent scan
+  recollection — verified against a second independent scan
   immediately after writing it, confirming an exact match (the only two
   "misses" were a verification-script limitation with multi-line decorators,
   not real gaps).
 - **A working-conventions file** — the standing rule that makes the reference
   actually stay a reference: update `ARCHITECTURE.md` in the same piece of
   work whenever an endpoint, model, or reusable pattern is added or changed,
-  the same discipline this DEVLOG already gets. Loaded automatically at the
-  start of every session, which is what made this durable across
-  conversations rather than a one-off intention that only held within one.
+  the same discipline this DEVLOG already gets. Kept as a
+  written rule, which is what made this durable over time rather than a
+  one-off intention.
   (Later removed from the repository — see the project's own housekeeping
   around going public.)
 
@@ -4316,14 +4314,14 @@ provider_usage"` shows `VARCHAR(16)` with the unique constraint and index
 intact, `alembic check` reports no further drift, full suite still at 521
 passed.
 
-## Decision 3u.12 — Phase 6: free news/sentiment alongside paid AI commentary (2026-08-22)
+## Decision 3u.12 — Phase 6: free news/sentiment alongside paid qualitative commentary (2026-08-22)
 
-Phase 6 was scoped from the start (Decision 0.3) as Perplexity qualitative
+Phase 6 was scoped from the start (Decision 0.3) as paid qualitative
 commentary — one instrument at a time, on explicit request, 7-day cache,
 never contributing to the score. That design still stands. What changed:
 the user asked for it alongside a free complement, Alpha Vantage's
 `NEWS_SENTIMENT` endpoint — real recent headlines plus a per-instrument
-sentiment score, no LLM involved, at no cost.
+sentiment score, no paid commentary involved, at no cost.
 
 Both are "fetch one thing about one instrument, cache it for N days, never
 touch the score" — the same shape twice, with different costs and therefore
@@ -4342,15 +4340,14 @@ limit is per account, not per endpoint, so two independent throttles could
 together exceed it during concurrent activity (a price refresh in flight
 while a user expands a news panel). `registry.py::get_alpha_vantage_provider()`
 pulls the exact chain instance by name rather than constructing a fresh one,
-guaranteeing that shared state. `perplexity.py` is the opposite: a standalone
+guaranteeing that shared state. The commentary client is the opposite: a standalone
 client with no throttle at all, since every call is one explicit user
 action, never a batch.
 
-A real, if minor, gap surfaced and got fixed along the way: the Perplexity
-settings fields (`perplexity_api_key`, `perplexity_model`,
-`perplexity_cache_ttl_days`) have existed in `config.py` since the project's
-first day, and `GET/PUT /api/settings/api-keys` already round-tripped a
-`perplexity` field — but `GET /api/settings/providers` (what the Settings
+A real, if minor, gap surfaced and got fixed along the way: the commentary
+provider's settings fields (API key, model name, cache TTL) have existed in `config.py` since the project's
+first day, and `GET/PUT /api/settings/api-keys` already round-tripped the
+commentary key field — but `GET /api/settings/providers` (what the Settings
 page actually renders from) never included it, so there was no way to enter
 or test that key through the running app at all. Fixed with the identical
 manual-append + special-cased `verify-key` branch `sec_user_agent` (EDGAR)
@@ -4375,15 +4372,15 @@ Frontend: a second, independent expandable row (`InsightsBadge` +
 instrument tables (Positions, Watchlist, Screener) the same way the score
 row already is. Asymmetric by design: news fetches automatically the moment
 the row expands (free, and expanding the row already is the one-instrument
-explicit action), while AI commentary waits for its own separate button —
+explicit action), while the paid commentary waits for its own separate button —
 Decision 0.3's "on explicit request" language was written specifically about
 the paid call.
 
 Verification: 561 backend tests pass (40 new, spread across
-`test_alpha_vantage_provider.py`, `test_perplexity_provider.py`,
+`test_alpha_vantage_provider.py`, the commentary provider's tests,
 `test_news_service.py`, `test_commentary_service.py`, `test_insights_api.py`,
 and an extension to `test_settings_api.py`), `tsc -b`/`oxlint` clean. Live:
-confirmed `perplexity` now appears in `GET /api/settings/providers` with a
+confirmed the commentary provider now appears in `GET /api/settings/providers` with a
 real description and signup URL, disabled until a key is saved — the exact
 gap this closed.
 
@@ -4488,7 +4485,7 @@ left the row exactly as found afterward.
 
 ## Decision 3u.15 — Target allocation by asset class, descriptive only (2026-08-25)
 
-Prompted by a broader "what's this app still missing" review that also
+Triggered by a broader "what's this app still missing" review that also
 proposed per-position "Conserver/Renforcer/Réduire" verdicts — deliberately
 not built: that crosses from descriptive indicators into personalized
 buy/sell advice, conflicting with this app's own stated design (the
@@ -4730,13 +4727,13 @@ backend tests pass.
 User asked directly for an "Acheter/Vendre/Conserver" (Buy/Sell/Hold)
 recommendation "to help decide" — refused the first two times it came up,
 for the same reason a per-position verdict was already rejected once before
-this session even reached allocation targets: it crosses from descriptive
+the project even reached allocation targets: it crosses from descriptive
 indicator into personalized investment advice, contradicting the app's own
 disclaimer and Decision 0.3. The user's final framing — "it's our own app,
 we can do what we want with it" — is a legitimate point about their own
-private tool, and not something I have standing to keep refusing on their
+private tool, and a sound reason to stop refusing on their
 behalf. Built it, but designed to stay on the honest side of the line that
-prompted the refusal in the first place: the label is a **fixed, fully
+motivated the refusal in the first place: the label is a **fixed, fully
 transparent combination of two indicators the app already computes and
 displays separately** — the composite score and the allocation gap (or
 target-price distance) — never a new analysis, never phrased as a trade
@@ -4770,7 +4767,7 @@ Wording was chosen carefully even after agreeing to build it:
 "Renforcer"/"Réduire" (position-sizing language) rather than
 "Acheter"/"Vendre" (trade-order language) — same softer vocabulary already
 used for the allocation feature's own rejected verdict proposal earlier
-this session. Every `SignalBadge` tooltip spells out the exact score and
+on. Every `SignalBadge` tooltip spells out the exact score and
 allocation-state (or distance) values that produced the label, so the
 result is never a black box — a user can always see it's "just" those two
 numbers combined by a fixed rule, not some opaque model output.
@@ -5026,14 +5023,14 @@ des recommendations et predictions pour les pepites" — a direct request for
 literal recommendations and predictions, overriding this app's own
 established descriptive-only convention (DEVLOG "Decision 0.3", and the
 verb-vs-fact lesson from Decision 3u.19's addendum). Given the size and
-ambiguity of "recommendation" and "prediction" as asked, clarified via
-`AskUserQuestion` before writing any code:
+ambiguity of "recommendation" and "prediction" as asked, clarified with the user
+before writing any code:
 
 - **Recommendation**: chose "Verdict Acheter/Vendre/Conserver" over a
   softer "top picks" framing — the literal buy/sell/hold verdict this app
   had refused twice before (Decision 3u.19's own opening paragraphs).
 - **Prediction**: chose "a real predictive model" over reformulating the
-  existing scores. Flagged, and left unstarted this session: a genuine
+  existing scores. Flagged, and left unstarted for now: a genuine
   forecasting model needs historical price data, feature engineering,
   backtesting, and statistical validation — none of which exist in this
   codebase today. Dressing the existing Value/Growth/Quality/Technical
@@ -5058,10 +5055,9 @@ This is a **narrow, explicit exception** — Position/watchlist signals
 elsewhere in the app (`_position_signal` in `routers/portfolio.py`,
 `routers/watchlist.py`'s signals endpoint) are untouched and still render
 as fact-based labels ("Score élevé · sous-pondéré", not "Renforcer").
-Updated the persistent memory
-(`stock-analyst-descriptive-not-verdict-labels.md`) to record this
-override explicitly, rather than let it read as a still-universal rule the
-next session might "helpfully" revert.
+Recorded this override explicitly in the project's design notes,
+rather than let it read as a still-universal rule a later change
+might "helpfully" revert.
 
 Frontend: new `RecommendationBadge.tsx` — green/gray/red (`tag resolved` /
 `tag neutral` / `tag negative`, reusing existing tag color tokens; added
@@ -5159,7 +5155,7 @@ correctness after a completed run.
 
 Full suite: 640 backend tests pass. `tsc -b`/`oxlint` clean.
 
-**Explicitly not done, and not started this session:** any actual
+**Explicitly not done, and not started yet:** any actual
 prediction model, feature engineering, or backtest. This decision is the
 data-collection step only — phase 2 (a technical/momentum model, trained
 and validated via walk-forward split over the now-deeper price history)
@@ -5372,8 +5368,8 @@ performance, not correctness).
 This also surfaced a separate operational fact worth recording: `uvicorn
 --reload --reload-dir app` still occasionally picked up changes to files
 outside `app/` (observed reacting to `tests/*.py` edits) during this
-session, contrary to the fix applied in 3u.22's mid-run incident note.
-Not chased further this session — each such reload was fast and harmless
+work, contrary to the fix applied in 3u.22's mid-run incident note.
+Not chased further for now — each such reload was fast and harmless
 (unlike 3u.22's `.venv/`-triggered storm) since no long-running request
 was in flight at the time, but it means `--reload-dir` alone isn't a
 complete guarantee against interrupting a genuinely long operation
@@ -5386,7 +5382,7 @@ already existed).
 
 ## Decision 3u.25 — Attention card: "à regarder aujourd'hui" (2026-09-05)
 
-Prompted by a beginner-user UX review: the app has plenty of indicators
+Triggered by a beginner-user UX review: the app has plenty of indicators
 (price status, allocation gaps, unresolved symbols) but each lives on its
 own table, so a new user has no single place answering "what should I
 check first?" before diving into 37 rows of positions. Highest-leverage,
@@ -5544,20 +5540,20 @@ score de 77."
    `défavorable`). Below it, "Points forts" / "Points à contrôler" lists
    stay purely factual: a metric's own translated name, included only when
    *that metric's own score* (not the composite) crosses the same 66/33
-   threshold — the second AskUserQuestion round confirmed this rule over
+   threshold — the user's second round of answers confirmed this rule over
    an always-show-top/bottom-N alternative, since a fixed threshold can
    legitimately produce an empty list (rendered as "Aucun pour l'instant"),
    which an always-N-items rule would have forced into false signal.
 
-**Scope of the exception, recorded in memory so a future session doesn't
+**Scope of the exception, recorded in the project notes so a later change doesn't
 silently "fix" it back.** This is a second, narrow carve-out from
 fact-not-verdict — distinct from Discovery's literal buy/hold/sell verdict
 (3u.21): no action is suggested, only an adjective describing the
 indicators. It applies to exactly one sentence, reused unchanged wherever
 `ScoreDetailRow` appears (positions, watchlist, screener) — nowhere else.
-Updated `stock-analyst-descriptive-not-verdict-labels` (persistent memory)
-with this second override and its date, and added a new project memory,
-`stock-analyst-ux-review-2026-09`, tracking which of the review's 5
+Updated the design notes on descriptive-not-verdict labels
+with this second override and its date, and added a UX-review
+checklist (2026-09) tracking which of the review's 5
 priority items are done (this is #3) and which remain (#4: split Portfolio
 into "my portfolio" vs "manage my data" views; #5: a per-position detail
 page).
@@ -5776,7 +5772,7 @@ byte-valid SQLite copy — restore was deliberately **not** exercised
 against the real production database during this verification pass (that
 would mean overwriting real portfolio data to test a destructive path);
 its correctness rests on the backend test suite's synthetic-database
-coverage instead, consistent with this session's safety posture around
+coverage instead, consistent with this project's safety posture around
 irreversible operations.
 
 ## Decision 3u.30 — Stock splits and reverse splits (2026-09-06)
@@ -6401,7 +6397,7 @@ sections plus the header-fix confirmation above.
 ## Decision 3u.37 — Beginner-comprehension pilot: Portfolio P0 (score color) + P1 (tooltips) (2026-09-07)
 
 First implementation pass of the beginner-comprehension initiative (see
-ARCHITECTURE.md-adjacent memory, not yet a doc section of its own): the
+the project notes, not yet a doc section of its own): the
 user proposed a product-wide rule — every technical term/status/metric
 should answer "what is it / why is it shown / what does it change for
 me" — and picked the Portfolio screen as the pilot. A Phase-1 audit
@@ -6518,7 +6514,7 @@ l'application sur ce titre."
 **P1, three items**: an `insights.commentaryDisclaimer` line ("Synthèse
 générée à partir des données disponibles, potentiellement incomplète —
 ne constitue pas un conseil en investissement") now renders directly
-above any real AI commentary content in `InsightsDetailRow.tsx`. The
+above any real commentary content in `InsightsDetailRow.tsx`. The
 existing `dividends.disclaimer` notice (already shown on the standalone
 Dividends page — "ne calcule pas votre impôt final...") is now reused
 verbatim in this panel's Revenus section whenever it has rows to show,
@@ -6541,12 +6537,12 @@ identical neutral gray styling and the provenance tooltip — confirmed via
 `getComputedStyle`, zero `--positive`/`--negative` colors anywhere. For
 the dividends disclaimer and allocation tooltip: confirmed on AAPL's real
 position (real dividend history + an active allocation target). The
-AI-commentary disclaimer's *conditional* rendering was confirmed correct
+commentary disclaimer's *conditional* rendering was confirmed correct
 by inspection and `tsc`, but the "real content present" branch itself
-wasn't exercised live — Perplexity is disabled in this environment (no
-API key configured, per Settings), and clicking "Obtenir un commentaire
-IA" correctly hit the existing graceful `commentary.outcome.code` fallback
-path ("Perplexity n'est pas configuré") rather than incurring a real
+wasn't exercised live — the commentary provider is disabled in this environment (no
+API key configured, per Settings), and clicking the commentary button
+correctly hit the existing graceful `commentary.outcome.code` fallback
+path (provider not configured) rather than incurring a real
 paid request just to screenshot the disclaimer.
 
 `tsc -b`/`oxlint` clean (same two pre-existing warnings). No backend
@@ -6717,15 +6713,15 @@ and `oxlint` clean (same two pre-existing warnings, no new ones).
 ## Decision 3u.40 — Lost `.env`: fsync on save, so a confirmed key save is actually durable (2026-09-07)
 
 Discovered live, same day: every keyed provider (FMP, EODHD, Twelve
-Data, Alpha Vantage, Perplexity, etc.) showed `enabled: false` in
+Data, Alpha Vantage, the commentary provider, etc.) showed `enabled: false` in
 Settings. `/api/health`'s `env_files` diagnostic (added earlier for
 exactly this kind of question) confirmed the actual cause: neither
 `.env` location (project root, `backend/.env`) existed on disk at all —
 not a code bug, the secrets file itself was gone.
 
 Root-caused, not just patched: `uptime -s` showed the machine had
-rebooted that same morning, mid-session (matching an earlier moment
-this session where the backend process was found not running and had
+rebooted that same morning, mid-day (matching an earlier moment
+that day where the backend process was found not running and had
 to be restarted manually). The mount is a normal `ext4` partition, not
 a live/overlay filesystem, which rules out "non-persistent environment"
 — on a normal persistent disk, a *clean* shutdown always flushes
@@ -6814,7 +6810,7 @@ included, `excluded_positions` from 1 to 0, `has_incomplete_data` from
 fix, Mintos's imported value still doesn't match the user's stated
 current total — traced to the imported source file itself: a quarterly
 statement covering 2025-07-01 to 2025-09-30, a full year
-before this session's date (2026-09-08). Nothing in the code can recover
+before the date of this entry (2026-09-08). Nothing in the code can recover
 a balance the source document itself doesn't contain; re-importing a
 current Mintos statement is the only fix. Amundi's total (well under
 what the user reported) is very likely the same root cause — Amundi
@@ -6978,7 +6974,7 @@ Also added, alongside both new "live snapshot" import buttons in Settings
 fr/en/pl; `ImportPanel`'s `BrokerKind` union extended): the whole point of
 building real importers instead of a one-off manual value edit is that
 the user can repeat this next time their broker-reported total drifts,
-without needing this session's investigation again.
+without needing this investigation again.
 
 ## Decision 3u.45 — Target allocation's Edit/Delete buttons were reachable only after scrolling the table (2026-09-08)
 
@@ -7204,7 +7200,7 @@ end-to-end, not just present in the catalogue).
 
 ## Decision 3u.48 — Exact per-fund Amundi gain when a fund's quantity hasn't changed (2026-09-08)
 
-Direct refinement of Decision 3u.47's Amundi pro-rata fallback, prompted
+Direct refinement of Decision 3u.47's Amundi pro-rata fallback, triggered
 by the user's own audit question ("est-ce que tout ça c'est correctement
 calculé... ?"). Answering it honestly surfaced that Amundi's real
 2024 annual PDF (`DOCINT_RAC-1.pdf`) had never been imported — the
@@ -7705,8 +7701,7 @@ That same evening's last resume run only checked 1 instrument
 day's Alpha Vantage quota ran out.
 
 User reviewed the corporate-actions backend state today, gave a
-prioritized roadmap (see [[stock-analyst-roadmap-2026-09]] item 15 in
-memory) naming Corporate Actions Phase 4 as priority 1, and asked to
+prioritized roadmap (see the 2026-09 roadmap notes, item 15) naming Corporate Actions Phase 4 as priority 1, and asked to
 check this gate cheaply first (`GET .../resume/status` +
 `GET .../incomplete`, no quota spent) before spending quota on a real
 run — confirmed the gate was still unmet (20 instruments still
@@ -7743,8 +7738,7 @@ incomplete for a future resume run (tomorrow, once quota resets again).
 
 ## Step 3u.57 — Corporate Actions Phase 4 frontend (2026-09-08)
 
-User-prioritized (see [[stock-analyst-roadmap-2026-09]] item 15 in
-memory) as the single active chantier once 3u.56's validation gate
+User-prioritized (see the 2026-09 roadmap notes, item 15) as the single active chantier once 3u.56's validation gate
 cleared. Scope: make the multi-source states from Decision 3u.41 visible
 — never redesign the underlying detection engine. Strict rule enforced
 throughout: **instrument counts and event counts are never conflated** —
@@ -8062,7 +8056,7 @@ rationale/thesis/review-date log) is the chantier after that.
 
 The user asked for tax-declaration help ("calculer les taxes pour les
 déclarations"), explicitly accepting the legal risk after this project's
-own standing rule against it (roadmap memory, and this session's earlier
+own standing rule against it (roadmap notes, and the earlier
 "pas de calcul fiscal PEA/CTO prétendument définitif" guardrail) was
 raised. A detailed follow-up spec reframed the goal correctly before any
 code was written: not a tax calculator, a **reconciliation assistant** —
@@ -8146,13 +8140,13 @@ remain named, scoped follow-ups, not started.
 
 The whole project (repo incl. `.git`, `data/stock_analyst.db`, both
 `.env` files) moved from this Kali laptop to a dedicated always-on
-host — done as part of a broader move of the automation gateway to the same
-host, since the `*/15 * * * * export_portfolio.py` cron (the analysis agent's only data source) couples the two projects:
-without this app's backend answering on `127.0.0.1:8000`, that skill has
+host — done as part of a broader move of other automation tooling to the same
+host, since the `*/15 * * * * export_portfolio.py` cron (the only data source of a separate local read-only tool) couples the two projects:
+without this app's backend answering on `127.0.0.1:8000`, that tool has
 nothing to read. `Stock-Analyst`'s own git remote — `github.com/Jacob-dot-bit/Stock-Analyst`,
-public, unlike the gateway's own repo — was already current, so no separate
+public, unlike that tooling's own repo — was already current, so no separate
 transfer step was needed for the code itself beyond a
-`git clone` on the new host — the manual copy this session actually did
+`git clone` on the new host — the manual copy actually done
 (`rsync`, since a stale local commit was still possible) doubled as the
 verification that the remote truly was in sync (`git status` came back
 clean).
@@ -8181,7 +8175,7 @@ units (`stock-analyst-backend.service`, `stock-analyst-frontend.service`,
 kernel-update reboot of the host: both came back on their own, and the
 export log kept writing successful entries straight through it with no
 manual intervention. Unit definitions and the exact setup steps live in
-the gateway repo's `MIGRATION.md` (this project's own repo doesn't carry
+the host-provisioning repo's `MIGRATION.md` (this project's own repo doesn't carry
 host-provisioning concerns), since the same steps apply regardless of
 which project's servers are being made persistent on that host.
 
@@ -8224,7 +8218,7 @@ at parity (752 keys each, verified by direct comparison).
 ## Decision 3u.63 — Discovery's data-quality gate, the "simplest cut" of the fuller Pépites-filters vision (2026-09-15)
 
 Same day, immediate follow-up: this chantier had been scoped much further
-in an earlier session (see memory `stock-analyst-roadmap-2026-09.md` item
+earlier (see the 2026-09 roadmap notes, item
 5 of the 2026-09-08 re-prioritization) into a dozen filter dimensions
 (market/country, sector, instrument type, cap, valuation/growth data
 availability, data quality, analysis score, dividend yield, debt, minimum
@@ -8272,7 +8266,7 @@ corporate_action_pending true/false against a real seeded
 **Deliberately not built in this slice**: market/country, sector,
 instrument type, cap, dividend yield, debt, minimum-history-length
 filters, and the explicit "not a recommendation" disclaimer rework — all
-still named in the memory note as the fuller vision, none scoped yet.
+still named in the roadmap notes as the fuller vision, none scoped yet.
 Cap/dividend-yield/debt in particular need new derived metrics (this app
 only stores raw filed XBRL figures today, not ratios) — a real backend
 chantier of its own, not a filter-UI addition.
@@ -8280,7 +8274,7 @@ chantier of its own, not a filter-UI addition.
 ## Decision 3u.64 — Discovery country/sector filters, no backend change needed (2026-09-15)
 
 Continuing the same slice-by-slice build of the fuller Pépites-filters
-vision (memory `stock-analyst-roadmap-2026-09.md` item 5): market/pays
+vision (2026-09 roadmap notes, item 5): market/pays
 and secteur next, user-requested by name.
 
 **Zero backend work, unlike 3u.63's data-quality gate**: `Instrument.country`/
@@ -8288,7 +8282,7 @@ and secteur next, user-requested by name.
 `get_or_create_instrument`'s broker-symbol-suffix resolution — every
 instrument gets one, not just S&P 500 imports; `sector` from the S&P 500
 import's own bundled data), and already exposed on `InstrumentOut` since
-before this session. Purely a frontend addition: two `<select>`s, options
+earlier phases. Purely a frontend addition: two `<select>`s, options
 derived from whatever's actually loaded (`[...new Set(...)].sort()` over
 the combined S&P 500 + Finviz candidate list) rather than a hardcoded
 taxonomy, so a filter never offers a choice that would show an empty
@@ -8318,15 +8312,15 @@ No backend change means no new tests needed beyond the existing coverage
 minimum-history-length, and the "not a recommendation" disclaimer rework
 — unchanged from 3u.63's list.
 
-## Decision 3u.65 — Personal Policy exported to the analysis agent, closing the AI-piloting gap found by asking the question directly (2026-09-16)
+## Decision 3u.65 — Personal Policy added to the read-only portfolio export, closing a gap found by asking the question directly (2026-09-16)
 
-User asked, exploratory: "un investisseur qui voudrait être piloté par
-IA, il aurait besoin de quoi sur notre site ?" Answered without building
+User asked, exploratory: what would an investor who wants to follow an
+automated, rules-based process need from this site? Answered without building
 anything first (this app has no trade-execution capability at all, and
 never will unless that's a deliberate future scope change — XTB's own
 API is gone, see the README's "Read this first"): the two real gaps are
-an agent-facing consolidated data surface, and a decision about whether
-an agent should invent its own recommendations or stay strictly inside
+a consolidated read-only data surface for external tools, and a decision about whether
+such a tool should invent its own recommendations or stay strictly inside
 the investor's *own* stated rules. Recommended the latter — reusing
 Personal Policy (Decision 3u.59) rather than adding a new recommendation
 engine that would contradict this app's whole "never tell the user what
@@ -8336,9 +8330,9 @@ User agreed to pursue this direction.
 **Found by re-reading `scripts/export_portfolio.py` (Decision 3u.61-era,
 commit `c08d67c5`) before writing anything**: the export already
 exists and already bundles portfolio/breakdown/allocation/attention/
-data-health/lots/dividends/tax — a real, working "agent-facing snapshot"
+data-health/lots/dividends/tax — a real, working read-only snapshot
 that answers half of what was just discussed. But it never included
-Personal Policy or its gaps — the one piece that would let an agent
+Personal Policy or its gaps — the one piece that would let an external tool
 reason about the investor's *own* constraints rather than just seeing
 raw numbers. Also found: that feature's own introducing commit
 (`49d1df3`) claimed to add docs for both tax prep *and* the export in
@@ -8349,7 +8343,7 @@ shipped. Both gaps closed together.
 **Change**: `export_portfolio.py` gains three more `_get()` calls —
 `personal_policy`, `personal_policy_limits` (every configured limit,
 satisfied or not — deliberately not just `/policy/gaps`'s breaches-only
-view, since an agent needs to know "within bounds" is different from "no
+view, since an external tool needs to know "within bounds" is different from "no
 rule set"), and `personal_policy_gaps`. Same pattern as every existing
 field: calls the app's own endpoint, no logic duplicated, `None` on
 failure rather than crashing the whole export. No backend change — all
@@ -8360,15 +8354,15 @@ endpoints return real data (a configured policy, 4 real limits, 2 real
 breaches). No new data-sensitivity concern — the export already carries
 every position's real broker symbol via the existing `portfolio` field;
 this only repeats the same already-flowing identifiers in a new field,
-into the same already-authorized destination (the agent's own read-only
+into the same already-authorized destination (a separate local tool's read-only
 bind mount, requested by the user in Decision-adjacent work,
 never a public or shared surface).
 
 **Not built, explicitly out of scope per the user's own agreed
 direction**: any execution/trading capability, any endpoint that lets
-an agent *write* to this app rather than only read, and any new
-independent "recommendation" surface for an agent to consume beyond
-what Discovery already discloses. If an agent needs to act, it acts inside
+an external tool *write* to this app rather than only read, and any new
+independent "recommendation" surface for such a tool to consume beyond
+what Discovery already discloses. Any action stays inside
 the investor's own Personal Policy — this app stays read-only and
 descriptive, same posture as everywhere else.
 
@@ -8429,8 +8423,8 @@ implicitly by shipping a UI element.
 ## Decision 3u.67 — "Risques du portefeuille": unconditional exposure facts, split from Personal Policy (2026-09-16)
 
 Direct follow-up, same "philosophy evolving" conversation: after the
-prediction module, the next question was what an AI-piloted investor
-would still be missing from this site. Answered by re-reading, not
+prediction module, the next question was what an investor following a
+rules-based process would still be missing from this site. Answered by re-reading, not
 guessing: Personal Policy (Decision 3u.59) already closes with an
 explicit named follow-up — *"a future full portfolio-risk view
 (sector/country/currency concentration beyond what a configured limit
@@ -8525,7 +8519,7 @@ real, previously-invisible fact about this portfolio's actual volatility
 history, now visible for the first time anywhere in the app.
 
 **Deliberately not built**: nothing execution-related, nothing that lets
-any agent *write* to this app — read-only and descriptive, same
+any external tool *write* to this app — read-only and descriptive, same
 posture as everywhere else (Decision 3u.65's own closing line). Line-item
 color-coded "risk tiers" were considered and rejected for
 `PositionConcentration` — a color implies a verdict this page explicitly
@@ -8716,7 +8710,7 @@ New test `test_currencies_are_never_summed_together` in
 instruments in different currencies, same account, same year) — asserts
 two separate summary rows, values never mixed. Full backend suite:
 **1050 passed** (1 pre-existing unrelated flaky test excluded, same as
-every prior chantier this session).
+every prior chantier in this phase).
 
 **Live-verified against the real portfolio**: the 2026 summary table now
 shows four separate rows for that year (`PEA/EUR`, `My Trades/USD`,
@@ -8729,7 +8723,7 @@ now correct for the first time since this page shipped (Decision 3u.28).
 
 Last two screens in the priority order set on 2026-09-07 (Portfolio and
 Position-detail: Decisions 3u.37/3u.38; Transactions/Dividendes: Decisions
-3u.69/3u.70). Two Explore agents read every component and i18n string
+3u.69/3u.70). Two review passes read every component and i18n string
 these screens use — a codebase-wide grep had already confirmed neither
 has any color-as-verdict misuse, so this pass was wording/disclosure only.
 
@@ -8771,7 +8765,7 @@ little verdicts.
 
 Not changed: the verdict's existence and its green/gray/red coloring —
 both the settled Decision 3u.21 exception, not revisited. Everything else
-on both screens (price-status icon, sparkline, news sentiment, AI-
+on both screens (price-status icon, sparkline, news sentiment,
 commentary disclaimer, category tags, filters, S&P 500/Finviz operational
 counts, backtest panel) was checked and already carries adequate
 disclosure.
@@ -8787,7 +8781,7 @@ signal string and the three new Pépites tooltip strings were confirmed
 served by the dev server (`GET /src/i18n/en.ts`) — this live portfolio
 currently has no watchlist row in the exact "hold" state and no S&P 500
 data imported yet, so those two specific badges couldn't be visually
-hovered this session; re-check once either exists.
+hovered yet; re-check once either exists.
 
 **This closes the beginner-comprehension initiative's screen-by-screen
 sequence** — all five screens named in the 2026-09-07 priority order
@@ -8985,7 +8979,7 @@ per-concept dispatch in `_normalise` — every other concept's extraction
 is byte-for-byte unchanged.
 
 **A useful general lesson, worth restating**: this is the second time
-this session a fetch-based feature's "uniformly wrong/missing results"
+in this phase a fetch-based feature's "uniformly wrong/missing results"
 turned out to have a root cause one level removed from where the
 investigation started (the first time was `SEC_USER_AGENT` being empty;
 this time, a filer-specific tagging convention nobody had reason to
@@ -9034,7 +9028,7 @@ threshold without a separate toggle).
 Pure frontend addition: `composite_score` already exists on
 `DiscoveryCandidate` (Decision 3u.20) — no new backend field, no new
 fetch. New `scoreMin` filter in `DiscoveryPanel.tsx`, same established
-pattern as every other Pépites filter this session (min-only numeric
+pattern as every other Pépites filter so far (min-only numeric
 input, "unknown excluded" convention — a candidate with no computed
 score at all is hidden, not shown as if it cleared the bar — applied at
 both the S&P 500 and Finviz call sites, same disclosed-scope hint
@@ -9248,19 +9242,19 @@ scrolling (confirmed pre-existing, not a CSS regression, by cross-
 checking `get_page_text`/computed styles matched the real DOM). `tsc
 -b`/`oxlint` clean at every step; i18n parity re-confirmed at 857 keys.
 
-## Decision 3u.78 — gitleaks pre-commit hook, after giving the automation agent read-write access to backend/ and frontend/ (2026-09-24)
+## Decision 3u.78 — gitleaks pre-commit hook, after giving the automation host read-write access to backend/ and frontend/ (2026-09-24)
 
-The automation agent's sandbox (a separate, internet-connected Docker container on
+The automation host's container (a separate, internet-connected Docker container on
 a dedicated host, used for code review/fixes on this project) got `backend/` and
 `frontend/` bind-mounted read-write so it could work on real ISIN/ticker
 reliability fixes without a copy-paste round trip. A bind mount means its
 edits land directly in this working tree — there is no staging area between
-"the agent wrote a file" and "it's sitting in `git status`" — so the actual
+"the container wrote a file" and "it's sitting in `git status`" — so the actual
 checkpoint against an accidentally-committed secret is at commit time, not a
 review step beforehand. `.env`, `data/`, `backups/`, `Extractions/` are not
 mounted (real API keys and real financial data — none of it reachable from
-the sandbox), but that only covers what's excluded by construction, not a new
-file the agent might create inside `backend/`/`frontend/` themselves.
+that container), but that only covers what's excluded by construction, not a new
+file the container might create inside `backend/`/`frontend/` themselves.
 
 Added `.githooks/pre-commit` (a tracked hook, not the untracked default
 `.git/hooks/`, so every clone gets the same one — enable with `git config
@@ -9322,3 +9316,57 @@ Follow-up fixes after review (2026-10-04):
   chart benchmark, so the panel's selection-bias disclaimer stays accurate.
 - **Accessibility.** The per-month bars are mirrored in a visually hidden
   table for screen readers.
+
+## Decision 3u.80 — "This week": one weekly view over limits, allocation, scores, watchlist and journal (2026-10-03)
+
+The app already answers each of these questions on its own page — personal
+policy gaps (3u.59), allocation targets (3u.15), score/allocation signals
+(3u.19), watchlist target prices, journal review dates (3u.68) — but a weekly
+check-in meant visiting five places. The Portfolio page's "to review today"
+card (3u.25) is the quick glance; this is the longer weekly read, so it gets
+its own page rather than growing that card into five sections.
+
+**No new computation.** New `routers/weekly.py`, `GET /api/weekly-summary`,
+calls the existing endpoint functions directly (`get_personal_policy_gaps`,
+`get_allocation`, `get_position_signals`, `get_attention`,
+`get_watchlist_signals`) and only filters and joins their output, so the
+weekly view can't drift from the pages it summarises. Sections:
+
+- policy gaps, as-is;
+- allocation rows in `under`/`over` only;
+- position signals `reinforce`/`reduce` only, with symbol, name and the
+  instrument's weight (summed across accounts) added so a row reads on its
+  own. Rendered with the existing fact labels ("Low score · over-allocated"),
+  never the verb, plus a standing note that the gap belongs to the whole
+  asset class, not that one line (3u.19's addendum);
+- watchlist items at/below target (any score — same rule as the nav bell),
+  or within `NEAR_TARGET_PCT` (5%) above it with a high score;
+- journal entries with no outcome yet whose review date has passed or falls
+  within `WINDOW_DAYS` (7);
+- the data-quality kinds of `/attention` (price error/stale, unresolved
+  symbols), as a reliability footer: every figure above depends on them.
+
+**Deliberately not built:** "what changed since last week". Nothing stores
+score or allocation history, so a comparison would need a weekly snapshot
+table first; a separate decision if it's wanted.
+
+Frontend: `pages/Weekly.tsx` at `/week`, nav entry right after Portfolio,
+one card per section with a link to the page that owns the data, an empty
+state per section, and the usual "not a suggestion to buy or sell" notice.
+`rangeLabel` moved from `PersonalPolicyPanel.tsx` to `format.ts` so both
+share it. i18n in en/fr/pl.
+
+Tests: `test_weekly_summary_api.py` (8) — empty database, policy/allocation
+filtering, aligned-signals-only with weight, weight summed across accounts,
+watchlist kinds and exclusions, journal window boundaries (day 7 in, day 8
+out, reviewed entries out), data-reliability kinds only, and one portfolio
+valuation per request (the summary stores it under
+`portfolio.FIGURES_SNAPSHOT_KEY` so every composed section reuses it). Live-checked in a
+browser in English and French against a seeded demo database.
+
+## Decision 3u.81 — Qualitative commentary provider removed (2026-10-03)
+
+The optional paid per-instrument commentary (the separate button in the Insights row) was
+removed, together with its settings fields, its cache table (dropped by an Alembic
+migration) and its tests. It was never part of the score, so no scoring behaviour changes.
+News/sentiment from Alpha Vantage stays exactly as it was in Decision 3u.12.

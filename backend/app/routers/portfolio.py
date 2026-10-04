@@ -556,10 +556,21 @@ def get_breakdown(
     return items
 
 
+#: `Session.info` key for a request-scoped `_positions_figures_and_total` result.
+FIGURES_SNAPSHOT_KEY = "positions_figures_snapshot"
+
+
 def _positions_figures_and_total(db: Session) -> tuple[list[Position], dict[int, PositionFigures], float]:
     """Held positions, their computed figures, and the portfolio total —
     the shared basis for `/breakdown`, `/allocation`, and the personal-
-    policy gap comparison, so each doesn't re-derive it independently."""
+    policy gap comparison, so each doesn't re-derive it independently.
+
+    A caller composing several of those endpoints in one request (the weekly
+    summary) can store this result under `db.info[FIGURES_SNAPSHOT_KEY]` so
+    every section reuses one valuation instead of recomputing it."""
+    snapshot = db.info.get(FIGURES_SNAPSHOT_KEY)
+    if snapshot is not None:
+        return snapshot
     positions = list(db.execute(select(Position).options(joinedload(Position.instrument))).scalars())
     base_currency = get_settings().base_currency
     figures = _compute_figures(db, positions, base_currency, live_quotes={})

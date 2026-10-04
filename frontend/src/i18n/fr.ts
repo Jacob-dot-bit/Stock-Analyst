@@ -4,6 +4,7 @@ export const fr: Catalogue = {
   // --- Shell ---------------------------------------------------------------
   'app.title': 'Stock Analyst',
   'nav.portfolio': 'Portefeuille',
+  'nav.weekly': 'Cette semaine',
   'nav.transactions': 'Transactions',
   'nav.watchlist': 'Watchlist',
   'nav.gems': 'Pépites',
@@ -868,9 +869,9 @@ export const fr: Catalogue = {
   'scores.droppedReason.missing_fx_rate': 'Taux de change indisponible',
   'scores.droppedReason.insufficient_history': "Historique insuffisant pour l'instant",
 
-  // --- Analyses : actualités/sentiment + commentaire IA (phase 6) -----------
-  'insights.badgeLabel': 'Actus & IA',
-  'insights.badgeTooltip': "Afficher l'actualité récente, le sentiment et le commentaire IA",
+  // --- Analyses : actualités/sentiment (phase 6) ----------------------------
+  'insights.badgeLabel': 'Actus',
+  'insights.badgeTooltip': "Afficher l'actualité récente et le sentiment",
   'insights.newsTitle': 'Actualités & sentiment',
   'insights.noNews': 'Aucune actualité récente trouvée pour cet instrument.',
   'insights.sentimentTooltip':
@@ -881,10 +882,6 @@ export const fr: Catalogue = {
   'insights.sentiment.somewhatBearish': 'Ton plutôt défavorable',
   'insights.sentiment.bearish': 'Ton nettement défavorable',
   'insights.sentiment.unknown': 'Ton non disponible',
-  'insights.commentaryTitle': 'Commentaire IA',
-  'insights.commentaryDisclaimer':
-    "Synthèse générée à partir des données disponibles, potentiellement incomplète — ne constitue pas un conseil en investissement.",
-  'insights.askPerplexity': 'Obtenir un commentaire IA',
 
   'news.updated': '{symbol} : {articles} article(s) trouvé(s).',
   'news.alreadyFresh': '{symbol} : déjà à jour (cache de {days} jour(s)).',
@@ -893,12 +890,6 @@ export const fr: Catalogue = {
   'news.noProvider': "{symbol} : Alpha Vantage n'est pas configuré (clé API manquante).",
   'news.rateLimited': '{symbol} : Alpha Vantage limite les requêtes. Réessaie dans un instant.',
   'news.failed': '{symbol} : échec de la récupération ({error}).',
-
-  'commentary.updated': '{symbol} : commentaire récupéré.',
-  'commentary.alreadyFresh': '{symbol} : déjà à jour (cache de {days} jour(s)).',
-  'commentary.noProvider': "{symbol} : Perplexity n'est pas configuré (clé API manquante).",
-  'commentary.rateLimited': '{symbol} : Perplexity limite les requêtes. Réessaie dans un instant.',
-  'commentary.failed': '{symbol} : échec de la récupération ({error}).',
 
   // --- Dividendes --------------------------------------------------------
   'dividends.title': 'Dividendes',
@@ -1191,4 +1182,37 @@ export const fr: Catalogue = {
     "Agrégat de prêts P2P Mintos — des dizaines de fragments de prêts sans cours individuel, valorisés uniquement par un solde global déclaré par Mintos.",
   'positionDetail.notPriceableReasonValue.employee_savings_fund':
     "Fonds d'épargne salariale Amundi — pas de cotation de marché, sa valeur provient uniquement du relevé annuel Amundi.",
+  // --- Cette semaine (DEVLOG "Decision 3u.80") ------------------------------
+  'weekly.title': 'Cette semaine',
+  'weekly.subtitle': 'Vos limites, cibles d\'allocation, scores, liste de suivi et journal au même endroit, au {date}.',
+  'weekly.subtitleLoading': 'Vos limites, cibles d\'allocation, scores, liste de suivi et journal au même endroit.',
+  'weekly.disclaimer':
+    "Chaque ligne ci-dessous est un constat que l'application affiche déjà sur une autre page, regroupé ici pour un point hebdomadaire. Aucune ne constitue une suggestion d'achat ou de vente.",
+  'weekly.openPortfolio': 'Ouvrir le portefeuille',
+  'weekly.openWatchlist': 'Ouvrir la liste de suivi',
+  'weekly.openJournal': 'Ouvrir le journal',
+  'weekly.openSettings': 'Ouvrir les paramètres',
+  'weekly.policy.title': 'Vos limites personnelles',
+  'weekly.policy.empty': 'Aucune limite personnelle n\'est dépassée (ou aucune n\'est encore configurée).',
+  'weekly.allocation.title': 'Cibles d\'allocation',
+  'weekly.allocation.empty': 'Chaque classe d\'actifs avec une cible est dans sa fourchette (ou aucune cible n\'est encore configurée).',
+  'weekly.allocation.detail': 'cible {range}, écart de {gap} pts',
+  'weekly.positions.title': 'Score et allocation vont dans le même sens',
+  'weekly.positions.empty': 'Aucune position détenue n\'a un score et un écart d\'allocation qui vont dans le même sens.',
+  'weekly.positions.note':
+    "L'écart d'allocation concerne toute la classe d'actifs, pas cette seule ligne : il indique que les deux indicateurs convergent, pas que cette position est celle à modifier.",
+  'weekly.positions.detail': '{weight} % du portefeuille · score {score}/100 · {category} : {state}, {gap} pts',
+  'weekly.watchlist.title': 'Liste de suivi',
+  'weekly.watchlist.empty': 'Aucun titre suivi n\'est à son prix cible, ou proche de celui-ci avec un score élevé.',
+  'weekly.watchlist.kind.target_reached': 'Cible atteinte',
+  'weekly.watchlist.kind.near_target_high_score': 'Score élevé · proche de la cible',
+  'weekly.watchlist.detail': '{distance} par rapport à la cible {target}',
+  'weekly.scoreSuffix': ' · score {score}/100',
+  'weekly.journal.title': 'Revues du journal',
+  'weekly.journal.empty': 'Aucune entrée du journal à revoir avant le {date}.',
+  'weekly.journal.overdue': 'À revoir depuis le {date}',
+  'weekly.journal.due': 'À revoir le {date}',
+  'weekly.data.title': 'Fiabilité des données',
+  'weekly.data.empty': 'Les cours sont à jour et tous les symboles sont résolus.',
+  'weekly.data.note': 'Les chiffres ci-dessus ne sont fiables que si les données ci-dessous le sont.',
 }

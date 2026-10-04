@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
-import type { InstrumentCommentary, NewsSentiment } from '../api/types'
+import type { NewsSentiment } from '../api/types'
 import { useI18n } from '../i18n'
 
 type Loadable<T> = T | 'loading' | null
@@ -24,22 +24,18 @@ function sentimentLabel(rawLabel: string, t: (key: string) => string): string {
   return key ? t(key) : t('insights.sentiment.unknown')
 }
 
-/** The full news/sentiment + AI-commentary panel for one instrument —
+/** The full news/sentiment panel for one instrument —
  * extracted so both the standalone table row below (Watchlist/Screener) and
  * the consolidated per-position detail panel (`PositionDetailRow.tsx`) can
  * render the exact same content without duplicating the fetch logic. See
  * DEVLOG "Decision 3u.31".
  *
- * Two sections with asymmetric weight matching their real cost (DEVLOG
- * "Decision 0.3"): news is free and fetches automatically the moment this
- * mounts (mounting it already *is* the one-instrument-at-a-time explicit
- * action); AI commentary is paid, so it waits for its own, separate, more
- * deliberate click.
+ * News is free and fetches automatically the moment this mounts (mounting it
+ * already *is* the one-instrument-at-a-time explicit action).
  */
 export function InsightsSection({ instrumentId }: { instrumentId: number }) {
   const { t, formatDate } = useI18n()
   const [news, setNews] = useState<Loadable<NewsSentiment>>('loading')
-  const [commentary, setCommentary] = useState<Loadable<InstrumentCommentary>>(null)
   // React 18 StrictMode intentionally double-invokes this effect in
   // development (mount, cleanup, mount again) to surface missing cleanup —
   // harmless for the read-only GETs elsewhere in this app, but this effect
@@ -67,14 +63,6 @@ export function InsightsSection({ instrumentId }: { instrumentId: number }) {
         if (fetchedForRef.current === instrumentId) setNews(null)
       })
   }, [instrumentId])
-
-  function handleAskPerplexity() {
-    setCommentary('loading')
-    api
-      .getInstrumentCommentary(instrumentId)
-      .then(setCommentary)
-      .catch(() => setCommentary(null))
-  }
 
   return (
         <div className="insights-detail">
@@ -109,40 +97,6 @@ export function InsightsSection({ instrumentId }: { instrumentId: number }) {
             )}
           </section>
 
-          <section className="insights-section">
-            <h4>{t('insights.commentaryTitle')}</h4>
-            {commentary === null && (
-              <button type="button" onClick={handleAskPerplexity}>
-                {t('insights.askPerplexity')}
-              </button>
-            )}
-            {commentary === 'loading' && <p className="muted">{t('common.loading')}</p>}
-            {commentary && commentary !== 'loading' && (
-              <>
-                {commentary.content ? (
-                  <>
-                    <p className="muted" style={{ fontSize: '0.85rem' }}>
-                      {t('insights.commentaryDisclaimer')}
-                    </p>
-                    <p>{commentary.content}</p>
-                    {commentary.citations.length > 0 && (
-                      <ul className="insights-citations">
-                        {commentary.citations.map((citation) => (
-                          <li key={citation.url}>
-                            <a href={citation.url} target="_blank" rel="noopener noreferrer">
-                              {citation.title ?? citation.url}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                ) : (
-                  <p className="muted">{t(commentary.outcome.code, commentary.outcome.params)}</p>
-                )}
-              </>
-            )}
-          </section>
         </div>
   )
 }

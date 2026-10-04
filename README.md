@@ -110,7 +110,6 @@ cleanly rather than failing startup.
 | `EODHD_API_KEY` | End-of-day historical prices | free |
 | `MARKETSTACK_API_KEY` | End-of-day US prices — thin free tier (100 req/month), end of the fallback chain | free |
 | `OPENFIGI_API_KEY` | Instrument identity (ISIN/FIGI). Works unauthenticated; a key only raises the rate ceiling | free |
-| `PERPLEXITY_API_KEY` | Per-instrument AI qualitative commentary, on request — see "Insights" | **paid** |
 
 ### Tests
 
@@ -265,7 +264,7 @@ reported as anomalies, since that is the expected outcome.
 | 3 | Scoring engine (4 pillars, `scoring.yaml`) | ✅ done |
 | 4 | Watchlist and entry timing | ✅ done |
 | 5 | Hidden gems page (screener) | ✅ done |
-| 6 | News/sentiment (Alpha Vantage) + qualitative commentary (Perplexity) | ✅ done |
+| 6 | News/sentiment (Alpha Vantage) | ✅ done |
 
 ### Planned data sources (phase 2)
 
@@ -278,7 +277,6 @@ reported as anomalies, since that is the expected outcome.
 | Twelve Data | Fallback prices | **US only on the free tier** | Verified live. European venues need a paid plan — their API says so explicitly |
 | SEC EDGAR | Official fundamentals (XBRL) | **US only** | Free, official, no key |
 | Alpha Vantage | Fallback prices + news/sentiment | worldwide | Free, 5 req/min. `NEWS_SENTIMENT` shares the same throttle as its price fetches |
-| Perplexity | Qualitative commentary | worldwide | **Paid** — on demand, one instrument at a time, cached |
 
 **Sources are routed by market, not tried blindly.** Each provider declares what it can
 serve, so a French holding never spends a request on a US-only free tier. On this

@@ -632,7 +632,7 @@ td.negative { color: var(--negative); }
   font-size: 0.72rem;
 }
 
-/* --- Insights: news/sentiment + AI commentary (phase 6) --- */
+/* --- Insights: news/sentiment (phase 6) --- */
 
 .insights-badge {
   cursor: pointer;
@@ -664,7 +664,7 @@ td.negative { color: var(--negative); }
   font-size: 0.9rem;
 }
 
-.insights-articles, .insights-citations {
+.insights-articles {
   list-style: none;
   margin: 0;
   padding: 0;

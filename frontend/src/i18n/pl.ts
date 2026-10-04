@@ -11,6 +11,7 @@ export const pl: Catalogue = {
   // --- Shell ---------------------------------------------------------------
   'app.title': 'Stock Analyst',
   'nav.portfolio': 'Portfel',
+  'nav.weekly': 'Ten tydzień',
   'nav.transactions': 'Transakcje',
   'nav.watchlist': 'Obserwowane',
   'nav.gems': 'Perełki',
@@ -876,9 +877,9 @@ export const pl: Catalogue = {
   'scores.droppedReason.missing_fx_rate': 'Kurs wymiany niedostępny',
   'scores.droppedReason.insufficient_history': 'Na razie za mało historii',
 
-  // --- Analizy: aktualności/sentyment + komentarz AI (etap 6) --------------
-  'insights.badgeLabel': 'Newsy i AI',
-  'insights.badgeTooltip': 'Pokaż ostatnie wiadomości, sentyment i komentarz AI',
+  // --- Analizy: aktualności/sentyment (etap 6) -----------------------------
+  'insights.badgeLabel': 'Newsy',
+  'insights.badgeTooltip': 'Pokaż ostatnie wiadomości i sentyment',
   'insights.newsTitle': 'Wiadomości i sentyment',
   'insights.noNews': 'Nie znaleziono ostatnich wiadomości dla tego instrumentu.',
   'insights.sentimentTooltip':
@@ -889,10 +890,6 @@ export const pl: Catalogue = {
   'insights.sentiment.somewhatBearish': 'Raczej negatywny ton',
   'insights.sentiment.bearish': 'Wyraźnie negatywny ton',
   'insights.sentiment.unknown': 'Ton niedostępny',
-  'insights.commentaryTitle': 'Komentarz AI',
-  'insights.commentaryDisclaimer':
-    'Podsumowanie wygenerowane na podstawie dostępnych danych, potencjalnie niepełnych — nie stanowi rekomendacji inwestycyjnej.',
-  'insights.askPerplexity': 'Pobierz komentarz AI',
 
   'news.updated': '{symbol}: znaleziono {articles} artykuł(y/ów).',
   'news.alreadyFresh': '{symbol}: już aktualne (cache {days} dni).',
@@ -901,12 +898,6 @@ export const pl: Catalogue = {
   'news.noProvider': '{symbol}: Alpha Vantage nie jest skonfigurowane (brak klucza API).',
   'news.rateLimited': '{symbol}: Alpha Vantage ogranicza zapytania. Spróbuj ponownie za chwilę.',
   'news.failed': '{symbol}: pobieranie nie powiodło się ({error}).',
-
-  'commentary.updated': '{symbol}: pobrano komentarz.',
-  'commentary.alreadyFresh': '{symbol}: już aktualne (cache {days} dni).',
-  'commentary.noProvider': '{symbol}: Perplexity nie jest skonfigurowane (brak klucza API).',
-  'commentary.rateLimited': '{symbol}: Perplexity ogranicza zapytania. Spróbuj ponownie za chwilę.',
-  'commentary.failed': '{symbol}: pobieranie nie powiodło się ({error}).',
 
   // --- Dywidendy -----------------------------------------------------------
   'dividends.title': 'Dywidendy',
@@ -1195,4 +1186,37 @@ export const pl: Catalogue = {
     'Agregat pożyczek P2P Mintos — dziesiątki fragmentów pożyczek bez indywidualnej wyceny, wartościowane wyłącznie jako jedno łączne saldo zadeklarowane przez Mintos.',
   'positionDetail.notPriceableReasonValue.employee_savings_fund':
     'Fundusz oszczędności pracowniczej Amundi — brak notowania rynkowego, jego wartość pochodzi wyłącznie z rocznego wyciągu Amundi.',
+  // --- Ten tydzień (DEVLOG "Decision 3u.80") --------------------------------
+  'weekly.title': 'Ten tydzień',
+  'weekly.subtitle': 'Twoje limity, docelowa alokacja, wyniki, lista obserwowanych i dziennik w jednym miejscu, stan na {date}.',
+  'weekly.subtitleLoading': 'Twoje limity, docelowa alokacja, wyniki, lista obserwowanych i dziennik w jednym miejscu.',
+  'weekly.disclaimer':
+    'Każda pozycja poniżej to fakt, który aplikacja pokazuje już na innej stronie, zebrany tutaj do cotygodniowego przeglądu. Żadna z nich nie jest sugestią kupna ani sprzedaży.',
+  'weekly.openPortfolio': 'Otwórz portfel',
+  'weekly.openWatchlist': 'Otwórz obserwowane',
+  'weekly.openJournal': 'Otwórz dziennik',
+  'weekly.openSettings': 'Otwórz ustawienia',
+  'weekly.policy.title': 'Twoje osobiste limity',
+  'weekly.policy.empty': 'Żaden osobisty limit nie jest przekroczony (lub żaden nie jest jeszcze skonfigurowany).',
+  'weekly.allocation.title': 'Docelowa alokacja',
+  'weekly.allocation.empty': 'Każda klasa aktywów z celem mieści się w swoim zakresie (lub żaden cel nie jest jeszcze skonfigurowany).',
+  'weekly.allocation.detail': 'cel {range}, {gap} pkt poza zakresem',
+  'weekly.positions.title': 'Wynik i alokacja wskazują ten sam kierunek',
+  'weekly.positions.empty': 'Żadna posiadana pozycja nie ma wyniku i odchylenia alokacji wskazujących ten sam kierunek.',
+  'weekly.positions.note':
+    'Odchylenie alokacji dotyczy całej klasy aktywów, a nie tej jednej pozycji: oznacza, że oba wskaźniki są zgodne, a nie że to tę pozycję należy zmienić.',
+  'weekly.positions.detail': '{weight}% portfela · wynik {score}/100 · {category}: {state}, {gap} pkt',
+  'weekly.watchlist.title': 'Obserwowane',
+  'weekly.watchlist.empty': 'Żaden obserwowany instrument nie osiągnął ceny docelowej ani nie jest blisko niej z wysokim wynikiem.',
+  'weekly.watchlist.kind.target_reached': 'Na lub poniżej celu',
+  'weekly.watchlist.kind.near_target_high_score': 'Wysoki wynik · blisko celu',
+  'weekly.watchlist.detail': '{distance} względem celu {target}',
+  'weekly.scoreSuffix': ' · wynik {score}/100',
+  'weekly.journal.title': 'Przeglądy dziennika',
+  'weekly.journal.empty': 'Żaden wpis w dzienniku nie wymaga przeglądu przed {date}.',
+  'weekly.journal.overdue': 'Zaległe od {date}',
+  'weekly.journal.due': 'Przegląd {date}',
+  'weekly.data.title': 'Wiarygodność danych',
+  'weekly.data.empty': 'Ceny są aktualne, a wszystkie symbole rozpoznane.',
+  'weekly.data.note': 'Powyższe liczby są tylko tak wiarygodne, jak dane poniżej.',
 }

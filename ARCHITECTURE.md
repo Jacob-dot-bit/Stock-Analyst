@@ -16,8 +16,7 @@ backend/app/
   symbols/       Broker-symbol ↔ provider-symbol mapping/resolution
   providers/     One file per external data source, behind a common interface
   analysis/      Per-instrument on-request enrichment: news_service.py (Alpha
-                 Vantage news/sentiment), commentary_service.py (Perplexity) —
-                 never read by scoring/service.py. Originally slated in an
+                 Vantage news/sentiment) — never read by scoring/service.py. Originally slated in an
                  early sketch for "indicators and scoring," which ended up
                  living in scoring/ instead; repurposed here rather than left
                  empty.
@@ -51,8 +50,7 @@ frontend/src/
 | `ProviderUsage` | `provider_usage` | Per-provider request count for the current quota period (only quota-tracked providers get a row). |
 | `FxRate` | `fx_rates` | Daily-cached currency conversion rate. |
 | `Fundamental` | `fundamentals` | One filed annual figure (concept/fiscal_year/value) for one instrument, from EDGAR or ESEF. |
-| `NewsSentiment` | `news_sentiments` | Cached Alpha Vantage news + per-article sentiment, one row per instrument. Free, softer TTL than commentary. |
-| `InstrumentCommentary` | `instrument_commentaries` | Cached Perplexity qualitative commentary, one row per instrument. 7-day TTL is a cost decision, not a freshness one. |
+| `NewsSentiment` | `news_sentiments` | Cached Alpha Vantage news + per-article sentiment, one row per instrument. Free, 1-day TTL. |
 | `FactorReturn` | `factor_returns` | One day's Carhart four-factor return series (Mkt-RF/SMB/HML/Mom/RF), fetched from Kenneth French's Data Library. `region` ("US"/"EUROPE") + date is UNIQUE. Decimal returns (source is percent). |
 | `CorporateAction` | `corporate_actions` | A confirmed stock split or reverse split. Never mutates `PriceBar`/`Lot` — read-time adjustment only, see "Stock splits" below. |
 | `PersonalPolicy` | `personal_policy` | Singleton: the user's own, self-declared objective/horizon/liquidity/risk-tolerance — every field optional, never inferred or scored. See "Personal policy" below. |
@@ -141,8 +139,7 @@ frontend/src/
 
 ### `/api/insights` (`routers/insights.py`)
 - `POST /{instrument_id}/news` — free Alpha Vantage news + sentiment; fetches on a cache miss/stale row (1-day TTL), otherwise cache-only.
-- `POST /{instrument_id}/commentary` — paid Perplexity qualitative commentary; fetches on a cache miss/stale row (`settings.perplexity_cache_ttl_days`, 7 by default), otherwise cache-only. One instrument at a time, on explicit request — never mass screening (DEVLOG "Decision 0.3").
-- Both `POST`, not `GET`: they're the one place fetching happens, same convention as `POST /api/watchlist`. Never read by `compute_scores` — commentary, not a scoring input.
+- `POST`, not `GET`: it's the one place fetching happens, same convention as `POST /api/watchlist`. Never read by `compute_scores` — context, not a scoring input.
 
 ### `/api/transactions` (`routers/transactions.py`)
 - `GET  ""` — list, filterable by type/date range/account/`instrument_id`.
@@ -163,6 +160,9 @@ frontend/src/
 - `GET  /years` — every calendar year with at least one dated transaction.
 - `GET  /summary?year=` — one row per account with tax-relevant activity that year: dividends/withholding (delegates to `dividends/service.py::dividend_summary`, never recomputed), interest, realized gains/losses (kept separate, never netted), fees, deposits, withdrawals, and `OTHER`-typed flows shown verbatim. **No tax rate is ever applied and no liability is ever computed** — a reconciliation aid, not a tax calculator. See "Annual tax-year reconciliation" below and DEVLOG "Decision 3u.60".
 - `GET  /summary.csv` — same data as a CSV download.
+
+### `/api/weekly-summary` (`routers/weekly.py`)
+- `GET ""` — one descriptive "this week" view composed from existing endpoint functions (policy gaps, allocation, position/watchlist signals, attention) plus journal entries due within 7 days. No new computation; the portfolio valuation is computed once per request and shared by every section (DEVLOG "Decision 3u.80").
 
 ### `/api/journal` (`routers/journal.py`)
 - `POST ""` — write a decision (`thesis` required, optional `broker_symbol` and `review_date`). `entry_date` is always server-set to today, never accepted from the client. See "Decision journal" below and DEVLOG "Decision 3u.68".
@@ -684,11 +684,10 @@ compression. `.env`/API keys are never touched, by construction — only the
 older ones are pruned on each new backup.
 
 **Portfolio export (`backend/scripts/export_portfolio.py`).** Read-only
-integration for a separate personal analysis agent running on the same
-host: a `*/15 * * * *` cron on the host calls every relevant existing
+integration for a separate local tool running on the same host: a `*/15 * * * *` cron on the host calls every relevant existing
 endpoint (never raw SQL — the export's numbers can never drift from what
 the app itself shows) and writes one consolidated JSON snapshot to
-`~/portfolio_export.json` (or `PORTFOLIO_EXPORT_PATH`), which the agent's own
+`~/portfolio_export.json` (or `PORTFOLIO_EXPORT_PATH`), which that tool's own
 container reads via a read-only bind mount. Runs on the host, never
 inside a container: the backend's own middleware only accepts loopback
 connections (`app/main.py`), so a containerized caller could never reach
@@ -698,14 +697,13 @@ Bundles: `portfolio`, `breakdown_by` (category/currency/country/sector),
 `allocation`, `attention`, `data_health`, `lots_by_instrument`,
 `dividends_summary`, `tax_summaries_by_year`, and — since Decision
 3u.65 — `personal_policy`/`personal_policy_limits`/`personal_policy_gaps`.
-The policy fields exist specifically so an agent reasoning about this
-portfolio stays inside the investor's *own* stated rules rather than
-inventing independent recommendations — `personal_policy_limits` is the
+The policy fields exist specifically so any consumer of this export
+sees the investor's *own* stated rules alongside the facts — `personal_policy_limits` is the
 full configured set (satisfied or not), deliberately not just
 `/policy/gaps`'s breaches-only view, since "within bounds" and "no rule
 configured" need to read differently to a consumer that never sees the
 UI. This app has, and is intended to have, no trade-execution
-capability — the agent reads facts; nothing here ever writes back.
+capability — the export carries facts; nothing here ever writes back.
 
 Restore refuses a schema-version mismatch rather than attempting to
 reconcile one: `alembic_version` is compared byte-for-byte between the
@@ -819,7 +817,7 @@ one more `instruments.extend(x for x in ... if x.id not in seen)` line, not
 redesigning the query.
 
 **Per-instrument, on-request, N-day-TTL enrichment.** `analysis/news_service.py::get_news`
-and `analysis/commentary_service.py::get_commentary` share one shape: `cached
+follows one shape: `cached
 = db.get(Model, instrument.id)`, a date-granularity freshness check (`cached.fetched_at.date()
 >= today - timedelta(days=N)` — never a full-datetime comparison: a `DateTime`
 column round-trips through SQLite as naive while `datetime.now(UTC)` is
@@ -848,8 +846,7 @@ below) with `ScoreDetailRow` as a thin `<tr><td colSpan><ScoreBreakdown
 `SortableHeader<K>` (generic over the caller's own sort-key union — don't
 widen a table's own `sortValue`/`SortKey` to share it, those stay
 table-specific); `ScoreBadge` (+ its `scoreBand` threshold helper);
-`PriceStatusBadge`; `InsightsSection` (the news/sentiment + on-request
-paid AI commentary content itself) with `InsightsBadge` + `InsightsDetailRow`
+`PriceStatusBadge`; `InsightsSection` (the news/sentiment content itself) with `InsightsBadge` + `InsightsDetailRow`
 as its thin-wrapper pair, same split as `ScoreBreakdown`/`ScoreDetailRow`.
 `WatchlistTable` and `ScreenerTable` use both pairs exactly as before —
 each with its own independent `expandedId`/`expandedInsightsId` toggle
@@ -1021,7 +1018,3 @@ also has `fetch_news_sentiment` (`routers/insights.py`, `analysis/news_service.p
 — both share the same `Throttle` instance (`registry.py::get_alpha_vantage_provider`
 pulls the exact chain instance rather than constructing a fresh one), so a
 price call and a news call together never exceed the real 5-req/min limit.
-
-`perplexity.py` is a standalone client (not `PriceProvider`-shaped, no chain
-membership, no shared throttle — every call is one explicit user action,
-never a batch). Paid; guardrails and reasoning in DEVLOG "Decision 0.3".

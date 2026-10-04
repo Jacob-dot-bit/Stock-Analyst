@@ -1,7 +1,7 @@
 import { useI18n } from '../i18n'
 
 /** Same visual shape as `ScoreBadge`'s toggle button, but a plain badge —
- * no score band, since this toggles news/commentary, not a score. */
+ * no score band, since this toggles news, not a score. */
 export function InsightsBadge({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
   const { t } = useI18n()
 

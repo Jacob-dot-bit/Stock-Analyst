@@ -471,6 +471,78 @@ class WatchlistSignalOut(BaseModel):
     distance_to_target_pct: float | None
 
 
+class WeeklyPositionFlagOut(BaseModel):
+    """A held instrument whose score band and asset-class allocation gap
+    point the same way — `PositionSignalOut`'s "reinforce"/"reduce"
+    combinations only, plus the identity and weight the weekly view needs to
+    be read on its own. Still a fact, never a trade: the gap belongs to the
+    whole category, not to this one line."""
+
+    instrument_id: int
+    symbol: str
+    name: str | None
+    #: "reinforce" | "reduce" — the frontend renders it as a fact ("high
+    #: score · under-weighted"), never as the verb.
+    signal: str
+    composite_score: float | None
+    score_band: str
+    category: str | None
+    allocation_state: str
+    gap_pct: float
+    #: This instrument's share of total portfolio value, summed across
+    #: accounts; `None` when it has no current value.
+    weight_percent: float | None
+
+
+class WeeklyWatchlistFlagOut(BaseModel):
+    """A watched instrument at or near its user-set target entry price."""
+
+    instrument_id: int
+    symbol: str
+    name: str | None
+    #: "target_reached" (price at or below target, any score) |
+    #: "near_target_high_score" (within `NEAR_TARGET_PCT` above target, with
+    #: a high score).
+    kind: str
+    composite_score: float | None
+    score_band: str
+    distance_to_target_pct: float
+    target_entry_price: float
+
+
+class WeeklyJournalDueOut(BaseModel):
+    """A journal entry with no outcome yet whose review date has passed or
+    falls within the summary's window."""
+
+    id: int
+    symbol: str | None
+    thesis: str
+    entry_date: date
+    review_date: date
+    overdue: bool
+
+
+class WeeklySummaryOut(BaseModel):
+    """One descriptive "what to look at this week" view, composed from
+    indicators the app already computes elsewhere (policy gaps, allocation,
+    position/watchlist signals, journal review dates, price freshness). No
+    new analysis, no trade suggestion. See DEVLOG "Decision 3u.80"."""
+
+    as_of: date
+    #: Last day of the 7-day window used for journal review dates.
+    window_end: date
+    policy_gaps: list[PersonalPolicyGapOut]
+    #: Only "under"/"over" rows from `GET /allocation`.
+    allocation_gaps: list[AllocationRowOut]
+    position_flags: list[WeeklyPositionFlagOut]
+    watchlist_flags: list[WeeklyWatchlistFlagOut]
+    journal_due: list[WeeklyJournalDueOut]
+    #: Only the data-quality kinds of `GET /attention` (price_error,
+    #: price_stale, unresolved_instruments) — every figure above depends on
+    #: them.
+    data_reliability: list[AttentionItemOut]
+
+
 class EnrichSectorsOut(BaseModel):
     """Result of a POST /enrich-sectors run."""
 
@@ -1487,20 +1559,6 @@ class NewsSentimentOut(BaseModel):
     instrument_id: int
     fetched_at: datetime | None
     articles: list[NewsArticleOut]
-    outcome: MessageOut
-
-
-class CitationOut(BaseModel):
-    url: str
-    title: str | None = None
-
-
-class InstrumentCommentaryOut(BaseModel):
-    instrument_id: int
-    fetched_at: datetime | None
-    model: str
-    content: str
-    citations: list[CitationOut]
     outcome: MessageOut
 
 

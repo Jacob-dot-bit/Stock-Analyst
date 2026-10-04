@@ -1,5 +1,4 @@
-"""End-to-end tests for the insights endpoints (news/sentiment + AI
-commentary). Mirrors `test_watchlist_api.py`'s structure.
+"""End-to-end tests for the insights news/sentiment endpoint. Mirrors `test_watchlist_api.py`'s structure.
 """
 
 from __future__ import annotations
@@ -49,10 +48,8 @@ def client():
 
 @pytest.fixture(autouse=True)
 def no_real_network_by_default(monkeypatch):
-    """Neither insights endpoint should ever reach the real network in a
-    test run — a disabled Alpha Vantage provider by default, and
-    `settings.perplexity_api_key` is already blanked by conftest's
-    `isolate_credentials`, so `PerplexityClient` is naturally disabled too."""
+    """The insights endpoint should never reach the real network in a test
+    run — a disabled Alpha Vantage provider by default."""
     monkeypatch.setattr("app.routers.insights.get_alpha_vantage_provider", lambda: FakeAlphaVantage(enabled=False))
 
 
@@ -113,17 +110,3 @@ class TestNewsEndpoint:
         finally:
             session.close()
 
-
-class TestCommentaryEndpoint:
-    def test_404_on_unknown_instrument(self, client):
-        assert client.post("/api/insights/999/commentary").status_code == 404
-
-    def test_no_provider_outcome_when_perplexity_key_unset(self, client):
-        instrument_id = make_instrument(client)
-
-        response = client.post(f"/api/insights/{instrument_id}/commentary")
-
-        assert response.status_code == 200
-        body = response.json()
-        assert body["outcome"]["code"] == "commentary.noProvider"
-        assert body["content"] == ""
