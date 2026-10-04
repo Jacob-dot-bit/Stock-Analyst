@@ -9,9 +9,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.backtest.service import _concepts_as_of, _forward_return, run_backtest
+from app.backtest import service as backtest_service
+from app.backtest.service import _concepts_as_of, _forward_return, _HistoricalFx, run_backtest, user_universe_ids
 from app.db import Base
-from app.models import Instrument, PriceBar
+from app.models import CorporateAction, Instrument, PriceBar, PriceHistoryStatus, ScreenerCandidate, WatchlistItem
 from app.scoring.config import MetricConfig, PillarConfig, ScoringConfig
 
 TODAY = date(2025, 1, 1)
@@ -136,3 +137,72 @@ class TestRunBacktest:
         assert result.observations == 0
         assert result.periods == []
         assert result.hit_rate is None
+
+
+class TestSplitAdjustment:
+    def test_raw_split_inside_horizon_is_not_a_crash(self, db):
+        # 8 flat instruments; one has a RAW 10-for-1 split halfway through the
+        # forward horizon (closes drop from 100 to 10). Split-adjusted, its
+        # forward return is 0%, not -90%.
+        instruments = [_instrument(db, f"FLAT{i}.US") for i in range(8)]
+        split_day = TODAY - timedelta(days=200)
+        for inst in instruments:
+            for n in range(756):
+                d = TODAY - timedelta(days=755 - n)
+                close = 10.0 if (inst is instruments[0] and d >= split_day) else 100.0
+                db.add(PriceBar(instrument_id=inst.id, bar_date=d, close=close))
+        db.add(
+            CorporateAction(
+                instrument_id=instruments[0].id,
+                action_type="split",
+                effective_date=split_day,
+                ratio_numerator=10,
+                ratio_denominator=1,
+                source="manual",
+                price_history_status=PriceHistoryStatus.RAW,
+            )
+        )
+        db.commit()
+
+        result = run_backtest(
+            db,
+            _technical_config(),
+            start=TODAY - timedelta(days=400),
+            end=TODAY - timedelta(days=380),
+            horizon_months=12,
+            min_history_bars=300,
+        )
+
+        assert result.observations > 0
+        for bucket in result.buckets:
+            if bucket.count:
+                assert bucket.mean_return == pytest.approx(0.0)
+
+
+class TestHistoricalFx:
+    def test_uses_the_rate_on_the_rebalance_date(self, db, monkeypatch):
+        calls = []
+
+        def fake_range(_db, from_currency, to_currency, start, end):
+            calls.append((from_currency, to_currency))
+            return {date(2023, 1, 2): 1.10, date(2024, 1, 2): 1.25}
+
+        monkeypatch.setattr(backtest_service, "get_rate_range", fake_range)
+        fx = _HistoricalFx(db, date(2023, 1, 1), date(2024, 12, 31))
+
+        assert fx.rate("EUR", "USD", date(2023, 1, 2)) == pytest.approx(1.10)
+        assert fx.rate("EUR", "USD", date(2024, 1, 2)) == pytest.approx(1.25)
+        assert fx.rate("USD", "USD", date(2024, 1, 2)) == 1.0
+        # One fetch per currency pair for the whole window.
+        assert calls == [("EUR", "USD")]
+
+
+class TestUserUniverse:
+    def test_only_picked_instruments(self, db):
+        watched = _instrument(db, "WATCH.US")
+        screened = _instrument(db, "SCREEN.US")
+        _instrument(db, "POOL.US")  # e.g. the automatic discovery pool
+        db.add_all([WatchlistItem(instrument_id=watched.id), ScreenerCandidate(instrument_id=screened.id)])
+        db.commit()
+
+        assert user_universe_ids(db) == sorted([watched.id, screened.id])

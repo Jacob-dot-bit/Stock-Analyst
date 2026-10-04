@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import Fundamental, Instrument, Position, PriceBar
+from app.models import Fundamental, Instrument, Position, PriceBar, WatchlistItem
 
 
 @pytest.fixture
@@ -181,6 +181,8 @@ class TestScoreBacktest:
             for i in range(5)
         ]
         _seed(client, instruments)
+        # Only the user's own instruments are tested; watchlist them all.
+        _seed(client, [WatchlistItem(instrument_id=inst.id) for inst in instruments])
         for inst in instruments:
             factor = 1.001 if inst.broker_symbol.startswith("UP") else 0.999
             for n in range(900):

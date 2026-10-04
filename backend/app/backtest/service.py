@@ -21,8 +21,9 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Fundamental, Instrument, PriceBar
-from app.prices.fx_service import get_rate
+from app.corporate_actions.service import load_actions_by_instrument, price_factor_from
+from app.models import CorporateAction, Fundamental, Instrument, Position, PriceBar, ScreenerCandidate, WatchlistItem
+from app.prices.fx_service import get_rate_range
 from app.scoring.config import ScoringConfig
 from app.scoring.metrics import AnnualValue
 from app.scoring.service import _compute_pillar, _finalise_composite, _representative_currency
@@ -87,12 +88,16 @@ def run_backtest(
     horizon_months: int = 12,
     filing_lag_days: int = FILING_LAG_DAYS,
     min_history_bars: int = MIN_HISTORY_BARS,
+    instrument_ids: list[int] | None = None,
 ) -> BacktestResult:
     """Cross-sectional quartile backtest over monthly rebalance dates in
     `[start, end]`. Per date: rank the universe by the point-in-time composite,
     split into quartiles, record each instrument's forward `horizon_months`
-    return. Returns per-quartile mean/median and the top-minus-bottom spread."""
-    instruments = _universe(db)
+    return. Returns per-quartile mean/median and the top-minus-bottom spread.
+
+    `instrument_ids` scopes the universe (see `user_universe_ids`); `None`
+    means every analysable instrument."""
+    instruments = _universe(db, instrument_ids)
     calendar = _trading_calendar(db, start, end)
     rebalance_dates = _monthly_dates(calendar)
     if not instruments or not rebalance_dates:
@@ -102,7 +107,9 @@ def run_backtest(
 
     ids = [i.id for i in instruments]
     fundamentals_by_id = _fundamentals_by_id(db, ids)
-    closes_by_id = _closes_by_id(db, ids)
+    actions_by_id = load_actions_by_instrument(db, ids)
+    closes_by_id = _closes_by_id(db, ids, actions_by_id)
+    fx = _HistoricalFx(db, rebalance_dates[0], rebalance_dates[-1])
 
     observations: dict[int, list[float]] = {1: [], 2: [], 3: [], 4: []}
     periods: list[Period] = []
@@ -110,17 +117,21 @@ def run_backtest(
     for rebalance in rebalance_dates:
         scored: list[tuple[int, float]] = []
         for instrument in instruments:
-            closes = [c for (d, c) in closes_by_id.get(instrument.id, []) if d <= rebalance]
+            # Closes on the share basis of the rebalance date itself: only
+            # splits between a bar and `rebalance` are undone, so the price
+            # matches the per-share fundamentals known at the time.
+            basis = price_factor_from(actions_by_id.get(instrument.id, []), rebalance)
+            closes = [c / basis for (d, c) in closes_by_id.get(instrument.id, []) if d <= rebalance]
             if len(closes) < min_history_bars:
                 continue
             composite = _score_at(
-                db,
                 instrument,
                 fundamentals_by_id.get(instrument.id, {}),
                 closes,
                 config,
                 rebalance,
                 filing_lag_days,
+                fx,
             )
             if composite is not None:
                 scored.append((instrument.id, composite))
@@ -164,8 +175,21 @@ def run_backtest(
     )
 
 
-def _universe(db: Session) -> list[Instrument]:
-    return list(db.execute(select(Instrument).where(Instrument.category.in_(ANALYSABLE_CATEGORIES))).scalars())
+def user_universe_ids(db: Session) -> list[int]:
+    """Instruments the user picked: held, watchlisted, or in the screener.
+    Excludes the automatic discovery pool and the chart benchmark, which
+    would otherwise silently join the quartiles once they have history."""
+    ids: set[int] = set()
+    for model in (Position, WatchlistItem, ScreenerCandidate):
+        ids.update(db.execute(select(model.instrument_id)).scalars())
+    return sorted(ids)
+
+
+def _universe(db: Session, instrument_ids: list[int] | None) -> list[Instrument]:
+    query = select(Instrument).where(Instrument.category.in_(ANALYSABLE_CATEGORIES))
+    if instrument_ids is not None:
+        query = query.where(Instrument.id.in_(instrument_ids))
+    return list(db.execute(query).scalars())
 
 
 def _fundamentals_by_id(db: Session, ids: list[int]) -> dict[int, dict[str, list[tuple[date, int, float, str]]]]:
@@ -182,7 +206,12 @@ def _fundamentals_by_id(db: Session, ids: list[int]) -> dict[int, dict[str, list
     return result
 
 
-def _closes_by_id(db: Session, ids: list[int]) -> dict[int, list[tuple[date, float]]]:
+def _closes_by_id(
+    db: Session, ids: list[int], actions_by_id: dict[int, list[CorporateAction]]
+) -> dict[int, list[tuple[date, float]]]:
+    """Closes split-adjusted to today's share basis (`price_factor_from`), so
+    a split inside a forward horizon is not read as a crash. Bars stay raw in
+    the database; the adjustment happens here at read time, as elsewhere."""
     rows = db.execute(
         select(PriceBar.instrument_id, PriceBar.bar_date, PriceBar.close)
         .where(PriceBar.instrument_id.in_(ids), PriceBar.close.is_not(None))
@@ -190,8 +219,29 @@ def _closes_by_id(db: Session, ids: list[int]) -> dict[int, list[tuple[date, flo
     )
     result: dict[int, list[tuple[date, float]]] = {}
     for instrument_id, bar_date, close in rows:
-        result.setdefault(instrument_id, []).append((bar_date, close))
+        factor = price_factor_from(actions_by_id.get(instrument_id, []), bar_date)
+        result.setdefault(instrument_id, []).append((bar_date, close * factor))
     return result
+
+
+class _HistoricalFx:
+    """FX rates as of each rebalance date, fetched once per currency pair for
+    the whole window (`get_rate_range`), never today's rate: using today's
+    rate would leak future information into past valuations."""
+
+    def __init__(self, db: Session, start: date, end: date) -> None:
+        self._db = db
+        self._start = start
+        self._end = end
+        self._pairs: dict[tuple[str, str], dict[date, float]] = {}
+
+    def rate(self, from_currency: str, to_currency: str, on: date) -> float | None:
+        if from_currency == to_currency:
+            return 1.0
+        key = (from_currency, to_currency)
+        if key not in self._pairs:
+            self._pairs[key] = get_rate_range(self._db, from_currency, to_currency, self._start, self._end)
+        return self._pairs[key].get(on)
 
 
 def _trading_calendar(db: Session, start: date, end: date) -> list[date]:
@@ -235,13 +285,13 @@ def _concepts_as_of(
 
 
 def _score_at(
-    db: Session,
     instrument: Instrument,
     fundamentals: dict[str, list[tuple[date, int, float, str]]],
     closes: list[float],
     config: ScoringConfig,
     as_of: date,
     lag_days: int,
+    fx: _HistoricalFx,
 ) -> float | None:
     price = closes[-1] if closes else None
     if price is None:
@@ -251,7 +301,7 @@ def _score_at(
     fundamentals_currency = _representative_currency(concepts)
     fx_rate = None
     if fundamentals_currency and price_currency:
-        fx_rate = get_rate(db, price_currency, fundamentals_currency)
+        fx_rate = fx.rate(price_currency, fundamentals_currency, as_of)
     pillars = [
         _compute_pillar(name, pillar_cfg, concepts, price, price_currency, fx_rate, closes, None)
         for name, pillar_cfg in config.pillars.items()

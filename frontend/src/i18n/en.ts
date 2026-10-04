@@ -786,6 +786,7 @@ export const en: Catalogue = {
   'scoreTrack.q3': 'Upper-middle',
   'scoreTrack.q2': 'Lower-middle',
   'scoreTrack.q1': 'Bottom quarter',
+  'scoreTrack.month': 'Month',
   'scoreTrack.perPeriod': 'Top minus bottom quarter, month by month',
 
   'factors.title': 'Factor exposure (Carhart four-factor model)',

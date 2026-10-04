@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 from datetime import date
 
-from app.backtest.service import run_backtest
+from app.backtest.service import run_backtest, user_universe_ids
 from app.db import SessionLocal
 from app.scoring.config import get_scoring_config
 
@@ -29,6 +29,7 @@ def main() -> None:
             start=date.fromisoformat(args.start),
             end=date.fromisoformat(args.end),
             horizon_months=args.horizon,
+            instrument_ids=user_universe_ids(db),
         )
     finally:
         db.close()
