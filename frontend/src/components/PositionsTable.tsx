@@ -116,6 +116,9 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
     { key: 'account', label: t('table.account') },
     { key: 'insights', label: t('table.insights') },
   ]
+  // Each cell repeats its column name, shown as a label when the table
+  // collapses into one card per row on a phone (see .table-stack in index.css).
+  const colLabel = (key: string) => columns.find((c) => c.key === key)?.label
 
   if (positions.length === 0) {
     return <div className="empty">{t('table.empty')}</div>
@@ -171,7 +174,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
       </div>
 
       <div className="table-wrap">
-        <table>
+        <table className="table-stack">
           <thead>
             <tr>
               <SortableHeader label={t('table.instrument')} sortKeyName="symbol" sort={sort} onSort={handleSort} />
@@ -266,7 +269,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
             {visible.map((position) => (
               <Fragment key={position.id}>
               <tr>
-                <td>
+                <td className="cell-primary">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <PriceStatusBadge instrument={position.instrument} valuationNote={position.valuation_note} />
                     <strong>{position.instrument.broker_symbol}</strong>
@@ -280,7 +283,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                   )}
                 </td>
                 {!hidden.has('type') && (
-                  <td>
+                  <td data-label={colLabel('type')}>
                     {position.instrument.category ? (
                       <span className="tag neutral">
                         {t(`breakdown.category.${position.instrument.category}`)}
@@ -291,13 +294,13 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                   </td>
                 )}
                 {!hidden.has('mapping') && (
-                  <td>
+                  <td data-label={colLabel('mapping')}>
                     <MappingCell instrument={position.instrument} onUpdated={onUpdated} />
                   </td>
                 )}
-                {!hidden.has('quantity') && <td className="num">{formatNumber(position.quantity, 4)}</td>}
+                {!hidden.has('quantity') && <td data-label={colLabel('quantity')} className="num">{formatNumber(position.quantity, 4)}</td>}
                 {!hidden.has('avgPrice') && (
-                  <td
+                  <td data-label={colLabel('avgPrice')}
                     className="num"
                     title={
                       position.instrument.category === 'P2P'
@@ -318,15 +321,15 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                   </td>
                 )}
                 {!hidden.has('price') && (
-                  <td className="num">{formatNumber(position.current_price ?? position.market_price)}</td>
+                  <td data-label={colLabel('price')} className="num">{formatNumber(position.current_price ?? position.market_price)}</td>
                 )}
                 {!hidden.has('trend') && (
-                  <td>
+                  <td data-label={colLabel('trend')}>
                     <Sparkline closes={sparklines[position.instrument.id] ?? []} />
                   </td>
                 )}
                 {!hidden.has('value') && (
-                  <td
+                  <td data-label={colLabel('value')}
                     className="num"
                     title={
                       position.valuation_note
@@ -340,7 +343,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                   </td>
                 )}
                 {!hidden.has('weight') && (
-                  <td className="num">
+                  <td data-label={colLabel('weight')} className="num">
                     {position.weight_percent !== null ? (
                       <span className={position.weight_percent > 15 ? 'weight-high' : ''}>
                         {formatNumber(position.weight_percent, 1)}%
@@ -351,17 +354,17 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                   </td>
                 )}
                 {!hidden.has('unrealized') && (
-                  <td className={`num ${signClass(position.current_unrealized_pl)}`}>
+                  <td data-label={colLabel('unrealized')} className={`num ${signClass(position.current_unrealized_pl)}`}>
                     {formatNumber(position.current_unrealized_pl)}
                   </td>
                 )}
                 {!hidden.has('performance') && (
-                  <td className={`num ${signClass(position.current_unrealized_pl_pct)}`}>
+                  <td data-label={colLabel('performance')} className={`num ${signClass(position.current_unrealized_pl_pct)}`}>
                     {formatSignedPercent(position.current_unrealized_pl_pct)}
                   </td>
                 )}
                 {!hidden.has('score') && (
-                  <td className="num">
+                  <td data-label={colLabel('score')} className="num">
                     <ScoreBadge
                       score={scores[position.instrument.id]}
                       expanded={expandedDetailId === position.instrument.id}
@@ -374,7 +377,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                   </td>
                 )}
                 {!hidden.has('signal') && (
-                  <td>
+                  <td data-label={colLabel('signal')}>
                     {(() => {
                       const signal = signals[position.instrument.id]
                       if (!signal) return '—'
@@ -415,16 +418,16 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                     })()}
                   </td>
                 )}
-                {!hidden.has('since') && <td>{formatDate(position.opened_at)}</td>}
+                {!hidden.has('since') && <td data-label={colLabel('since')}>{formatDate(position.opened_at)}</td>}
                 {!hidden.has('account') && (
-                  <td>
+                  <td data-label={colLabel('account')}>
                     <span className={`tag ${position.source === 'MANUAL' ? 'manual' : 'neutral'}`}>
                       {position.account ?? (position.source === 'MANUAL' ? t('table.manual') : '—')}
                     </span>
                   </td>
                 )}
                 {!hidden.has('insights') && (
-                  <td>
+                  <td data-label={colLabel('insights')}>
                     <InsightsBadge
                       expanded={expandedDetailId === position.instrument.id}
                       onToggle={() =>
@@ -435,7 +438,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                     />
                   </td>
                 )}
-                <td>
+                <td className="cell-actions">
                   <button
                     className="link"
                     onClick={() => {

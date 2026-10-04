@@ -11,6 +11,7 @@ export const fr: Catalogue = {
   'nav.taxPrep': 'Préparation fiscale',
   'nav.risk': 'Risques',
   'nav.journal': 'Journal',
+  'nav.menu': 'Menu',
   'alerts.tooltip': {
     one: '{count} élément de la watchlist a atteint son prix cible',
     other: '{count} éléments de la watchlist ont atteint leur prix cible',

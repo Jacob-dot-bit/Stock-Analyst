@@ -461,6 +461,9 @@ a {
 
 .table-wrap {
   overflow-x: auto;
+  /* Contains absolutely positioned children (visually-hidden header labels),
+     which would otherwise escape the scroller and widen the whole page. */
+  position: relative;
   /* A wide table (13 columns) routinely needs to scroll even at the widened
      .content max-width — macOS hides scrollbars until actively scrolling by
      default, which made that scrolling undiscoverable: nothing on screen
@@ -1421,10 +1424,127 @@ details.raw summary {
   }
 }
 
-/* Narrow screens: tighter gutters, nav wraps under the brand. */
+/* Only shown on narrow screens, where the nav collapses behind it. */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--text);
+}
+
+/* Narrow screens: one compact top row (brand, alerts, language, theme,
+   menu button); the nav opens as a panel under it. */
 @media (max-width: 720px) {
-  .topbar { padding: var(--space-3) var(--space-4); gap: var(--space-3); position: static; }
+  .topbar {
+    padding: var(--space-2) var(--space-4);
+    gap: var(--space-2);
+  }
+  .brand { font-size: var(--fs-md); }
+  .topbar-controls { order: 2; }
+  .nav-toggle { display: inline-flex; order: 3; }
+  .alerts-bell { order: 1; margin-left: auto; }
+  .alerts-bell + .topbar-controls { margin-left: 0; }
+  .nav {
+    display: none;
+    order: 4;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-1);
+    padding: var(--space-1);
+  }
+  .nav.open { display: grid; }
+  .nav a { padding: var(--space-3); font-size: var(--fs-base); }
+  .language-switcher select { max-width: 7.5rem; }
+
   .content { padding: var(--space-4); }
+  .page-header { margin-bottom: var(--space-5); }
   .page-header h1 { font-size: var(--fs-xl); }
   .card { padding: var(--space-4); }
+
+  /* Two KPI tiles per row instead of one tall column of five. */
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+  .stat { padding: var(--space-3) var(--space-4) var(--space-4); }
+  .stat .value { font-size: var(--fs-lg); }
+  .stat .label { font-size: 0.6875rem; }
+}
+
+/* Phones: the main data tables (.table-stack) turn each row into a card —
+   the cell's own column name (data-label) printed above its value, two
+   facts per line — instead of a 13-column table scrolling sideways inside
+   its card. The header row stays in the DOM for screen readers. */
+@media (max-width: 640px) {
+  .table-wrap:has(> .table-stack) { overflow-x: visible; padding-bottom: 0; }
+
+  .table-stack thead {
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .table-stack,
+  .table-stack tbody { display: block; }
+
+  .table-stack tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .table-stack tbody tr:last-child { margin-bottom: 0; }
+
+  .table-stack td,
+  .table-stack tbody tr:last-child td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 0;
+    border: none;
+    white-space: normal;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .table-stack td > * { max-width: 100%; flex-wrap: wrap; }
+
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .table-stack td.cell-primary,
+  .table-stack td.cell-actions,
+  .table-stack td[colspan] { grid-column: 1 / -1; }
+
+  .table-stack td.cell-primary { font-size: var(--fs-base); }
+
+  .table-stack td.cell-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+  }
+
+  /* An expanded detail row is one full-width cell under its card. */
+  .table-stack tbody tr:has(> td[colspan]) {
+    display: block;
+    margin-top: calc(-1 * var(--space-2));
+  }
+
+  .table-stack td[colspan] { display: block; }
 }

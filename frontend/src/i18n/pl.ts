@@ -18,6 +18,7 @@ export const pl: Catalogue = {
   'nav.taxPrep': 'Przygotowanie podatkowe',
   'nav.risk': 'Ryzyko',
   'nav.journal': 'Dziennik',
+  'nav.menu': 'Menu',
   'alerts.tooltip': {
     one: '{count} pozycja z watchlisty osiągnęła cenę docelową',
     few: '{count} pozycje z watchlisty osiągnęły cenę docelową',

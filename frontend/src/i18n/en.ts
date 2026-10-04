@@ -18,6 +18,7 @@ export const en: Catalogue = {
   'nav.taxPrep': 'Tax prep',
   'nav.risk': 'Risk',
   'nav.journal': 'Journal',
+  'nav.menu': 'Menu',
   'alerts.tooltip': {
     one: '{count} watchlist item at or below its target price',
     other: '{count} watchlist items at or below their target price',
