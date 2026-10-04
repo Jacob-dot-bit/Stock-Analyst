@@ -88,8 +88,8 @@ export function PredictionBackfillButton() {
 
   return (
     <div>
-      <h3 style={{ marginBottom: '0.2rem' }}>{t('prediction.title')}</h3>
-      <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+      <h3 className="section-title">{t('prediction.title')}</h3>
+      <p className="muted section-desc">
         {t('prediction.description')}
       </p>
       <div className="form-row">

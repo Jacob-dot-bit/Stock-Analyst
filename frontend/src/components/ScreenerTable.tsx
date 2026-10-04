@@ -201,7 +201,7 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
                         />
                       ) : (
                         item.instrument.name && (
-                          <div className="muted" style={{ fontSize: '0.78rem' }}>
+                          <div className="muted text-xs">
                             {item.instrument.name}
                           </div>
                         )

@@ -276,7 +276,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                     {position.quantity < 0 && <span className="tag neutral">{t('table.short')}</span>}
                   </div>
                   {position.instrument.name && (
-                    <div className="muted" style={{ fontSize: '0.78rem' }}>
+                    <div className="muted text-xs">
                       {position.instrument.name}
                       {position.lots_count > 1 && ` · ${t('table.lots', { count: position.lots_count })}`}
                     </div>

@@ -41,7 +41,7 @@ export function UnresolvedPanel({ instruments, onUpdated }: Props) {
   return (
     <div className="card">
       <h2>{t('unresolved.title', { count: instruments.length })}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('unresolved.description')}
       </p>
 

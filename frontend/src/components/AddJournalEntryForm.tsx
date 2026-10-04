@@ -73,7 +73,7 @@ export function AddJournalEntryForm({ onCreated }: Props) {
   if (!open) {
     return (
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+        <div className="card-header">
           <div>
             <h2 className="compact">{t('journal.form.title')}</h2>
             <span className="muted">{t('journal.form.subtitle')}</span>

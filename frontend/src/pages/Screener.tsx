@@ -79,7 +79,7 @@ export function Screener() {
 
       <div className="card">
         <h2>{t('gems.priceFilterTitle')}</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
+        <p className="muted section-desc">
           {t('gems.priceFilterHint')}
         </p>
         <div className="form-row">

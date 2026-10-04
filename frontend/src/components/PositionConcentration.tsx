@@ -56,7 +56,7 @@ export function PositionConcentration() {
                   <td>
                     <strong>{row.symbol}</strong>
                     {row.name && (
-                      <div className="muted" style={{ fontSize: '0.78rem' }}>
+                      <div className="muted text-xs">
                         {row.name}
                       </div>
                     )}

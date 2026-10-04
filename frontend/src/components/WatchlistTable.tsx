@@ -243,7 +243,7 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                         />
                       ) : (
                         item.instrument.name && (
-                          <div className="muted" style={{ fontSize: '0.78rem' }}>
+                          <div className="muted text-xs">
                             {item.instrument.name}
                           </div>
                         )

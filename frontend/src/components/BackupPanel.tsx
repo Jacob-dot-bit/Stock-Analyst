@@ -80,7 +80,7 @@ export function BackupPanel() {
   return (
     <div className="card">
       <h2>{t('backup.title')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('backup.description')}
       </p>
 

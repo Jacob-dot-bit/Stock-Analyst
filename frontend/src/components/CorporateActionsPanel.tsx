@@ -202,7 +202,7 @@ export function CorporateActionsPanel() {
   return (
     <div className="card">
       <h2>{t('corporateActions.title')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('corporateActions.description')}
       </p>
 
@@ -211,7 +211,7 @@ export function CorporateActionsPanel() {
       {/* --- Couverture automatique : lecture seule, jamais d'appel fournisseur --- */}
       {coverage && (
         <div style={{ marginTop: '0.6rem' }}>
-          <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.coverageTitle')}</h3>
+          <h3 className="section-title">{t('corporateActions.coverageTitle')}</h3>
           <div>{t('corporateActions.coverage.instrumentsEligible', { count: coverage.eligible_instruments })}</div>
           <div className="muted">
             {t('corporateActions.coverage.instrumentsChecked', {
@@ -253,8 +253,8 @@ export function CorporateActionsPanel() {
 
       {/* --- Alpha Vantage : bouton de reprise ciblée, jamais automatique --- */}
       <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.resume.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('corporateActions.resume.title')}</h3>
+        <p className="muted section-desc">
           {t('corporateActions.resume.description')}
         </p>
         <button onClick={() => void handleResume()} disabled={resumeButtonDisabled}>
@@ -300,9 +300,9 @@ export function CorporateActionsPanel() {
       </div>
 
       {/* --- Candidats à confirmer : jamais appliqués automatiquement --- */}
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.outstanding.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+      <div className="card-section">
+        <h3 className="section-title">{t('corporateActions.outstanding.title')}</h3>
+        <p className="muted section-desc">
           {t('corporateActions.outstanding.description')}
         </p>
         {outstanding && outstanding.length === 0 && (
@@ -340,7 +340,7 @@ export function CorporateActionsPanel() {
         )}
       </div>
 
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+      <div className="card-section">
         <button className="primary" onClick={() => void handleDetect()} disabled={detecting}>
           {detecting ? t('common.saving') : t('corporateActions.detect')}
         </button>
@@ -368,9 +368,9 @@ export function CorporateActionsPanel() {
         )}
       </div>
 
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.detectOne.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+      <div className="card-section">
+        <h3 className="section-title">{t('corporateActions.detectOne.title')}</h3>
+        <p className="muted section-desc">
           {t('corporateActions.detectOne.description')}
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
@@ -419,8 +419,8 @@ export function CorporateActionsPanel() {
         )}
       </div>
 
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.historyTitle')}</h3>
+      <div className="card-section">
+        <h3 className="section-title">{t('corporateActions.historyTitle')}</h3>
         <div>{t('corporateActions.historyCount', { count: actions?.length ?? 0 })}</div>
         {detection &&
           (detection.created > 0 ? (

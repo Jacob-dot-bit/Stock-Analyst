@@ -154,10 +154,10 @@ export function PersonalPolicyPanel() {
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+      <div className="card-header">
         <div>
           <h2 className="compact">{t('policy.title')}</h2>
-          <p className="muted" style={{ marginTop: 0 }}>
+          <p className="muted section-desc">
             {t('policy.subtitle')}
           </p>
         </div>
@@ -302,7 +302,7 @@ export function PersonalPolicyPanel() {
           </button>
         </div>
       ) : isPolicyEmpty(policy) ? (
-        <p className="muted" style={{ marginTop: 0 }}>
+        <p className="muted section-desc">
           {t('policy.empty')}
         </p>
       ) : (
@@ -340,7 +340,7 @@ export function PersonalPolicyPanel() {
       )}
 
       <h3 style={{ marginTop: '1.2rem' }}>{t('policy.limits.title')}</h3>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('policy.limits.subtitle')}
       </p>
 
@@ -433,12 +433,12 @@ export function PersonalPolicyPanel() {
       {limits.length > 0 && (
         <div style={{ marginTop: '0.9rem' }}>
           {gaps.length === 0 ? (
-            <p className="muted" style={{ marginTop: 0 }}>
+            <p className="muted section-desc">
               {t('policy.gaps.allWithin')}
             </p>
           ) : (
             <>
-              <p className="muted" style={{ marginTop: 0 }}>
+              <p className="muted section-desc">
                 {t('policy.gaps.disclaimer')}
               </p>
               <ul className="attention-list">

@@ -61,7 +61,7 @@ export function AttentionCard() {
     <div className="card">
       <h2>{t('attention.title')}</h2>
       {items.length === 0 ? (
-        <p className="muted" style={{ marginTop: 0 }}>
+        <p className="muted section-desc">
           {t('attention.allClear')}
         </p>
       ) : (

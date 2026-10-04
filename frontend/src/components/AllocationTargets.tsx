@@ -81,7 +81,7 @@ export function AllocationTargets() {
   return (
     <div className="card">
       <h2>{t('allocation.title')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('allocation.description')}
       </p>
 

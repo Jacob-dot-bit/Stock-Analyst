@@ -19,7 +19,7 @@ function Section({ title, link, linkLabel, children }: { title: string; link: st
 
 function Empty({ text }: { text: string }) {
   return (
-    <p className="muted" style={{ marginTop: 0 }}>
+    <p className="muted section-desc">
       {text}
     </p>
   )
@@ -119,7 +119,7 @@ export function Weekly() {
               <Empty text={t('weekly.positions.empty')} />
             ) : (
               <>
-                <p className="muted" style={{ marginTop: 0 }}>
+                <p className="muted section-desc">
                   {t('weekly.positions.note')}
                 </p>
                 <ul className="attention-list">
@@ -194,7 +194,7 @@ export function Weekly() {
               <Empty text={t('weekly.data.empty')} />
             ) : (
               <>
-                <p className="muted" style={{ marginTop: 0 }}>
+                <p className="muted section-desc">
                   {t('weekly.data.note')}
                 </p>
                 <ul className="attention-list">

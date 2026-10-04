@@ -59,7 +59,7 @@ export function ManualTransactionForm({ onCreated }: Props) {
   if (!open) {
     return (
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+        <div className="card-header">
           <div>
             <h2 className="compact">{t('transactions.manual.title')}</h2>
             <span className="muted">{t('transactions.manual.subtitle')}</span>

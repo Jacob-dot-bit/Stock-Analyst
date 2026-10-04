@@ -32,8 +32,8 @@ export function BacktestPanel() {
 
   return (
     <div>
-      <h3 style={{ marginBottom: '0.2rem' }}>{t('backtest.title')}</h3>
-      <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+      <h3 className="section-title">{t('backtest.title')}</h3>
+      <p className="muted section-desc">
         {t('backtest.description')}
       </p>
       <div className="form-row">

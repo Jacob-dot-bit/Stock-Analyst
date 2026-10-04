@@ -40,7 +40,7 @@ export function ScoreTrackRecordPanel() {
   return (
     <div className="card">
       <h2 style={{ marginBottom: '0.2rem' }}>{t('scoreTrack.title')}</h2>
-      <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+      <p className="muted section-desc">
         {t('scoreTrack.description')}
       </p>
       <div className="form-row">

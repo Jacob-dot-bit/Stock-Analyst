@@ -387,6 +387,38 @@ a {
   color: var(--text);
 }
 
+/* Title (+ optional subtitle) on the left, one action on the right; the
+   action keeps its size and drops under the text on a narrow card. */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+}
+
+.card-header > :first-child { flex: 1 1 18rem; min-width: 0; }
+.card-header > button { flex-shrink: 0; }
+
+/* A sub-section inside a card, separated from what precedes it by a rule. */
+.card-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.section-title {
+  margin: var(--space-4) 0 var(--space-1);
+  font-size: var(--fs-md);
+  font-weight: 650;
+}
+
+.card-section > .section-title:first-child { margin-top: 0; }
+
+.section-desc { margin-top: 0; }
+
+.text-xs { font-size: var(--fs-xs); }
+
 .settings-group {
   margin-bottom: var(--space-6);
 }
@@ -1114,8 +1146,18 @@ td.negative { color: var(--negative); }
 
 button {
   font: inherit;
+  font-size: var(--fs-sm);
   font-weight: 550;
-  padding: 0.48rem 0.95rem;
+  line-height: 1.2;
+  /* One height for every text button (34px, same as the top-bar controls),
+     and a label that never wraps onto two lines when its row gets tight. */
+  min-height: 34px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0.4rem 0.9rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1140,9 +1182,44 @@ button.link {
   border: none;
   background: none;
   color: var(--accent);
+  min-height: 0;
   padding: 0.2rem 0.35rem;
   font-size: var(--fs-sm);
   font-weight: 500;
+}
+
+button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
+
+/* A set of mutually exclusive options (breakdown dimension, rank by, verdict
+   filter): one bordered track with the chosen option raised inside it,
+   instead of a row of separate buttons with one painted solid blue. */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 3px);
+  background: var(--surface-alt);
+}
+
+.segmented button {
+  min-height: 28px;
+  padding: 0.3rem 0.8rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+}
+
+.segmented button:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border-strong);
 }
 
 input, select, textarea {
