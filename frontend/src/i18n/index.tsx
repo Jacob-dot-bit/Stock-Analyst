@@ -110,7 +110,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       },
       formatDate: (input) => {
         if (!input) return '—'
-        const date = new Date(input)
+        // A bare "YYYY-MM-DD" is a calendar date, not an instant: `new Date()`
+        // would read it as UTC midnight and show the previous day west of UTC.
+        const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input)
+        const date = dateOnly
+          ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+          : new Date(input)
         return Number.isNaN(date.getTime()) ? '—' : numberFormats.date.format(date)
       },
     }

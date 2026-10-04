@@ -440,8 +440,8 @@ export function PersonalPolicyPanel() {
                 {t('policy.gaps.disclaimer')}
               </p>
               <ul className="attention-list">
-                {gaps.map((gap) => (
-                  <li key={`${gap.limit_id}-${gap.target ?? ''}`} className="attention-item warning">
+                {gaps.map((gap, i) => (
+                  <li key={`${gap.limit_id}-${gap.target ?? ''}-${i}`} className="attention-item warning">
                     {t(`policy.dimension.${gap.dimension}`)}
                     {gap.target ? ` — ${gap.target}` : ''}
                     {': '}

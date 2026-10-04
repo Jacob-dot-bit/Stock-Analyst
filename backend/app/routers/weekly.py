@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.db import get_db
 from app.models import Instrument, JournalEntry, WatchlistItem
 from app.routers.portfolio import (
+    FIGURES_SNAPSHOT_KEY,
     _positions_figures_and_total,
     get_allocation,
     get_attention,
@@ -66,8 +67,20 @@ def _instrument_weights(db: Session) -> dict[int, float]:
 
 @router.get("", response_model=WeeklySummaryOut)
 def get_weekly_summary(db: Session = Depends(get_db)) -> WeeklySummaryOut:
-    """Cache-only, never triggers a fetch. Every section is empty when
-    nothing in it currently warrants a look."""
+    """Every section is empty when nothing in it currently warrants a look.
+
+    Valuation is computed once and shared by every section (see
+    `FIGURES_SNAPSHOT_KEY`). Like the endpoints it composes, it reads cached
+    prices but may fetch and store today's FX rate on a cache miss
+    (`prices/fx_service.py::get_rate`)."""
+    db.info[FIGURES_SNAPSHOT_KEY] = _positions_figures_and_total(db)
+    try:
+        return _build_summary(db)
+    finally:
+        db.info.pop(FIGURES_SNAPSHOT_KEY, None)
+
+
+def _build_summary(db: Session) -> WeeklySummaryOut:
     today = datetime.now(UTC).date()
     window_end = today + timedelta(days=WINDOW_DAYS)
 

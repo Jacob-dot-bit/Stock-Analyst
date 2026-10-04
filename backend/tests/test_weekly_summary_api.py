@@ -205,3 +205,26 @@ def test_data_reliability_keeps_data_kinds_only(client, monkeypatch):
     assert "allocation_over" not in kinds
     assert kinds  # the 60-day-old price is flagged one way or another
     assert set(kinds) <= {"price_error", "price_stale", "unresolved_instruments"}
+
+
+def test_portfolio_valuation_is_computed_once_per_request(client, monkeypatch):
+    held("AAA.FR", "STOCK", quantity=9, price=100.0)
+    client.put("/api/portfolio/allocation/STOCK", json={"min_pct": 0, "max_pct": 50})
+    client.post("/api/portfolio/policy/limits", json={"dimension": "line", "max_pct": 50})
+    patch_scores(monkeypatch, {})
+
+    import app.routers.portfolio as portfolio
+
+    calls = []
+    original = portfolio._compute_figures
+
+    def counting(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(portfolio, "_compute_figures", counting)
+
+    body = client.get("/api/weekly-summary").json()
+
+    assert body["allocation_gaps"] and body["policy_gaps"]
+    assert len(calls) == 1

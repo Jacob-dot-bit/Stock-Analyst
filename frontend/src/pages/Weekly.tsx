@@ -81,8 +81,8 @@ export function Weekly() {
               <Empty text={t('weekly.policy.empty')} />
             ) : (
               <ul className="attention-list">
-                {summary.policy_gaps.map((gap) => (
-                  <li key={`${gap.limit_id}-${gap.target ?? ''}`} className="attention-item warning">
+                {summary.policy_gaps.map((gap, i) => (
+                  <li key={`${gap.limit_id}-${gap.target ?? ''}-${i}`} className="attention-item warning">
                     {t(`policy.dimension.${gap.dimension}`)}
                     {gap.target ? ` — ${gap.target}` : ''}
                     {': '}

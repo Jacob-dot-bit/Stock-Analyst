@@ -161,6 +161,9 @@ frontend/src/
 - `GET  /summary?year=` — one row per account with tax-relevant activity that year: dividends/withholding (delegates to `dividends/service.py::dividend_summary`, never recomputed), interest, realized gains/losses (kept separate, never netted), fees, deposits, withdrawals, and `OTHER`-typed flows shown verbatim. **No tax rate is ever applied and no liability is ever computed** — a reconciliation aid, not a tax calculator. See "Annual tax-year reconciliation" below and DEVLOG "Decision 3u.60".
 - `GET  /summary.csv` — same data as a CSV download.
 
+### `/api/weekly-summary` (`routers/weekly.py`)
+- `GET ""` — one descriptive "this week" view composed from existing endpoint functions (policy gaps, allocation, position/watchlist signals, attention) plus journal entries due within 7 days. No new computation; the portfolio valuation is computed once per request and shared by every section (DEVLOG "Decision 3u.80").
+
 ### `/api/journal` (`routers/journal.py`)
 - `POST ""` — write a decision (`thesis` required, optional `broker_symbol` and `review_date`). `entry_date` is always server-set to today, never accepted from the client. See "Decision journal" below and DEVLOG "Decision 3u.68".
 - `GET  ""` — every entry, newest `entry_date` first.
