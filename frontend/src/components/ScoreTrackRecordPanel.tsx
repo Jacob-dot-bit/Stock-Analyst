@@ -123,7 +123,16 @@ export function ScoreTrackRecordPanel() {
             </table>
           </div>
 
-          {definedPeriods.length > 0 && <SpreadBars periods={definedPeriods} label={t('scoreTrack.perPeriod')} />}
+          {definedPeriods.length > 0 && (
+            <SpreadBars
+              periods={definedPeriods}
+              label={t('scoreTrack.perPeriod')}
+              dateHeader={t('scoreTrack.month')}
+              spreadHeader={t('scoreTrack.spread')}
+              formatDate={formatDate}
+              formatSpread={pct}
+            />
+          )}
         </div>
       )}
     </div>
@@ -132,8 +141,23 @@ export function ScoreTrackRecordPanel() {
 
 /** One bar per rebalance date: above the line when the top quartile beat the
  * bottom one, below when it lagged — shows whether the average is steady or
- * carried by a few months. */
-function SpreadBars({ periods, label }: { periods: ScoreBacktest['periods']; label: string }) {
+ * carried by a few months. The same values are in a visually hidden table,
+ * since the bars themselves are invisible to screen readers. */
+function SpreadBars({
+  periods,
+  label,
+  dateHeader,
+  spreadHeader,
+  formatDate,
+  formatSpread,
+}: {
+  periods: ScoreBacktest['periods']
+  label: string
+  dateHeader: string
+  spreadHeader: string
+  formatDate: (value: string) => string
+  formatSpread: (value: number | null) => string
+}) {
   const width = 600
   const height = 80
   const max = Math.max(...periods.map((p) => Math.abs(p.spread ?? 0)), 1e-9)
@@ -144,7 +168,7 @@ function SpreadBars({ periods, label }: { periods: ScoreBacktest['periods']; lab
       <figcaption className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.3rem' }}>
         {label}
       </figcaption>
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none" role="img" aria-label={label}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none" aria-hidden="true">
         <line x1={0} x2={width} y1={mid} y2={mid} stroke="var(--border-strong)" strokeWidth={1} />
         {periods.map((p, i) => {
           const spread = p.spread ?? 0
@@ -158,11 +182,28 @@ function SpreadBars({ periods, label }: { periods: ScoreBacktest['periods']; lab
               height={h}
               fill={spread >= 0 ? 'var(--positive)' : 'var(--negative)'}
             >
-              <title>{`${p.rebalance_date}: ${(spread * 100).toFixed(1)}%`}</title>
+              <title>{`${formatDate(p.rebalance_date)}: ${formatSpread(p.spread)}`}</title>
             </rect>
           )
         })}
       </svg>
+      <table className="visually-hidden">
+        <caption>{label}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{dateHeader}</th>
+            <th scope="col">{spreadHeader}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {periods.map((p) => (
+            <tr key={p.rebalance_date}>
+              <td>{formatDate(p.rebalance_date)}</td>
+              <td>{formatSpread(p.spread)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </figure>
   )
 }

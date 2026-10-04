@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.backtest.service import run_backtest
+from app.backtest.service import run_backtest, user_universe_ids
 from app.db import get_db
 from app.fundamentals.service import fetch_fundamentals, get_fundamentals_progress
 from app.models import Instrument, Position, PriceBar
@@ -139,13 +139,22 @@ def score_backtest(
     monthly rebalance date (`app/backtest/service.py`) and compare forward
     returns across score quartiles. The window ends `horizon_months` before
     the latest stored bar, so every rebalance date has a forward return to
-    measure. Recomputed live, like `/scores` — nothing is persisted."""
+    measure. The universe is the user's own instruments (held, watchlisted,
+    screened), matching the panel's selection-bias disclaimer. Recomputed
+    live, like `/scores` — nothing is persisted."""
     latest = db.execute(select(func.max(PriceBar.bar_date))).scalar()
     if latest is None:
         latest = date.today()
     end = latest - timedelta(days=30 * horizon_months)
     start = end - timedelta(days=365 * years)
-    result = run_backtest(db, get_scoring_config(), start=start, end=end, horizon_months=horizon_months)
+    result = run_backtest(
+        db,
+        get_scoring_config(),
+        start=start,
+        end=end,
+        horizon_months=horizon_months,
+        instrument_ids=user_universe_ids(db),
+    )
     return ScoreBacktestOut(
         start=start,
         end=end,

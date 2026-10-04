@@ -790,6 +790,7 @@ export const fr: Catalogue = {
   'scoreTrack.q3': 'Milieu haut',
   'scoreTrack.q2': 'Milieu bas',
   'scoreTrack.q1': 'Quart inférieur',
+  'scoreTrack.month': 'Mois',
   'scoreTrack.perPeriod': 'Quart supérieur moins quart inférieur, mois par mois',
 
   'factors.title': 'Exposition factorielle (modèle à 4 facteurs de Carhart)',

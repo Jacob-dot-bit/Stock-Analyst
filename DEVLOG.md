@@ -9309,3 +9309,16 @@ two biases that remain: the universe is the instruments already in the app
 (picked partly with hindsight), and monthly rebalances with a 12-month
 horizon overlap, so months are not independent trials. Recomputed live on
 every click, like `/scores`; nothing is persisted.
+
+Follow-up fixes after review (2026-10-04):
+- **Splits.** Closes are now split-adjusted at read time (`price_factor_from`,
+  RAW histories only): forward returns use today's share basis, and the score
+  on each rebalance date uses that date's basis, so a split inside a horizon
+  is no longer read as a -90% return.
+- **Historical FX.** Valuation metrics use the FX rate on the rebalance date
+  (`get_rate_range`, one fetch per currency pair), not today's rate.
+- **Universe.** The endpoint and CLI test only the user's own instruments
+  (held, watchlisted, screened), excluding the S&P 500 discovery pool and the
+  chart benchmark, so the panel's selection-bias disclaimer stays accurate.
+- **Accessibility.** The per-month bars are mirrored in a visually hidden
+  table for screen readers.
