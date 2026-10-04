@@ -138,6 +138,37 @@ enabled — the fastest way to check a key is being read.
 > `.env` — signup takes an email and no card — and the fallback takes over. The app tells
 > you this in the refresh report rather than leaving you to guess.
 
+### Backtesting the score
+
+Does the composite score actually predict returns? The backtest recomputes it as it
+would have stood on each past monthly rebalance date, using only what was known then:
+fundamentals whose fiscal period ended at least 120 days earlier (a filing lag) and
+closes up to that date, split-adjusted and converted at that date's FX rate. It then
+groups forward returns by score quartile and reports the top-minus-bottom spread.
+
+- In the app: the **Score track record** panel on the Hidden gems page
+  (`POST /api/scoring/backtest?horizon_months=12&years=5`).
+- From the command line:
+
+```bash
+cd backend && .venv/bin/python -m scripts.backtest --start 2021-01-01 --end 2025-01-01 --horizon 12
+```
+
+Only your own instruments are tested (held, watchlisted, screened), and an instrument
+needs 504 daily bars before it can be scored. Read results with two biases in mind: that
+universe was picked partly with hindsight, and monthly rebalances with a 12-month
+horizon overlap, so months are not independent trials. The panel flags a result with
+fewer than 12 months or 20 instruments as too thin to read.
+
+### The "This week" page
+
+`/week` gathers what is worth checking once a week in one place: personal-policy limit
+breaches, asset classes outside their target range, held lines whose score and allocation
+point the same way, watchlist items at or near their target price, journal entries due
+for review, and data problems that make any of those figures unreliable. It computes
+nothing new; each section is filtered from the page that owns the data and links back to
+it. Like the rest of the app it states facts, never a buy or sell instruction.
+
 ### Security
 
 A [gitleaks](https://github.com/gitleaks/gitleaks) pre-commit hook (`.githooks/`,
@@ -162,20 +193,26 @@ backend/app/
 ├── config.py            Settings from .env, no hardcoded keys
 ├── messages.py          Language-neutral message codes
 ├── models.py            SQLAlchemy ORM (local SQLite)
-├── ingest/
-│   ├── xtb_import.py    xStation export parser
-│   └── service.py       Persistence, deduplication, idempotency
-├── symbols/mapping.py   Broker symbol ↔ provider symbol
-├── routers/             HTTP endpoints
-├── providers/           Data sources (phase 2)
-└── analysis/            Indicators and scoring (phase 3)
+├── ingest/              Broker file parsers (XTB, Mintos, Amundi) + persistence
+├── symbols/             Broker symbol ↔ provider symbol
+├── providers/           One file per external data source
+├── prices/              Daily bars, live quotes, FX
+├── fundamentals/        SEC EDGAR + ESEF filings
+├── scoring/             Composite score (4 pillars, scoring.yaml)
+├── backtest/            Point-in-time track record of the composite score
+├── analysis/            On-request news/sentiment
+└── routers/             HTTP endpoints, one file per area
 
 frontend/src/
 ├── api/                 Typed HTTP client
 ├── i18n/                Translation catalogues (en, fr, pl)
 ├── components/          Reusable components
-└── pages/               Portfolio, Watchlist, Hidden gems
+└── pages/               This week, Portfolio, Transactions, Dividends, Watchlist,
+                         Hidden gems, Risks, Journal, Tax prep, Settings
 ```
+
+[ARCHITECTURE.md](ARCHITECTURE.md) is the detailed map: every endpoint, model and
+established pattern.
 
 ### Three design commitments worth knowing
 
@@ -265,6 +302,8 @@ reported as anomalies, since that is the expected outcome.
 | 4 | Watchlist and entry timing | ✅ done |
 | 5 | Hidden gems page (screener) | ✅ done |
 | 6 | News/sentiment (Alpha Vantage) | ✅ done |
+| 7 | Score track record (point-in-time backtest) | ✅ done |
+| 8 | "This week" summary page | ✅ done |
 
 ### Planned data sources (phase 2)
 
