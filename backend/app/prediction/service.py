@@ -93,7 +93,7 @@ def get_backfill_progress() -> BackfillProgress:
         return replace(_progress)
 
 
-def _already_priced_instruments(db: Session, with_fundamentals: bool = False) -> list[Instrument]:
+def _backfill_instruments(db: Session, with_fundamentals: bool = False) -> list[Instrument]:
     """The phase-1 universe: instruments that already have at least one
     cached bar — not the full, much larger Discovery candidate pool, to
     keep this a bounded, quick-to-run pull rather than an hours-long one.
@@ -120,7 +120,7 @@ def backfill_history(
         return None
 
     try:
-        instruments = _already_priced_instruments(db, with_fundamentals)
+        instruments = _backfill_instruments(db, with_fundamentals)
         _set_progress(
             running=True,
             total=len(instruments),

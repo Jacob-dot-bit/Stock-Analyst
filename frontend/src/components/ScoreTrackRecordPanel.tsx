@@ -46,7 +46,15 @@ export function ScoreTrackRecordPanel() {
       <div className="form-row">
         <label>
           {t('scoreTrack.universe')}{' '}
-          <select value={universe} onChange={(e) => setUniverse(e.target.value as ScoreBacktestUniverse)}>
+          <select
+            value={universe}
+            disabled={busy}
+            onChange={(e) => {
+              // A report for the other universe must never sit under this selection.
+              setUniverse(e.target.value as ScoreBacktestUniverse)
+              setReport(null)
+            }}
+          >
             <option value="mine">{t('scoreTrack.universeMine')}</option>
             <option value="wide">{t('scoreTrack.universeWide')}</option>
           </select>
