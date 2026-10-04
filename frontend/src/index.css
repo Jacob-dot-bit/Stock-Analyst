@@ -1053,6 +1053,21 @@ td.negative { color: var(--negative); }
 
 .skeleton-chart { height: 240px; margin-top: var(--space-3); }
 
+.skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-row { height: 2.4rem; }
+.skeleton-row:first-of-type { height: 2rem; opacity: 0.7; }
+
+.skeleton-stats { margin-bottom: var(--space-5); }
+.skeleton-stat { height: 5.5rem; border-radius: var(--radius-lg); }
+
+.skeleton-title { width: 14rem; max-width: 70%; height: 2.4rem; margin-bottom: var(--space-3); }
+.skeleton-subtitle { width: 22rem; max-width: 90%; height: 1rem; }
+
 @keyframes skeleton-shimmer {
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }

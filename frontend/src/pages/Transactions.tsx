@@ -7,6 +7,7 @@ import { ManualTransactionForm } from '../components/ManualTransactionForm'
 import { signClass } from '../format'
 import { useHiddenColumns } from '../hooks/useHiddenColumns'
 import { useI18n } from '../i18n'
+import { SkeletonRows } from '../components/Skeleton'
 
 //: Grouped rather than one filter per raw TxType (9 values) — these are the
 //: distinctions a user actually thinks in, not the ledger's own vocabulary.
@@ -243,7 +244,7 @@ export function Transactions() {
                 (tx.account?.toLowerCase().includes(query) ?? false),
             ) ?? []
 
-          if (loading) return <div className="empty">{t('common.loading')}</div>
+          if (loading) return <SkeletonRows rows={6} />
           if (data && filtered.length === 0) return <div className="empty">{t('transactions.empty')}</div>
           if (!data) return null
 

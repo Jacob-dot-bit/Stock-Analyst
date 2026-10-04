@@ -10,6 +10,7 @@ import { ImportPanel } from '../components/ImportPanel'
 import { ManualPositionForm } from '../components/ManualPositionForm'
 import { UnresolvedPanel } from '../components/UnresolvedPanel'
 import { useI18n } from '../i18n'
+import { SkeletonCards } from '../components/Skeleton'
 
 interface ProviderStatus {
   name: string
@@ -159,9 +160,12 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="page-header">
-        <h1>{t('settings.title')}</h1>
-        <p>{t('common.loading')}</p>
+      <div>
+        <div className="page-header">
+          <h1>{t('settings.title')}</h1>
+          <p>{t('settings.subtitle')}</p>
+        </div>
+        <SkeletonCards />
       </div>
     )
   }

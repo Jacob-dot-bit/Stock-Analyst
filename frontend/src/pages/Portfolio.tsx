@@ -11,6 +11,7 @@ import { RefreshPanel } from '../components/RefreshPanel'
 import { ValueHistoryChart } from '../components/ValueHistoryChart'
 import { signClass } from '../format'
 import { useI18n } from '../i18n'
+import { SkeletonRows } from '../components/Skeleton'
 
 export function Portfolio() {
   const { t, formatDate } = useI18n()
@@ -116,7 +117,7 @@ export function Portfolio() {
       <div className="card">
         <h2>{t('portfolio.openPositions')}</h2>
         {loading ? (
-          <div className="empty">{t('common.loading')}</div>
+          <SkeletonRows />
         ) : (
           data && (
             <PositionsTable

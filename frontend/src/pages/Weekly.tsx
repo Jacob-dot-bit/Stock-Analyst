@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import type { AttentionItem, WeeklySummary } from '../api/types'
 import { rangeLabel } from '../format'
 import { useI18n } from '../i18n'
+import { SkeletonCards } from '../components/Skeleton'
 
 function Section({ title, link, linkLabel, children }: { title: string; link: string; linkLabel: string; children: ReactNode }) {
   return (
@@ -73,6 +74,8 @@ export function Weekly() {
       <div className="notice info">{t('weekly.disclaimer')}</div>
 
       {error && <div className="notice error">{error}</div>}
+
+      {!summary && !error && <SkeletonCards />}
 
       {summary && (
         <>

@@ -6,6 +6,7 @@ import { BackfillFigisButton } from '../components/BackfillFigisButton'
 import { BackfillIsinsButton } from '../components/BackfillIsinsButton'
 import { WatchlistTable } from '../components/WatchlistTable'
 import { useI18n } from '../i18n'
+import { SkeletonRows } from '../components/Skeleton'
 
 export function Watchlist() {
   const { t } = useI18n()
@@ -83,7 +84,7 @@ export function Watchlist() {
       <div className="card">
         <h2>{t('watchlist.openItems')}</h2>
         {loading ? (
-          <div className="empty">{t('common.loading')}</div>
+          <SkeletonRows />
         ) : (
           <WatchlistTable
             items={items}

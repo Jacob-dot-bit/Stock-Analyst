@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client'
 import type { DividendDetailRow, DividendSummaryRow } from '../api/types'
 import { useI18n } from '../i18n'
+import { SkeletonCards } from '../components/Skeleton'
 
 function accountLabel(account: string | null, t: (key: string) => string): string {
   return account ?? t('dividends.unknownAccount')
@@ -94,6 +95,8 @@ export function Dividends() {
       {error && <div className="notice error">{error}</div>}
 
       <div className="notice info">{t('dividends.disclaimer')}</div>
+
+      {!summary && !error && <SkeletonCards />}
 
       {summary && summary.length === 0 && <div className="empty">{t('dividends.empty')}</div>}
 
