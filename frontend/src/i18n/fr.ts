@@ -11,6 +11,7 @@ export const fr: Catalogue = {
   'nav.taxPrep': 'Préparation fiscale',
   'nav.risk': 'Risques',
   'nav.journal': 'Journal',
+  'nav.menu': 'Menu',
   'alerts.tooltip': {
     one: '{count} élément de la watchlist a atteint son prix cible',
     other: '{count} éléments de la watchlist ont atteint leur prix cible',
@@ -30,6 +31,7 @@ export const fr: Catalogue = {
   'common.delete': 'Supprimer',
   'common.edit': 'Modifier',
   'common.loading': 'Chargement…',
+  'common.actions': 'Actions',
   'common.notComputable': 'non calculable',
   'common.notApplicable': 'non applicable',
   'common.none': '—',
@@ -439,6 +441,8 @@ export const fr: Catalogue = {
   'history.capped':
     "L'historique commence le {date} — limite de profondeur des cours en cache, pas la date de votre premier achat.",
   'history.empty': "Pas encore assez de données (lots ou cours en cache) pour reconstruire un historique.",
+  'history.tooFew': "Un seul jour d'historique pour l'instant. Le graphique s'affichera dès qu'il y en aura au moins deux.",
+  'history.chartLabel': 'Graphique de la valeur du portefeuille du {from} au {to}. Utilisez les flèches gauche et droite pour lire chaque jour.',
 
   'table.unrealized': 'Latent ({currency})',
   'table.performance': 'Perf.',

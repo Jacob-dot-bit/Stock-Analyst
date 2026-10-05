@@ -120,6 +120,9 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
     { key: 'added', label: t('watchlist.addedOn') },
     { key: 'insights', label: t('table.insights') },
   ]
+  // Each cell repeats its column name, shown as a label when the table
+  // collapses into one card per row on a phone (see .table-stack in index.css).
+  const colLabel = (key: string) => columns.find((c) => c.key === key)?.label
 
   if (items.length === 0) {
     return <div className="empty">{t('watchlist.empty')}</div>
@@ -167,7 +170,7 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
       )}
 
       <div className="table-wrap">
-        <table>
+        <table className="table-stack">
           <thead>
             <tr>
               <SortableHeader label={t('table.instrument')} sortKeyName="symbol" sort={sort} onSort={handleSort} />
@@ -213,7 +216,9 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                 <SortableHeader label={t('watchlist.addedOn')} sortKeyName="added" sort={sort} onSort={handleSort} />
               )}
               {!hidden.has('insights') && <th>{t('table.insights')}</th>}
-              <th />
+              <th>
+                <span className="visually-hidden">{t('common.actions')}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -224,7 +229,7 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
               return (
                 <Fragment key={item.id}>
                   <tr>
-                    <td>
+                    <td className="cell-primary">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <PriceStatusBadge instrument={item.instrument} />
                         <strong>{item.instrument.broker_symbol}</strong>
@@ -238,14 +243,14 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                         />
                       ) : (
                         item.instrument.name && (
-                          <div className="muted" style={{ fontSize: '0.78rem' }}>
+                          <div className="muted text-xs">
                             {item.instrument.name}
                           </div>
                         )
                       )}
                     </td>
                     {!hidden.has('type') && (
-                      <td>
+                      <td data-label={colLabel('type')}>
                         {item.instrument.category ? (
                           <span className="tag neutral">{t(`breakdown.category.${item.instrument.category}`)}</span>
                         ) : (
@@ -254,15 +259,15 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                       </td>
                     )}
                     {!hidden.has('price') && (
-                      <td className="num">{item.current_price !== null ? formatNumber(item.current_price) : '—'}</td>
+                      <td data-label={colLabel('price')} className="num">{item.current_price !== null ? formatNumber(item.current_price) : '—'}</td>
                     )}
                     {!hidden.has('trend') && (
-                      <td>
+                      <td data-label={colLabel('trend')}>
                         <Sparkline closes={sparklines[item.instrument.id] ?? []} />
                       </td>
                     )}
                     {!hidden.has('target') && (
-                      <td className="num">
+                      <td data-label={colLabel('target')} className="num">
                         {editingId === item.id ? (
                           <input
                             style={{ width: '6rem', textAlign: 'right' }}
@@ -279,12 +284,12 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                       </td>
                     )}
                     {!hidden.has('distance') && (
-                      <td className={`num ${signClass(item.distance_to_target_pct === null ? null : -item.distance_to_target_pct)}`}>
+                      <td data-label={colLabel('distance')} className={`num ${signClass(item.distance_to_target_pct === null ? null : -item.distance_to_target_pct)}`}>
                         {item.distance_to_target_pct !== null ? formatSignedPercent(item.distance_to_target_pct) : '—'}
                       </td>
                     )}
                     {!hidden.has('score') && (
-                      <td className="num">
+                      <td data-label={colLabel('score')} className="num">
                         <ScoreBadge
                           score={score}
                           expanded={expandedId === item.instrument.id}
@@ -293,7 +298,7 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                       </td>
                     )}
                     {!hidden.has('signal') && (
-                      <td>
+                      <td data-label={colLabel('signal')}>
                         {signal ? (
                           <SignalBadge
                             signal={signal.signal}
@@ -319,7 +324,7 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                       </td>
                     )}
                     {!hidden.has('note') && (
-                      <td className="muted">
+                      <td data-label={colLabel('note')} className="muted">
                         {editingId === item.id ? (
                           <input
                             value={editDraft.note}
@@ -330,9 +335,9 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                         )}
                       </td>
                     )}
-                    {!hidden.has('added') && <td>{formatDate(item.added_at)}</td>}
+                    {!hidden.has('added') && <td data-label={colLabel('added')}>{formatDate(item.added_at)}</td>}
                     {!hidden.has('insights') && (
-                      <td>
+                      <td data-label={colLabel('insights')}>
                         <InsightsBadge
                           expanded={expandedInsightsId === item.instrument.id}
                           onToggle={() =>
@@ -341,7 +346,7 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                         />
                       </td>
                     )}
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td className="cell-actions" style={{ whiteSpace: 'nowrap' }}>
                       {editingId === item.id ? (
                         <>
                           <button className="link" disabled={rowBusy} onClick={() => void saveEdit(item.id)}>

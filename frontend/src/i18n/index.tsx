@@ -1,11 +1,28 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { en } from './en'
-import { fr } from './fr'
-import { pl } from './pl'
 import { LOCALES, type Catalogue, type Locale, type Translation } from './types'
 
-const CATALOGUES: Record<Locale, Catalogue> = { en, fr, pl }
+// English ships with the app (it is also the fallback for any missing key);
+// French and Polish are separate chunks fetched only when chosen, so most
+// users don't download two catalogues they never see.
+const LOADERS: Record<Exclude<Locale, 'en'>, () => Promise<Catalogue>> = {
+  fr: () => import('./fr').then((m) => m.fr),
+  pl: () => import('./pl').then((m) => m.pl),
+}
+
+const CATALOGUES: Partial<Record<Locale, Catalogue>> = { en }
+
+/** Resolves once `locale`'s catalogue is available. A failed fetch resolves
+ * too: `t` then falls back to English rather than leaving the app blank. */
+function loadCatalogue(locale: Locale): Promise<void> {
+  if (locale === 'en' || CATALOGUES[locale]) return Promise.resolve()
+  return LOADERS[locale]()
+    .then((catalogue) => {
+      CATALOGUES[locale] = catalogue
+    })
+    .catch(() => undefined)
+}
 
 const STORAGE_KEY = 'stock-analyst.locale'
 
@@ -48,6 +65,26 @@ function interpolate(template: string, params: TranslateParams): string {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(detectLocale)
+  // False only on a first visit in French/Polish, for the moment it takes to
+  // fetch that catalogue — rendering in the meantime would flash English.
+  const [ready, setReady] = useState(() => CATALOGUES[locale] !== undefined)
+
+  useEffect(() => {
+    if (ready) return
+    let cancelled = false
+    void loadCatalogue(locale).then(() => {
+      if (!cancelled) setReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [ready, locale])
+
+  // Switching language waits for the new catalogue before re-rendering, so
+  // the page never shows a mix of two languages.
+  const setLocale = useCallback((next: Locale) => {
+    void loadCatalogue(next).then(() => setLocaleState(next))
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, locale)
@@ -62,7 +99,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     (key: string, params: TranslateParams = {}): string => {
       // Fall back to English before giving up: a missing translation should degrade
       // to a readable sentence, not to a raw identifier.
-      const entry: Translation | undefined = CATALOGUES[locale][key] ?? en[key]
+      const entry: Translation | undefined = CATALOGUES[locale]?.[key] ?? en[key]
       if (entry === undefined) return key
 
       if (typeof entry === 'string') return interpolate(entry, params)
@@ -97,7 +134,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
     return {
       locale,
-      setLocale: setLocaleState,
+      setLocale,
       t,
       formatNumber,
       formatCompactNumber: (input) => {
@@ -119,7 +156,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         return Number.isNaN(date.getTime()) ? '—' : numberFormats.date.format(date)
       },
     }
-  }, [locale, t, numberFormats])
+  }, [locale, setLocale, t, numberFormats])
+
+  if (!ready) return null
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }
@@ -138,9 +177,11 @@ export type { Locale } from './types'
 if (import.meta.env.DEV) {
   for (const locale of LOCALES) {
     if (locale === 'en') continue
-    const missing = Object.keys(en).filter((key) => !(key in CATALOGUES[locale]))
-    if (missing.length > 0) {
-      console.warn(`[i18n] "${locale}" is missing ${missing.length} key(s):`, missing)
-    }
+    void LOADERS[locale]().then((catalogue) => {
+      const missing = Object.keys(en).filter((key) => !(key in catalogue))
+      if (missing.length > 0) {
+        console.warn(`[i18n] "${locale}" is missing ${missing.length} key(s):`, missing)
+      }
+    })
   }
 }

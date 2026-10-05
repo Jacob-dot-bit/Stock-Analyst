@@ -202,7 +202,7 @@ export function CorporateActionsPanel() {
   return (
     <div className="card">
       <h2>{t('corporateActions.title')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('corporateActions.description')}
       </p>
 
@@ -211,7 +211,7 @@ export function CorporateActionsPanel() {
       {/* --- Couverture automatique : lecture seule, jamais d'appel fournisseur --- */}
       {coverage && (
         <div style={{ marginTop: '0.6rem' }}>
-          <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.coverageTitle')}</h3>
+          <h3 className="section-title">{t('corporateActions.coverageTitle')}</h3>
           <div>{t('corporateActions.coverage.instrumentsEligible', { count: coverage.eligible_instruments })}</div>
           <div className="muted">
             {t('corporateActions.coverage.instrumentsChecked', {
@@ -253,8 +253,8 @@ export function CorporateActionsPanel() {
 
       {/* --- Alpha Vantage : bouton de reprise ciblée, jamais automatique --- */}
       <div style={{ marginTop: '1rem', paddingTop: '0.8rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.resume.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('corporateActions.resume.title')}</h3>
+        <p className="muted section-desc">
           {t('corporateActions.resume.description')}
         </p>
         <button onClick={() => void handleResume()} disabled={resumeButtonDisabled}>
@@ -300,9 +300,9 @@ export function CorporateActionsPanel() {
       </div>
 
       {/* --- Candidats à confirmer : jamais appliqués automatiquement --- */}
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.outstanding.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+      <div className="card-section">
+        <h3 className="section-title">{t('corporateActions.outstanding.title')}</h3>
+        <p className="muted section-desc">
           {t('corporateActions.outstanding.description')}
         </p>
         {outstanding && outstanding.length === 0 && (
@@ -340,7 +340,7 @@ export function CorporateActionsPanel() {
         )}
       </div>
 
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+      <div className="card-section">
         <button className="primary" onClick={() => void handleDetect()} disabled={detecting}>
           {detecting ? t('common.saving') : t('corporateActions.detect')}
         </button>
@@ -368,13 +368,17 @@ export function CorporateActionsPanel() {
         )}
       </div>
 
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.detectOne.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+      <div className="card-section">
+        <h3 className="section-title">{t('corporateActions.detectOne.title')}</h3>
+        <p className="muted section-desc">
           {t('corporateActions.detectOne.description')}
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-          <select value={checkInstrumentId} onChange={(e) => setCheckInstrumentId(e.target.value)}>
+          <select
+            aria-label={t('corporateActions.instrument')}
+            value={checkInstrumentId}
+            onChange={(e) => setCheckInstrumentId(e.target.value)}
+          >
             <option value="">{t('corporateActions.selectInstrument')}</option>
             {instruments.map((instrument) => (
               <option key={instrument.id} value={instrument.id}>
@@ -415,8 +419,8 @@ export function CorporateActionsPanel() {
         )}
       </div>
 
-      <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('corporateActions.historyTitle')}</h3>
+      <div className="card-section">
+        <h3 className="section-title">{t('corporateActions.historyTitle')}</h3>
         <div>{t('corporateActions.historyCount', { count: actions?.length ?? 0 })}</div>
         {detection &&
           (detection.created > 0 ? (
@@ -432,7 +436,11 @@ export function CorporateActionsPanel() {
 
         {formOpen && (
           <div style={{ marginTop: '0.6rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-            <select value={instrumentId} onChange={(e) => setInstrumentId(e.target.value)}>
+            <select
+              aria-label={t('corporateActions.instrument')}
+              value={instrumentId}
+              onChange={(e) => setInstrumentId(e.target.value)}
+            >
               <option value="">{t('corporateActions.selectInstrument')}</option>
               {instruments.map((instrument) => (
                 <option key={instrument.id} value={instrument.id}>
@@ -441,15 +449,19 @@ export function CorporateActionsPanel() {
                 </option>
               ))}
             </select>
-            <select value={actionType} onChange={(e) => setActionType(e.target.value as 'split' | 'reverse_split')}>
+            <select aria-label={t('corporateActions.type')} value={actionType} onChange={(e) => setActionType(e.target.value as 'split' | 'reverse_split')}>
               <option value="split">{t('corporateActions.type.split')}</option>
               <option value="reverse_split">{t('corporateActions.type.reverse_split')}</option>
             </select>
-            <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+            <input
+              type="date"
+              aria-label={t('corporateActions.date')}
+              value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
             <span style={{ display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}>
               <input
                 style={{ width: '4rem' }}
                 placeholder={t('corporateActions.newShares')}
+                aria-label={t('corporateActions.newShares')}
                 value={ratioNumerator}
                 onChange={(e) => setRatioNumerator(e.target.value)}
               />
@@ -457,6 +469,7 @@ export function CorporateActionsPanel() {
               <input
                 style={{ width: '4rem' }}
                 placeholder={t('corporateActions.oldShares')}
+                aria-label={t('corporateActions.oldShares')}
                 value={ratioDenominator}
                 onChange={(e) => setRatioDenominator(e.target.value)}
               />
@@ -482,7 +495,9 @@ export function CorporateActionsPanel() {
                 <th>{t('corporateActions.source')}</th>
                 <th>{t('corporateActions.confidence')}</th>
                 <th>{t('corporateActions.priceHistoryStatus')}</th>
-                <th />
+                <th>
+                  <span className="visually-hidden">{t('common.actions')}</span>
+                </th>
               </tr>
             </thead>
             <tbody>

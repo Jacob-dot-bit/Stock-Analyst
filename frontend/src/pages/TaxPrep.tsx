@@ -33,7 +33,9 @@ function EnvelopeCard({ envelope }: { envelope: TaxEnvelopeSummary }) {
   return (
     <div className="card">
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0 }}>{envelope.account}</h3>
+        <h2 className="compact" style={{ margin: 0 }}>
+          {envelope.account}
+        </h2>
         <span className={`tag ${ENVELOPE_BADGE_CLASS[envelope.envelope_kind] ?? 'confidence-neutral'}`}>
           {t(`taxPrep.envelope.${envelope.envelope_kind}`)}
         </span>

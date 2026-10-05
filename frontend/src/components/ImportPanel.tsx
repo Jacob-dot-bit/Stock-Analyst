@@ -104,7 +104,7 @@ export function ImportPanel({ kind, onImported }: Props) {
     <div className="card">
       <h2>{t(`import.${kind}.title`)}</h2>
 
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t(`import.${kind}.instructions`)}
       </p>
       <p className="muted">{t(`import.${kind}.multiAccount`)}</p>
@@ -150,7 +150,7 @@ export function ImportPanel({ kind, onImported }: Props) {
 
       {preview && (
         <div style={{ marginTop: '1rem' }}>
-          <p className="muted" style={{ marginTop: 0 }}>
+          <p className="muted section-desc">
             {t('import.previewTitle')}
           </p>
           <ImportReport batch={preview} />

@@ -18,6 +18,7 @@ export const pl: Catalogue = {
   'nav.taxPrep': 'Przygotowanie podatkowe',
   'nav.risk': 'Ryzyko',
   'nav.journal': 'Dziennik',
+  'nav.menu': 'Menu',
   'alerts.tooltip': {
     one: '{count} pozycja z watchlisty osiągnęła cenę docelową',
     few: '{count} pozycje z watchlisty osiągnęły cenę docelową',
@@ -38,6 +39,7 @@ export const pl: Catalogue = {
   'common.delete': 'Usuń',
   'common.edit': 'Edytuj',
   'common.loading': 'Ładowanie…',
+  'common.actions': 'Akcje',
   'common.notComputable': 'nie do obliczenia',
   'common.notApplicable': 'nie dotyczy',
   'common.none': '—',
@@ -445,6 +447,8 @@ export const pl: Catalogue = {
   'history.capped':
     'Historia zaczyna się {date} — to głębokość zapisanej historii cen, nie data pierwszego zakupu.',
   'history.empty': 'Za mało danych (lotów lub zapisanych cen), aby zrekonstruować historię.',
+  'history.tooFew': 'Na razie jest tylko jeden dzień historii. Wykres pojawi się, gdy będą co najmniej dwa.',
+  'history.chartLabel': 'Wykres wartości portfela od {from} do {to}. Użyj strzałek w lewo i w prawo, aby odczytać każdy dzień.',
 
   'table.unrealized': 'Niezrealizowany ({currency})',
   'table.performance': 'Zwrot',

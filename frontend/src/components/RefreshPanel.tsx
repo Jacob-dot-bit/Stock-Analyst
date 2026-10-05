@@ -205,7 +205,7 @@ export function RefreshPanel({ onRefreshed, onLivePortfolio }: Props) {
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+      <div className="card-header">
         <div>
           <h2 className="compact">{t('prices.title')}</h2>
           <span className="muted">{t('prices.subtitle')}</span>

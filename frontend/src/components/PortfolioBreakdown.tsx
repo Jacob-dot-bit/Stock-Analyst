@@ -78,13 +78,9 @@ export function PortfolioBreakdown() {
         }}
       >
         <h2 className="compact">{t('breakdown.title')}</h2>
-        <div className="form-row" style={{ marginBottom: 0 }}>
+        <div className="segmented" role="group" aria-label={t('breakdown.title')}>
           {DIMENSIONS.map((dim) => (
-            <button
-              key={dim}
-              className={dim === dimension ? 'primary' : undefined}
-              onClick={() => setDimension(dim)}
-            >
+            <button key={dim} type="button" aria-pressed={dim === dimension} onClick={() => setDimension(dim)}>
               {t(`breakdown.dimension.${dim}`)}
             </button>
           ))}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { NewsSentiment } from '../api/types'
 import { useI18n } from '../i18n'
+import { SkeletonRows } from './Skeleton'
 
 type Loadable<T> = T | 'loading' | null
 
@@ -68,7 +69,7 @@ export function InsightsSection({ instrumentId }: { instrumentId: number }) {
         <div className="insights-detail">
           <section className="insights-section">
             <h4>{t('insights.newsTitle')}</h4>
-            {news === 'loading' && <p className="muted">{t('common.loading')}</p>}
+            {news === 'loading' && <SkeletonRows rows={2} />}
             {news === null && <p className="muted">{t('insights.noNews')}</p>}
             {news && news !== 'loading' && news.articles.length === 0 && (
               <p className="muted">

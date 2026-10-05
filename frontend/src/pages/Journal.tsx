@@ -4,6 +4,7 @@ import type { JournalEntry } from '../api/types'
 import { AddJournalEntryForm } from '../components/AddJournalEntryForm'
 import { JournalEntryList } from '../components/JournalEntryList'
 import { useI18n } from '../i18n'
+import { SkeletonRows } from '../components/Skeleton'
 
 export function Journal() {
   const { t } = useI18n()
@@ -57,7 +58,7 @@ export function Journal() {
       <AddJournalEntryForm onCreated={() => void load()} />
 
       {loading ? (
-        <div className="empty">{t('common.loading')}</div>
+        <SkeletonRows />
       ) : (
         <JournalEntryList
           entries={entries}

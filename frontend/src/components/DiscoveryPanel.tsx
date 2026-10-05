@@ -289,7 +289,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
         <td>
           <strong>{c.instrument.broker_symbol}</strong>
           {c.instrument.name && (
-            <div className="muted" style={{ fontSize: '0.78rem' }}>
+            <div className="muted text-xs">
               {c.instrument.name}
             </div>
           )}
@@ -321,22 +321,23 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   return (
     <div className="card">
       <h2>{t('discovery.title')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('discovery.description')}
       </p>
 
       {error && <div className="notice error">{error}</div>}
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.verdictFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.verdictFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.verdictFilterHint')}
         </p>
-        <div className="form-row">
+        <div className="segmented" role="group" aria-label={t('discovery.verdictFilterLabel')}>
           {(['all', 'buy', 'hold', 'sell'] as VerdictFilter[]).map((option) => (
             <button
               key={option}
-              className={verdictFilter === option ? 'primary' : undefined}
+              type="button"
+              aria-pressed={verdictFilter === option}
               onClick={() => setVerdictFilter(option)}
             >
               {option === 'all' ? t('filters.all') : t(`discovery.recommendation.${option}`)}
@@ -346,8 +347,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.dataQualityFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.dataQualityFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.dataQualityFilterHint')}
         </p>
         <label>
@@ -361,8 +362,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.marketSectorFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.marketSectorFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.marketSectorFilterHint')}
         </p>
         <div className="form-row">
@@ -392,8 +393,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.marketCapFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.marketCapFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.marketCapFilterHint')}
         </p>
         <div className="form-row">
@@ -409,8 +410,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.debtRatioFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.debtRatioFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.debtRatioFilterHint')}
         </p>
         <div className="field">
@@ -420,8 +421,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.historyFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.historyFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.historyFilterHint')}
         </p>
         <div className="field">
@@ -431,8 +432,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.dividendFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.dividendFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.dividendFilterHint')}
         </p>
         <div className="field">
@@ -442,8 +443,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.scoreFilterLabel')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.scoreFilterLabel')}</h3>
+        <p className="muted section-desc">
           {t('discovery.scoreFilterHint')}
         </p>
         <div className="field">
@@ -453,8 +454,8 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div style={{ marginBottom: '1.2rem' }}>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.sp500.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.sp500.title')}</h3>
+        <p className="muted section-desc">
           {t('discovery.sp500.description')}
         </p>
         <div className="form-row">
@@ -467,12 +468,14 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
           <button onClick={() => void handleDividendBackfill()} disabled={dividendBackfillBusy}>
             {dividendBackfillBusy ? t('common.saving') : t('discovery.backfillDividends')}
           </button>
-          <button className={rankBy === 'value' ? 'primary' : undefined} onClick={() => void handleRankByChange('value')}>
-            {t('discovery.rankByValue')}
-          </button>
-          <button className={rankBy === 'growth' ? 'primary' : undefined} onClick={() => void handleRankByChange('growth')}>
-            {t('discovery.rankByGrowth')}
-          </button>
+          <div className="segmented" role="group">
+            <button type="button" aria-pressed={rankBy === 'value'} onClick={() => void handleRankByChange('value')}>
+              {t('discovery.rankByValue')}
+            </button>
+            <button type="button" aria-pressed={rankBy === 'growth'} onClick={() => void handleRankByChange('growth')}>
+              {t('discovery.rankByGrowth')}
+            </button>
+          </div>
         </div>
         {importNotice && (
           <div className="muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
@@ -508,7 +511,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                   <th className="num">{t('discovery.debtRatio')}</th>
                   <th className="num">{t('discovery.dividendYield')}</th>
                   <th>{t('discovery.recommendationColumn')}</th>
-                  <th />
+                  <th>
+                    <span className="visually-hidden">{t('common.actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -531,11 +536,11 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
       </div>
 
       <div>
-        <h3 style={{ marginBottom: '0.2rem' }}>{t('discovery.finviz.title')}</h3>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+        <h3 className="section-title">{t('discovery.finviz.title')}</h3>
+        <p className="muted section-desc">
           {t('discovery.finviz.description')}
         </p>
-        <p className="muted" style={{ marginTop: 0, fontSize: '0.78rem' }}>
+        <p className="muted section-desc text-xs">
           {t('discovery.finviz.slowNotice')}
         </p>
         <div className="form-row">
@@ -577,7 +582,7 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                 {t(`discovery.finviz.${preset === 'insider_buys' ? 'insiderBuys' : 'oversold'}`)}
               </div>
               {failedCount > 0 && (
-                <div className="muted" style={{ fontSize: '0.78rem' }}>
+                <div className="muted text-xs">
                   {t('discovery.finviz.failedCount', { count: failedCount })}
                 </div>
               )}
@@ -591,7 +596,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
                         <th>{t('table.instrument')}</th>
                         <th className="num">{t('table.price')}</th>
                         <th>{t('discovery.recommendationColumn')}</th>
-                        <th />
+                        <th>
+                          <span className="visually-hidden">{t('common.actions')}</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>{filteredResults.map((c) => candidateRow(c, false))}</tbody>

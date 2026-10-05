@@ -7,6 +7,7 @@ import { ManualTransactionForm } from '../components/ManualTransactionForm'
 import { signClass } from '../format'
 import { useHiddenColumns } from '../hooks/useHiddenColumns'
 import { useI18n } from '../i18n'
+import { SkeletonRows } from '../components/Skeleton'
 
 //: Grouped rather than one filter per raw TxType (9 values) — these are the
 //: distinctions a user actually thinks in, not the ledger's own vocabulary.
@@ -49,6 +50,9 @@ export function Transactions() {
     { key: 'currencyEffect', label: t('transactions.currencyEffect') },
     { key: 'comment', label: t('transactions.comment') },
   ]
+  // Each cell repeats its column name, shown as a label when the table
+  // collapses into one card per row on a phone (see .table-stack in index.css).
+  const colLabel = (key: string) => columns.find((c) => c.key === key)?.label
 
   const load = useCallback(() => {
     setLoading(true)
@@ -240,13 +244,13 @@ export function Transactions() {
                 (tx.account?.toLowerCase().includes(query) ?? false),
             ) ?? []
 
-          if (loading) return <div className="empty">{t('common.loading')}</div>
+          if (loading) return <SkeletonRows rows={6} />
           if (data && filtered.length === 0) return <div className="empty">{t('transactions.empty')}</div>
           if (!data) return null
 
           return (
             <div className="table-wrap">
-              <table>
+              <table className="table-stack">
                 <thead>
                   <tr>
                     <th>{t('transactions.date')}</th>
@@ -280,13 +284,13 @@ export function Transactions() {
                           />
                         </td>
                         {!hidden.has('type') && (
-                          <td>
+                          <td data-label={colLabel('type')}>
                             <span className="tag neutral">{t(`transactions.type.${tx.type}`)}</span>
                           </td>
                         )}
-                        {!hidden.has('instrument') && <td>{tx.instrument?.broker_symbol ?? '—'}</td>}
+                        {!hidden.has('instrument') && <td data-label={colLabel('instrument')}>{tx.instrument?.broker_symbol ?? '—'}</td>}
                         {!hidden.has('account') && (
-                          <td>
+                          <td data-label={colLabel('account')}>
                             <input
                               value={editDraft.account}
                               onChange={(e) => setEditDraft({ ...editDraft, account: e.target.value })}
@@ -294,7 +298,7 @@ export function Transactions() {
                           </td>
                         )}
                         {!hidden.has('amount') && (
-                          <td className="num">
+                          <td data-label={colLabel('amount')} className="num">
                             <input
                               style={{ width: '6.5rem', textAlign: 'right' }}
                               value={editDraft.amount}
@@ -304,17 +308,17 @@ export function Transactions() {
                           </td>
                         )}
                         {!hidden.has('instrumentEffect') && (
-                          <td className={`num ${signClass(tx.instrument_effect)}`}>
+                          <td data-label={colLabel('instrumentEffect')} className={`num ${signClass(tx.instrument_effect)}`}>
                             {tx.instrument_effect === null ? '—' : formatNumber(tx.instrument_effect)}
                           </td>
                         )}
                         {!hidden.has('currencyEffect') && (
-                          <td className={`num ${signClass(tx.currency_effect)}`}>
+                          <td data-label={colLabel('currencyEffect')} className={`num ${signClass(tx.currency_effect)}`}>
                             {tx.currency_effect === null ? '—' : formatNumber(tx.currency_effect)}
                           </td>
                         )}
                         {!hidden.has('comment') && (
-                          <td>
+                          <td data-label={colLabel('comment')}>
                             <input
                               value={editDraft.comment}
                               onChange={(e) => setEditDraft({ ...editDraft, comment: e.target.value })}
@@ -336,32 +340,32 @@ export function Transactions() {
                       </tr>
                     ) : (
                       <tr key={tx.id}>
-                        <td>{formatDate(tx.executed_at)}</td>
+                        <td className="cell-primary">{formatDate(tx.executed_at)}</td>
                         {!hidden.has('type') && (
-                          <td>
+                          <td data-label={colLabel('type')}>
                             <span className="tag neutral">{t(`transactions.type.${tx.type}`)}</span>
                           </td>
                         )}
-                        {!hidden.has('instrument') && <td>{tx.instrument?.broker_symbol ?? '—'}</td>}
-                        {!hidden.has('account') && <td>{tx.account ?? '—'}</td>}
+                        {!hidden.has('instrument') && <td data-label={colLabel('instrument')}>{tx.instrument?.broker_symbol ?? '—'}</td>}
+                        {!hidden.has('account') && <td data-label={colLabel('account')}>{tx.account ?? '—'}</td>}
                         {!hidden.has('amount') && (
-                          <td className={`num ${tx.type === 'CLOSED_TRADE' ? signClass(tx.amount) : ''}`}>
+                          <td data-label={colLabel('amount')} className={`num ${tx.type === 'CLOSED_TRADE' ? signClass(tx.amount) : ''}`}>
                             {tx.amount === null ? '—' : formatNumber(tx.amount)}
                             {tx.currency ? ` ${tx.currency}` : ''}
                           </td>
                         )}
                         {!hidden.has('instrumentEffect') && (
-                          <td className={`num ${signClass(tx.instrument_effect)}`}>
+                          <td data-label={colLabel('instrumentEffect')} className={`num ${signClass(tx.instrument_effect)}`}>
                             {tx.instrument_effect === null ? '—' : formatNumber(tx.instrument_effect)}
                           </td>
                         )}
                         {!hidden.has('currencyEffect') && (
-                          <td className={`num ${signClass(tx.currency_effect)}`}>
+                          <td data-label={colLabel('currencyEffect')} className={`num ${signClass(tx.currency_effect)}`}>
                             {tx.currency_effect === null ? '—' : formatNumber(tx.currency_effect)}
                           </td>
                         )}
-                        {!hidden.has('comment') && <td>{tx.comment ?? '—'}</td>}
-                        <td style={{ whiteSpace: 'nowrap' }}>
+                        {!hidden.has('comment') && <td data-label={colLabel('comment')}>{tx.comment ?? '—'}</td>}
+                        <td className="cell-actions" style={{ whiteSpace: 'nowrap' }}>
                           <button className="link" onClick={() => startEdit(tx)}>
                             {t('common.edit')}
                           </button>{' '}

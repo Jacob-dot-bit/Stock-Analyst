@@ -54,7 +54,7 @@ export function FactorExposures() {
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+      <div className="card-header">
         <div>
           <h2 className="compact">{t('factors.title')}</h2>
           <span className="muted">{t('factors.description')}</span>
@@ -112,7 +112,7 @@ export function FactorExposures() {
                   <td>
                     <strong>{row.instrument.broker_symbol}</strong>
                     {row.instrument.name && (
-                      <div className="muted" style={{ fontSize: '0.78rem' }}>
+                      <div className="muted text-xs">
                         {row.instrument.name}
                       </div>
                     )}

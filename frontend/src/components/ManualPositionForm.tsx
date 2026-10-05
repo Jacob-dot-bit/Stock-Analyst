@@ -95,7 +95,7 @@ export function ManualPositionForm({ onCreated }: Props) {
     return (
       <div className="card">
         <div
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}
+          className="card-header"
         >
           <div>
             <h2 className="compact">{t('manual.title')}</h2>

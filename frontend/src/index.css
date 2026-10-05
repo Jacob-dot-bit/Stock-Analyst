@@ -387,6 +387,67 @@ a {
   color: var(--text);
 }
 
+/* Title (+ optional subtitle) on the left, one action on the right; the
+   action keeps its size and drops under the text on a narrow card. */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+}
+
+.card-header > :first-child { flex: 1 1 18rem; min-width: 0; }
+.card-header > button { flex-shrink: 0; }
+
+/* A sub-section inside a card, separated from what precedes it by a rule. */
+.card-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.section-title {
+  margin: var(--space-4) 0 var(--space-1);
+  font-size: var(--fs-md);
+  font-weight: 650;
+}
+
+.card-section > .section-title:first-child { margin-top: 0; }
+
+.section-desc { margin-top: 0; }
+
+.text-xs { font-size: var(--fs-xs); }
+
+/* Sub-navigation between the groups of one page (Settings). Scrolls
+   sideways on a phone rather than wrapping into a second row. */
+.page-tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.page-tabs a {
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.page-tabs a:hover { color: var(--text); }
+
+.page-tabs a[aria-current='page'] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 .settings-group {
   margin-bottom: var(--space-6);
 }
@@ -461,6 +522,9 @@ a {
 
 .table-wrap {
   overflow-x: auto;
+  /* Contains absolutely positioned children (visually-hidden header labels),
+     which would otherwise escape the scroller and widen the whole page. */
+  position: relative;
   /* A wide table (13 columns) routinely needs to scroll even at the widened
      .content max-width — macOS hides scrollbars until actively scrolling by
      default, which made that scrolling undiscoverable: nothing on screen
@@ -523,9 +587,23 @@ tbody tr:hover {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
-th.sortable {
+/* The header's button inherits the <th> typography and stays visually
+   identical to a plain header; only the focus ring shows it is a control. */
+.sort-button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
   cursor: pointer;
   user-select: none;
+  border-radius: 4px;
+}
+
+th.num .sort-button { justify-content: flex-end; }
+
+.sort-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 th.sortable:hover {
@@ -646,6 +724,8 @@ td.negative { color: var(--negative); }
 /* --- Score badge + detail (Phase 3 scoring engine) --- */
 
 .score-badge {
+  display: inline-block;
+  min-height: 0;
   cursor: pointer;
   font: inherit;
   font-weight: 600;
@@ -730,6 +810,8 @@ td.negative { color: var(--negative); }
 /* --- Insights: news/sentiment (phase 6) --- */
 
 .insights-badge {
+  display: inline-block;
+  min-height: 0;
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
@@ -882,6 +964,119 @@ td.negative { color: var(--negative); }
   font-size: 0.8rem;
 }
 
+/* --- Line charts (ValueHistoryChart) --- */
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Drawn at its measured pixel width (no viewBox stretching), so the axis
+   text stays at --fs-xs on any screen. The min-height holds the space while
+   the first measurement is taken. */
+.chart-plot {
+  position: relative;
+  min-height: 240px;
+  margin-top: var(--space-3);
+  border-radius: var(--radius);
+  touch-action: pan-y;
+}
+
+.chart-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart-axis-label {
+  font-size: var(--fs-xs);
+  fill: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  min-width: 170px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-sm);
+}
+
+.chart-tooltip-date {
+  margin-bottom: var(--space-1);
+  font-weight: 650;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chart-tooltip-value {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.chart-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* Loading placeholder: a shimmering block the same shape as the content
+   it stands in for, so the layout doesn't jump when the data arrives. */
+.skeleton {
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--surface-alt) 0%, var(--border) 50%, var(--surface-alt) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-chart { height: 240px; margin-top: var(--space-3); }
+
+.skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-row { height: 2.4rem; }
+.skeleton-row:first-of-type { height: 2rem; opacity: 0.7; }
+
+.skeleton-stats { margin-bottom: var(--space-5); }
+.skeleton-stat { height: 5.5rem; border-radius: var(--radius-lg); }
+
+.skeleton-title { width: 14rem; max-width: 70%; height: 2.4rem; margin-bottom: var(--space-3); }
+.skeleton-subtitle { width: 22rem; max-width: 90%; height: 1rem; }
+
+@keyframes skeleton-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 /* --- Messages --- */
 
 .notice {
@@ -999,8 +1194,18 @@ td.negative { color: var(--negative); }
 
 button {
   font: inherit;
+  font-size: var(--fs-sm);
   font-weight: 550;
-  padding: 0.48rem 0.95rem;
+  line-height: 1.2;
+  /* One height for every text button (34px, same as the top-bar controls),
+     and a label that never wraps onto two lines when its row gets tight. */
+  min-height: 34px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0.4rem 0.9rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1025,9 +1230,44 @@ button.link {
   border: none;
   background: none;
   color: var(--accent);
+  min-height: 0;
   padding: 0.2rem 0.35rem;
   font-size: var(--fs-sm);
   font-weight: 500;
+}
+
+button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
+
+/* A set of mutually exclusive options (breakdown dimension, rank by, verdict
+   filter): one bordered track with the chosen option raised inside it,
+   instead of a row of separate buttons with one painted solid blue. */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 3px);
+  background: var(--surface-alt);
+}
+
+.segmented button {
+  min-height: 28px;
+  padding: 0.3rem 0.8rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+}
+
+.segmented button:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border-strong);
 }
 
 input, select, textarea {
@@ -1090,6 +1330,8 @@ input:focus, select:focus, textarea:focus {
 
 .symbol-suggestions li button {
   display: block;
+  min-height: 0;
+  white-space: normal;
   width: 100%;
   text-align: left;
   border: none;
@@ -1309,10 +1551,127 @@ details.raw summary {
   }
 }
 
-/* Narrow screens: tighter gutters, nav wraps under the brand. */
+/* Only shown on narrow screens, where the nav collapses behind it. */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--text);
+}
+
+/* Narrow screens: one compact top row (brand, alerts, language, theme,
+   menu button); the nav opens as a panel under it. */
 @media (max-width: 720px) {
-  .topbar { padding: var(--space-3) var(--space-4); gap: var(--space-3); position: static; }
+  .topbar {
+    padding: var(--space-2) var(--space-4);
+    gap: var(--space-2);
+  }
+  .brand { font-size: var(--fs-md); }
+  .topbar-controls { order: 2; }
+  .nav-toggle { display: inline-flex; order: 3; }
+  .alerts-bell { order: 1; margin-left: auto; }
+  .alerts-bell + .topbar-controls { margin-left: 0; }
+  .nav {
+    display: none;
+    order: 4;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-1);
+    padding: var(--space-1);
+  }
+  .nav.open { display: grid; }
+  .nav a { padding: var(--space-3); font-size: var(--fs-base); }
+  .language-switcher select { max-width: 7.5rem; }
+
   .content { padding: var(--space-4); }
+  .page-header { margin-bottom: var(--space-5); }
   .page-header h1 { font-size: var(--fs-xl); }
   .card { padding: var(--space-4); }
+
+  /* Two KPI tiles per row instead of one tall column of five. */
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+  .stat { padding: var(--space-3) var(--space-4) var(--space-4); }
+  .stat .value { font-size: var(--fs-lg); }
+  .stat .label { font-size: 0.6875rem; }
+}
+
+/* Phones: the main data tables (.table-stack) turn each row into a card —
+   the cell's own column name (data-label) printed above its value, two
+   facts per line — instead of a 13-column table scrolling sideways inside
+   its card. The header row stays in the DOM for screen readers. */
+@media (max-width: 640px) {
+  .table-wrap:has(> .table-stack) { overflow-x: visible; padding-bottom: 0; }
+
+  .table-stack thead {
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .table-stack,
+  .table-stack tbody { display: block; }
+
+  .table-stack tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .table-stack tbody tr:last-child { margin-bottom: 0; }
+
+  .table-stack td,
+  .table-stack tbody tr:last-child td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 0;
+    border: none;
+    white-space: normal;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .table-stack td > * { max-width: 100%; flex-wrap: wrap; }
+
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .table-stack td.cell-primary,
+  .table-stack td.cell-actions,
+  .table-stack td[colspan] { grid-column: 1 / -1; }
+
+  .table-stack td.cell-primary { font-size: var(--fs-base); }
+
+  .table-stack td.cell-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+  }
+
+  /* An expanded detail row is one full-width cell under its card. */
+  .table-stack tbody tr:has(> td[colspan]) {
+    display: block;
+    margin-top: calc(-1 * var(--space-2));
+  }
+
+  .table-stack td[colspan] { display: block; }
 }

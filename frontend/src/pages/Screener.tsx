@@ -8,6 +8,7 @@ import { DiscoveryPanel } from '../components/DiscoveryPanel'
 import { ScoreTrackRecordPanel } from '../components/ScoreTrackRecordPanel'
 import { ScreenerTable } from '../components/ScreenerTable'
 import { useI18n } from '../i18n'
+import { SkeletonRows } from '../components/Skeleton'
 
 export function Screener() {
   const { t } = useI18n()
@@ -79,7 +80,7 @@ export function Screener() {
 
       <div className="card">
         <h2>{t('gems.priceFilterTitle')}</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
+        <p className="muted section-desc">
           {t('gems.priceFilterHint')}
         </p>
         <div className="form-row">
@@ -111,7 +112,7 @@ export function Screener() {
       <div className="card">
         <h2>{t('gems.candidates')}</h2>
         {loading ? (
-          <div className="empty">{t('common.loading')}</div>
+          <SkeletonRows />
         ) : (
           <ScreenerTable
             items={items}

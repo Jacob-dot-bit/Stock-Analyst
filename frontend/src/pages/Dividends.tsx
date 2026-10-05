@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client'
 import type { DividendDetailRow, DividendSummaryRow } from '../api/types'
 import { useI18n } from '../i18n'
+import { SkeletonCards } from '../components/Skeleton'
 
 function accountLabel(account: string | null, t: (key: string) => string): string {
   return account ?? t('dividends.unknownAccount')
@@ -95,6 +96,8 @@ export function Dividends() {
 
       <div className="notice info">{t('dividends.disclaimer')}</div>
 
+      {!summary && !error && <SkeletonCards />}
+
       {summary && summary.length === 0 && <div className="empty">{t('dividends.empty')}</div>}
 
       {summary && summary.length > 0 && latestYear !== undefined && (
@@ -163,7 +166,7 @@ export function Dividends() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2>{t('dividends.detailTitle')}</h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+            <select aria-label={t('dividends.year')} value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
               <option value="">{t('dividends.allYears')}</option>
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -171,7 +174,7 @@ export function Dividends() {
                 </option>
               ))}
             </select>
-            <select value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+            <select aria-label={t('dividends.account')} value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
               <option value="">{t('dividends.allAccounts')}</option>
               {accounts.map((a) => (
                 <option key={a} value={a}>

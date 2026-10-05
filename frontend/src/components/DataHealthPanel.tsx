@@ -103,12 +103,12 @@ export function DataHealthPanel() {
   return (
     <div className="card">
       <h2>{t('dataHealth.title')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('dataHealth.subtitle')}
       </p>
 
       {rows.length === 0 && figiDuplicates.length === 0 && (
-        <p className="muted" style={{ marginTop: 0 }}>
+        <p className="muted section-desc">
           {t('dataHealth.empty')}
         </p>
       )}
@@ -173,8 +173,8 @@ export function DataHealthPanel() {
 
       {figiDuplicates.length > 0 && (
         <div style={{ marginTop: rows.length > 0 ? '1.2rem' : 0 }}>
-          <h3 style={{ marginBottom: '0.2rem' }}>{t('dataHealth.figiDuplicates.title')}</h3>
-          <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+          <h3 className="section-title">{t('dataHealth.figiDuplicates.title')}</h3>
+          <p className="muted section-desc">
             {t('dataHealth.figiDuplicates.hint')}
           </p>
           <ul>

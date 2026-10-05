@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import type { AttentionItem, WeeklySummary } from '../api/types'
 import { rangeLabel } from '../format'
 import { useI18n } from '../i18n'
+import { SkeletonCards } from '../components/Skeleton'
 
 function Section({ title, link, linkLabel, children }: { title: string; link: string; linkLabel: string; children: ReactNode }) {
   return (
@@ -19,7 +20,7 @@ function Section({ title, link, linkLabel, children }: { title: string; link: st
 
 function Empty({ text }: { text: string }) {
   return (
-    <p className="muted" style={{ marginTop: 0 }}>
+    <p className="muted section-desc">
       {text}
     </p>
   )
@@ -74,6 +75,8 @@ export function Weekly() {
 
       {error && <div className="notice error">{error}</div>}
 
+      {!summary && !error && <SkeletonCards />}
+
       {summary && (
         <>
           <Section title={t('weekly.policy.title')} link="/portfolio" linkLabel={t('weekly.openPortfolio')}>
@@ -119,7 +122,7 @@ export function Weekly() {
               <Empty text={t('weekly.positions.empty')} />
             ) : (
               <>
-                <p className="muted" style={{ marginTop: 0 }}>
+                <p className="muted section-desc">
                   {t('weekly.positions.note')}
                 </p>
                 <ul className="attention-list">
@@ -194,7 +197,7 @@ export function Weekly() {
               <Empty text={t('weekly.data.empty')} />
             ) : (
               <>
-                <p className="muted" style={{ marginTop: 0 }}>
+                <p className="muted section-desc">
                   {t('weekly.data.note')}
                 </p>
                 <ul className="attention-list">

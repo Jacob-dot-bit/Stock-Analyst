@@ -35,7 +35,7 @@ export function Liquidity() {
   return (
     <div className="card">
       <h2>{t('liquidity.title')}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted section-desc">
         {t('liquidity.subtitle')}
       </p>
 
@@ -68,7 +68,7 @@ export function Liquidity() {
                     <td>
                       {source.provider_name}
                       {source.has_stale && source.stalest_as_of && (
-                        <div className="muted" style={{ fontSize: '0.78rem' }} title={t('valuation.declaredStale', { provider: source.provider_name, date: formatDate(source.stalest_as_of) })}>
+                        <div className="muted text-xs" title={t('valuation.declaredStale', { provider: source.provider_name, date: formatDate(source.stalest_as_of) })}>
                           {t('valuation.declaredStale', { provider: source.provider_name, date: formatDate(source.stalest_as_of) })}
                         </div>
                       )}

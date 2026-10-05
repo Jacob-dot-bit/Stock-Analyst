@@ -5,6 +5,7 @@ import { signClass } from '../format'
 import { useI18n } from '../i18n'
 import { InsightsSection } from './InsightsDetailRow'
 import { ScoreBreakdown } from './ScoreDetailRow'
+import { SkeletonRows } from './Skeleton'
 
 function categoryLabel(category: string | null, t: (key: string) => string): string {
   if (!category) return t('breakdown.unknown')
@@ -204,7 +205,7 @@ export function PositionDetailRow({
 
           <section className="position-detail-section">
             <h4>{t('positionDetail.income')}</h4>
-            {data === 'loading' && <p className="muted">{t('common.loading')}</p>}
+            {data === 'loading' && <SkeletonRows rows={2} />}
             {data === null && <p className="muted">{t('positionDetail.loadError')}</p>}
             {data && data !== 'loading' && data.dividends.length === 0 && (
               <p className="muted">{t('dividends.detailEmpty')}</p>
@@ -244,7 +245,7 @@ export function PositionDetailRow({
 
           <section className="position-detail-section">
             <h4>{t('positionDetail.history')}</h4>
-            {data === 'loading' && <p className="muted">{t('common.loading')}</p>}
+            {data === 'loading' && <SkeletonRows rows={2} />}
             {data && data !== 'loading' && (
               <>
                 <h5>{t('positionDetail.openLots')}</h5>
