@@ -9426,3 +9426,37 @@ sees a dark flash.
 - Polish on top: sticky translucent top bar, segmented nav, larger page
   titles, cards with a subtle top highlight, table headers on a tinted band,
   focus rings, and a reduced-motion guard for the few transitions added.
+
+## Decision 3u.85 — Interface brought up to current web conventions (2026-10-05)
+
+A review of every page at desktop and phone width, with an axe WCAG A/AA
+scan, found the theme work of 3u.84 solid but six gaps against what a
+current web app does. All six are closed:
+
+- **Charts.** `ValueHistoryChart` is drawn at its measured pixel width
+  (`useElementWidth`, a ResizeObserver) instead of stretching a fixed
+  viewBox, so axis text stays at `--fs-xs` on any screen. Hover or the arrow
+  keys show a crosshair and a tooltip with the exact figures for one day,
+  mirrored into a polite live region. A single day of history says so
+  instead of drawing an empty grid. Still no chart library.
+- **Keyboard and screen readers.** `SortableHeader` puts a real button
+  inside the `<th>` and sets `aria-sort`. Action columns get a hidden
+  header, and unlabelled selects and inputs get `aria-label`. axe now
+  reports nothing on any page, best-practice rules included.
+- **Phones.** Below 720px the nav folds behind a menu button in one compact
+  top row and KPI tiles go two per row. Below 640px the positions, watchlist
+  and transactions tables (`.table-stack`) render one card per row, each
+  value labelled through `data-label`. `.table-wrap` is now positioned so
+  hidden header labels can't widen the page.
+- **Consistency.** Every text button shares one height and font size and
+  never wraps. Exclusive options (breakdown dimension, rank-by, verdict
+  filter) use a `.segmented` control with `aria-pressed`. Repeated inline
+  styles became `.card-header`, `.card-section`, `.section-title`,
+  `.section-desc` and `.text-xs` on the spacing and type tokens.
+- **Settings.** The four groups are tabs driven by the URL hash. The ids are
+  the old anchors, so existing links open the right tab.
+- **Loading and performance.** Skeleton placeholders replace "Loading…"
+  text. Pages are lazy routes and the French and Polish catalogues are
+  fetched only when chosen (English stays bundled as the fallback): the
+  main bundle went from 645 kB to 313 kB. Browser tabs are titled after the
+  open page.
