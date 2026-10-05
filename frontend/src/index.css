@@ -724,6 +724,8 @@ td.negative { color: var(--negative); }
 /* --- Score badge + detail (Phase 3 scoring engine) --- */
 
 .score-badge {
+  display: inline-block;
+  min-height: 0;
   cursor: pointer;
   font: inherit;
   font-weight: 600;
@@ -808,6 +810,8 @@ td.negative { color: var(--negative); }
 /* --- Insights: news/sentiment (phase 6) --- */
 
 .insights-badge {
+  display: inline-block;
+  min-height: 0;
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
@@ -1326,6 +1330,8 @@ input:focus, select:focus, textarea:focus {
 
 .symbol-suggestions li button {
   display: block;
+  min-height: 0;
+  white-space: normal;
   width: 100%;
   text-align: left;
   border: none;
