@@ -15,7 +15,7 @@ Real structure observed on 2026 production exports — one sheet per section::
         ...
         Product | Instrument/Position | Ticker | Category | Type | Volume | ...
         My Trades | ASML       | ASML.NL | STOCK |      | 1.0 | ...   <- aggregate row
-        My Trades | 1636247573 | ASML.NL |       | BUY  | 1.0 | ...   <- lot
+        My Trades | 1900000201 | ASML.NL |       | BUY  | 1.0 | ...   <- lot
 
 Four traps this module handles explicitly, each found the hard way on real files:
 
@@ -504,7 +504,7 @@ def _clean_id(value: Any) -> str | None:
     """Normalise a numeric identifier.
 
     openpyxl returns whole numbers from a workbook as floats: without this, the id
-    1677685567 would become the string "1677685567.0".
+    1900000107 would become the string "1900000107.0".
     """
     if value is None:
         return None

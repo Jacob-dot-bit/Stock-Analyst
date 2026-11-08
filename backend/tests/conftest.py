@@ -175,14 +175,14 @@ def xtb_export() -> bytes:
                     ["My Trades", "ASML", "ASML.NL", "STOCK", None, 1.0, 1558.0, None,
                      723.7, None, None, None, 115.28, 834.3, 834.3, None, None, None],
                     # Its lot: direction and time set, category absent.
-                    ["My Trades", 1636247573, "ASML.NL", None, "BUY", 1.0, 1558.0, 1558.0,
+                    ["My Trades", 1900000201, "ASML.NL", None, "BUY", 1.0, 1558.0, 1558.0,
                      723.7, "2025-01-31 13:33:28", None, None, 115.28, 834.3, 834.3, None, None, None],
 
                     ["My Trades", "Nvidia", "NVDA.US", "STOCK", None, 2.0, 1312.08, None,
                      106.53, None, None, None, 88.03, 614.27, 614.27, None, None, None],
-                    ["My Trades", 1630937303, "NVDA.US", None, "BUY", 1.0, 656.04, 217.46,
+                    ["My Trades", 1900000202, "NVDA.US", None, "BUY", 1.0, 656.04, 217.46,
                      120.2, "2025-01-28 15:06:48", None, None, 61.94, 306.13, 306.13, None, None, None],
-                    ["My Trades", 1744899271, "NVDA.US", None, "BUY", 1.0, 656.04, 217.46,
+                    ["My Trades", 1900000203, "NVDA.US", None, "BUY", 1.0, 656.04, 217.46,
                      93.75, "2025-04-04 16:31:15", None, None, 118.51, 308.14, 308.14, None, None, None],
                 ],
             ),
@@ -196,15 +196,15 @@ def xtb_export() -> bytes:
                 CLOSED_HEADERS,
                 [
                     closed_row("Canadian Pacific", "CP.US", 1.0, 77.3, "2025-02-25 18:05:02",
-                               90.07, "2026-05-29 16:06:15", 2.83, 1677685560.0),
+                               90.07, "2026-05-29 16:06:15", 2.83, 1900000100.0),
                     closed_row("Nestle", "NESN.CH", 1.0, 72.18, "2025-09-22 08:10:38",
-                               80.035, "2026-05-29 11:38:30", 9.78, 1677685561.0),
+                               80.035, "2026-05-29 11:38:30", 9.78, 1900000101.0),
                     # Partial close: same "Position ID" as the row below. Seen on real
                     # exports (223 rows for 220 distinct ids).
                     closed_row("Applied Digital", "APLD.US", 1.0, 7.88, "2025-03-31 15:55:55",
-                               37.25, "2026-01-16 20:57:06", 24.35, 1677685567.0),
+                               37.25, "2026-01-16 20:57:06", 24.35, 1900000107.0),
                     closed_row("Applied Digital", "APLD.US", 1.0, 7.88, "2025-03-31 15:55:55",
-                               42.33, "2026-05-15 19:51:17", 30.10, 1677685567.0),
+                               42.33, "2026-05-15 19:51:17", 30.10, 1900000107.0),
                 ],
             ),
             (
@@ -217,15 +217,15 @@ def xtb_export() -> bytes:
                 CASH_HEADERS,
                 [
                     ["Withholding tax", "ASML", "ASML.NL", "STOCK", "2026-08-05 09:59:25",
-                     -0.28, 1386991258, "ASML.NL EUR WHT 15%", "My Trades", 1636247573],
+                     -0.28, 1900000302, "ASML.NL EUR WHT 15%", "My Trades", 1900000201],
                     ["Dividend", "ASML", "ASML.NL", "STOCK", "2026-08-05 09:59:25",
-                     1.88, 1386991257, "ASML.NL EUR 1.8800/ SHR", "My Trades", 1636247573],
+                     1.88, 1900000301, "ASML.NL EUR 1.8800/ SHR", "My Trades", 1900000201],
                     ["Free funds interest", None, None, None, "2026-08-04 14:52:46",
-                     0.01, 1383977734, "Free-funds Interest 2026-07", "My Trades", None],
+                     0.01, 1900000303, "Free-funds Interest 2026-07", "My Trades", None],
                     ["Free funds interest tax", None, None, None, "2026-08-04 14:52:46",
-                     -0.01, 1383977735, "Tax on interest", "My Trades", None],
+                     -0.01, 1900000304, "Tax on interest", "My Trades", None],
                     ["Stock purchase", "Nvidia", "NVDA.US", "STOCK", "2025-01-28 15:06:48",
-                     -120.2, 1130937303, "OPEN BUY 1 @ 120.2", "My Trades", 1630937303],
+                     -120.2, 1900000305, "OPEN BUY 1 @ 120.2", "My Trades", 1900000202],
                     ["Deposit", None, None, None, "2024-01-01 00:00:00",
                      5000.0, 1000000001, "Initial transfer", "My Trades", None],
                     # Subtotal row: must not become an operation.
@@ -253,7 +253,7 @@ def xtb_pea_export() -> bytes:
                 [
                     ["PEA", "TotalEnergies", "TTE.FR", "STOCK", None, 10.0, 620.0, None,
                      55.0, None, None, None, 12.72, 70.0, 70.0, None, None, None],
-                    ["PEA", 1914280470, "TTE.FR", None, "BUY", 10.0, 620.0, 62.0,
+                    ["PEA", 1900000204, "TTE.FR", None, "BUY", 10.0, 620.0, 62.0,
                      55.0, "2025-03-10 10:00:00", None, None, 12.72, 70.0, 70.0, None, None, None],
                 ],
             ),
@@ -263,7 +263,7 @@ def xtb_pea_export() -> bytes:
                 CASH_HEADERS,
                 [
                     ["Dividend", "TotalEnergies", "TTE.FR", "STOCK", "2026-07-03 09:58:01",
-                     0.85, 1341782108, "TTE.FR EUR 0.8500/ SHR", "PEA", 1914280470],
+                     0.85, 1900000306, "TTE.FR EUR 0.8500/ SHR", "PEA", 1900000204],
                 ],
             ),
         ]
