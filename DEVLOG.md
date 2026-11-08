@@ -9444,3 +9444,26 @@ current web app does. All six are closed:
   fetched only when chosen (English stays bundled as the fallback): the
   main bundle went from 645 kB to 313 kB. Browser tabs are titled after the
   open page.
+
+## Step 3u.86 — Repository tidied for a first-time visitor (2026-11-08)
+
+The repository is public, so it was re-read as a stranger would find it.
+
+- **Personal data.** A few entries still quoted figures taken from the real
+  portfolio (a position's value and weight, the drawdown with its peak and
+  trough, sector and currency shares, two cash amounts). They now describe
+  the check without the number. The xStation position and operation ids in
+  the test fixtures were replaced by invented ones, as the account numbers
+  already were.
+- **Wording.** Entries written as notes about "the user" now read in the
+  first person, and quoted requests are paraphrased in English.
+- **Getting started.** The README opens with a quick start that covers
+  Windows (`.venv\Scripts\...`) as well as macOS/Linux. `scripts/make_demo_export.py`
+  writes a fictional XTB export (five holdings, two closed trades, deposits
+  and dividends) so the app can be tried without a broker account;
+  `tests/test_demo_export.py` keeps it importable without warnings.
+- **Housekeeping.** MIT `LICENSE`, and `frontend/README.md` now describes
+  this frontend instead of the Vite template.
+
+Verification: backend suite 1103 passed; `npm run lint` and `npm run build`
+clean.

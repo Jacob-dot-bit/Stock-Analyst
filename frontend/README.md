@@ -1,32 +1,32 @@
-# React + TypeScript + Vite
+# Stock Analyst — frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + TypeScript, built with Vite. Setup and the overall picture are in the
+[main README](../README.md); this file only covers working on the UI.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev     # http://localhost:5173, proxies /api to the backend on :8000
+npm run lint    # oxlint
+npm run build   # type-check (tsc -b) then production build into dist/
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The backend must be running for the pages to show data.
+
+## Layout
+
+| Path | Content |
+|---|---|
+| `src/pages/` | One component per route (Portfolio, Watchlist, Screener, Weekly, …), loaded on demand |
+| `src/components/` | Shared panels, tables and charts |
+| `src/api/` | Typed client for the backend API |
+| `src/i18n/` | Translations: `en.ts`, `fr.ts`, `pl.ts` (same keys in all three) |
+| `src/format.ts` | Number, currency and date formatting for the current locale |
+| `src/theme.ts` | Dark/light theme, saved in `localStorage` |
+| `src/index.css` | Design tokens (CSS variables) and shared layout classes |
+
+## Conventions
+
+- Every visible string goes through `t()`. A new key must be added to all three
+  catalogues (typed as `Catalogue`), or the type check fails.
+- Missing values are shown as missing (`—`), never as `0`.
+- The app describes facts; no text phrases an indicator as an order to buy or sell.
