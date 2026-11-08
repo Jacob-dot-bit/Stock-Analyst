@@ -13,6 +13,12 @@ Available in English, French and Polish.
 along with the bugs encountered and their root causes. This README describes the *current
 state* of the project; the log explains *how it got there*.
 
+![Portfolio page with the demo data: totals and value over time](docs/screenshots/portfolio.png)
+
+![Risk page with the demo data: concentration and maximum drawdown](docs/screenshots/risk.png)
+
+*Screenshots use the fictional demo export described below.*
+
 ## Quick start
 
 Requirements: [Python 3.13+](https://www.python.org/downloads/) and
