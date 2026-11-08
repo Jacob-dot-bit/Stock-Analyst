@@ -13,6 +13,56 @@ Available in English, French and Polish.
 along with the bugs encountered and their root causes. This README describes the *current
 state* of the project; the log explains *how it got there*.
 
+## Quick start
+
+Requirements: [Python 3.13+](https://www.python.org/downloads/) and
+[Node.js 20+](https://nodejs.org/). Everything runs on your own machine; no account or
+API key is needed to start.
+
+**1. Backend** (first terminal)
+
+```bash
+# macOS / Linux
+cd backend
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m uvicorn app.main:app --port 8000
+```
+
+```powershell
+# Windows (PowerShell)
+cd backend
+py -3.13 -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python -m uvicorn app.main:app --port 8000
+```
+
+**2. Frontend** (second terminal, same on every system)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open <http://localhost:5173>. The database (`data/stock_analyst.db`) is created on the
+first start, empty.
+
+**3. Try it without your own data** (optional)
+
+```bash
+cd backend
+.venv/bin/python -m scripts.make_demo_export        # Windows: .venv\Scripts\python -m scripts.make_demo_export
+```
+
+This writes `data/imports/demo-xtb-export.xlsx`, a fictional XTB export (five holdings,
+two closed trades, a few deposits and dividends). Import it from the **Portfolio** page
+(*Import an XTB statement*), then click **Refresh** to fetch prices. Delete
+`data/stock_analyst.db` to start over with an empty app.
+
+Your own data never leaves your machine: the database, imports and backups live in
+`data/` and `backups/`, both excluded from git.
+
 ---
 
 ## Read this first: the XTB API no longer exists
@@ -52,15 +102,14 @@ creates no duplicates. Open positions are a snapshot and replace the previous im
 
 ---
 
-## Getting started
+## Development
 
-Requirements: Python 3.13+, Node 20+.
+Commands below use the macOS/Linux layout (`.venv/bin/...`). On Windows, use
+`.venv\Scripts\...` instead.
 
 ### Backend
 
-```bash
-cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-```
+Run with auto-reload while you work on it:
 
 ```bash
 cd backend && .venv/bin/python -m uvicorn app.main:app --reload --port 8000
@@ -154,9 +203,11 @@ groups forward returns by score quartile and reports the top-minus-bottom spread
 cd backend && .venv/bin/python -m scripts.backtest --start 2021-01-01 --end 2025-01-01 --horizon 12
 ```
 
-Only your own instruments are tested (held, watchlisted, screened), and an instrument
-needs 504 daily bars before it can be scored. Read results with two biases in mind: that
-universe was picked partly with hindsight, and monthly rebalances with a 12-month
+By default only your own instruments are tested (held, watchlisted, screened); the
+**wide** universe (`universe=wide`, or the selector in the panel) adds every instrument
+with stored fundamentals. `python -m scripts.backfill_prices --with-fundamentals` pulls
+the price history it needs. An instrument needs 504 daily bars before it can be scored. Read results with two biases in mind: your own
+universe was picked partly with hindsight (the wide one has survivorship bias), and monthly rebalances with a 12-month
 horizon overlap, so months are not independent trials. The panel flags a result with
 fewer than 12 months or 20 instruments as too thin to read.
 
@@ -352,3 +403,10 @@ actually served the data.
 - Stooq was dropped as a source: it now serves a JavaScript proof-of-work anti-bot
   challenge instead of CSV, and defeating that is out of scope for this project.
 - No scraping of Finviz or TradingView: against their terms.
+
+---
+
+## License
+
+[MIT](LICENSE). This tool produces indicators from public data; it is not investment
+advice.
