@@ -230,7 +230,7 @@ and the final summary notice replaces it.
 
 ## Bug 2b.4 — Portfolio total didn't match the real, current broker value
 
-**Symptom.** User reported the app showing [montant A] while their broker platform showed
+**Symptom.** I noticed the app showing [montant A] while my broker platform showed
 [montant B] right after clicking "Refresh prices" — a small (~1.7%) gap that refreshing
 repeatedly did not close.
 
@@ -314,7 +314,7 @@ triggers past 8 slices.
 
 ## Step 2b.5 — Live-estimated portfolio value with FX conversion (Phase B, 2026-08-14)
 
-**Context.** Direct follow-up to Bug 2b.4: the user wanted the gap between the
+**Context.** Direct follow-up to Bug 2b.4: I wanted the gap between the
 two computed totals actually closed, not just explained. Doing that correctly requires
 converting each holding's price into the base currency — the thing the codebase
 had explicitly avoided until now for lack of a reliable FX source (see README
@@ -401,7 +401,7 @@ data itself is the problem.
 ## Step 2b.6 — Manual "Recalculate" for the live estimate (2026-08-14)
 
 **Context.** After the Frankfurter fix, the estimate landed within ~0.5% of the
-real total, down from 57%. User asked how often it refreshes.
+real total, down from 57%. I wanted to know how often it refreshes.
 Answer at the time: only on page load and after another action re-triggers
 `load()` (import, price refresh, position add/delete) — no background timer.
 
@@ -424,9 +424,9 @@ here so it is not re-investigated as a bug later.
 
 ## Step 2b.7 — Budgeted "fetch fresh prices" for the live estimate (2026-08-14)
 
-**Context.** Follow-up to 2b.6: user asked whether the live estimate could
+**Context.** Follow-up to 2b.6: could the live estimate
 refresh more often using other free sources, not just once a day. Live-tested
-Yahoo's chart endpoint directly during this conversation and got back **HTTP
+Yahoo's chart endpoint directly during the investigation and got back **HTTP
 429** — a real, present rate-limit, not a hypothetical one. Combined with the
 existing 5s-per-request Yahoo throttle, fetching a live quote for all 37 held
 instruments would take **~185 seconds** for that source alone. A "just fetch it
@@ -514,7 +514,7 @@ proves to be a frequent, not occasional, occurrence in practice.
 
 ## Step 2b.8 — Every enabled provider became quote-capable, not just Yahoo (2026-08-14)
 
-**Context.** User's reaction to Bug 2b.6, fairly: with 17 sources already
+**Context.** Second thought after Bug 2b.6: with 17 sources already
 integrated, "only Yahoo supports quotes" was a self-inflicted limit, not a real
 one. Reconsidered the "deliberately not built" call from 2b.7 in that light.
 
@@ -545,8 +545,8 @@ reworded to "every configured source that could serve these instruments."
 
 ## Step 2b.9 — Signup links on the Settings page (2026-08-14)
 
-**Context.** After seeing quote coverage improve via multi-source fallback, user
-asked to add each keyed provider's free-signup link directly on the Settings
+**Context.** After seeing quote coverage improve via multi-source fallback, the next
+step was to add each keyed provider's free-signup link directly on the Settings
 page, rather than having to look them up elsewhere.
 
 **Delivered.** `ProviderStatus` gained `signup_url`, populated in
@@ -565,7 +565,7 @@ since the page shipped. Corrected to the real variable names.
 
 ## Bug 2b.7 — Three dead API-key fields, one silently-broken one
 
-**Symptom.** User asked why some providers show an API key input and others
+**Symptom.** I wanted to know why some providers show an API key input and others
 don't, and on inspection found the inconsistency wasn't only about "needs a key
 vs doesn't" — some fields were there but pointless.
 
@@ -611,11 +611,11 @@ never read the value.
 
 ## Step 2b.10 — Settings page only lists what it can actually change (2026-08-14)
 
-**Context.** Follow-up question from the same conversation: even after 2.4's
+**Context.** Follow-up question: even after 2.4's
 fix, the page still listed all 17 providers, six of them (Yahoo, Boursorama,
 Frankfurt, Stooq, Eoddata, Finviz) with no key field — `is_enabled()` is
 unconditionally `True` for all six, so their "Enabled" badge was never
-actionable either. User asked, reasonably: what is the point of a row with
+actionable either. Fair question: what is the point of a row with
 nothing to interact with, on a page whose entire purpose is configuring keys.
 
 **Decision.** Filter the list to `has_api_key` providers only. The six keyless
@@ -632,7 +632,7 @@ source has no real use case that a key-focused Settings page needs to serve.
 
 ## Bug 2b.8 — Full signup-link audit: 2 dead providers, 1 broken URL, 2 stale links
 
-**Context.** Triggered by the user hitting one bad link (Polygon → redirected
+**Context.** Triggered by hitting one bad link (Polygon → redirected
 to `massive.com`). Rather than patch that single link, live-tested every
 signup URL and, for the ones that looked suspicious, the actual API endpoint
 each provider's code calls — since a marketing-site rename (harmless) and an
@@ -767,7 +767,7 @@ fetch logic as providers change.
 
 ## Bug 2b.9 — Saved key never took effect until backend restart
 
-**Symptom.** User tested an Alpha Vantage key (not yet saved) with the new
+**Symptom.** I tested an Alpha Vantage key (not yet saved) with the new
 "Test" button, got a valid result, clicked Save, and the provider still
 showed "Disabled" afterward.
 
@@ -823,7 +823,7 @@ refresh cadence — which is exactly what surfaced it.
 
 ## Bug 2b.11 — Tiingo's free tier dropped historical date ranges entirely
 
-**Symptom.** User tested a Tiingo key, got `HTTP 400`. The bare status code
+**Symptom.** I tested a Tiingo key, got `HTTP 400`. The bare status code
 gave no clue why — same problem as the earlier Barchart/Frankfurter
 investigations, so the fix started the same way: read the actual response
 body, not just the code.
@@ -870,7 +870,7 @@ just narrowed from two capabilities to one.
 
 ## Bug 2b.12 — Polygon: legacy host, and a parsing bug never exercised until now
 
-**Context.** User shared Massive's official machine-readable API docs
+**Context.** I shared Massive's official machine-readable API docs
 (under `massive.com/docs/rest/`), suggested specifically to avoid
 guessing endpoint details — fetched them rather than
 continuing to rely on the `api.polygon.io` host verified back at Bug 2b.8.
@@ -966,7 +966,7 @@ testing proves nothing about the success path, and neither does "the error
 changed" without checking that the new error is a *smaller, more specific*
 problem than the last one, not just a different label for the same one.
 
-**Verified fixed, with real keys, same day.** User re-tested all five
+**Verified fixed, with real keys, same day.** I re-tested all five
 affected/adjacent providers via the "Test key" button:
 
 | Provider | Result |
@@ -986,7 +986,7 @@ testing the rejection path.
 
 ## Step 2b.13 — Three new FMP capabilities: quote, sector enrichment, name search (2026-08-14)
 
-**Context.** User shared FMP's own onboarding docs (four starter endpoints:
+**Context.** I shared FMP's own onboarding docs (four starter endpoints:
 search-by-name, quote, profile, income-statement). Two of the four map
 directly onto real, previously-unmet needs from this phase; implemented
 all three usable ones (income-statement is phase-3/scoring scope, deferred).
@@ -1045,16 +1045,16 @@ after every rename and reverted.
 
 ## Note — live verification of Step 2b.13, and a caveat on Intrinio (2026-08-15)
 
-App launched (backend + frontend, both already running from the user's own
+App launched (backend + frontend, both already running from my own
 session — reused rather than starting duplicates) and inspected directly
 rather than taking results on faith.
 
 **Sector enrichment confirmed working end-to-end.** 23 enriched, 0 failed,
-breakdown chart correctly shows Technology 43.8%, Financial Services 3.7%,
-etc., with the expected "Unknown" bucket (42.6%) for non-US holdings FMP's
+breakdown chart correctly shows Technology, Financial Services,
+etc., with the expected "Unknown" bucket for non-US holdings FMP's
 free tier cannot cover — matches the design in Step 2b.13, not a bug.
 
-**Intrinio is trial-only, not a permanent free tier.** User reports Intrinio
+**Intrinio is trial-only, not a permanent free tier.** I noticed Intrinio
 only offers a time-limited free trial rather than an ongoing free plan like
 the other keyed providers here. Unlike IEX Cloud/WTD/Quandl (Bug 2b.8, "Bug
 2.6"), this isn't dead — it works today — but it will stop working once the
@@ -1108,7 +1108,7 @@ the user for a real export.
 
 # Phase 1b — Meeting the real files (2026-08-12)
 
-Two production exports supplied by the user: a brokerage account and a tax-wrapper account.
+Two production exports from my own accounts: a brokerage account and a tax-wrapper account.
 **Initial result: "0 positions, 0 operations, no table recognised".**
 
 This confrontation exposed **seven bugs** the synthetic file could never have surfaced —
@@ -1147,7 +1147,7 @@ company name is now used and displayed under the symbol.
 
 ```
 My Trades | ASML       | ASML.NL | STOCK |     | 1.0 | ...   <- aggregate row
-My Trades | 1636247573 | ASML.NL |       | BUY | 1.0 | ...   <- lot
+My Trades | 1900000201 | ASML.NL |       | BUY | 1.0 | ...   <- lot
 ```
 
 One holding = one aggregate row + N lot rows. On the real files, **38 positions occupy 153
@@ -1196,7 +1196,7 @@ duplicates.
 
 ## Bug 1b.6 — Numeric identifiers rendered as floats
 
-**Symptom.** `external_id` came out as `"1677685567.0"` instead of `"1677685567"`.
+**Symptom.** `external_id` came out as `"1900000107.0"` instead of `"1900000107"`.
 
 **Cause.** openpyxl returns whole numbers from a workbook as `float`.
 
@@ -2158,7 +2158,7 @@ concrete: **Alembic is needed before the next schema change**, not before phase 
 
 ## Decision 2e.4 — Route by market, and make the redundancy inspectable
 
-Asked for more sources so that exhausting one leaves others. The chain already fell
+Wanted more sources so that exhausting one leaves others. The chain already fell
 through on failure, but it tried **every** provider in the same fixed order — so a French
 holding spent a request on Twelve Data and another on FMP to be told, twice, something
 already measured: their free tiers stop at the US border.
@@ -2218,7 +2218,7 @@ The portfolio page offered three separate "update data" buttons: *Rafraîchir le
 cours* (refreshes the cached daily-bar history, budgeted), *Recalculer* (rereads
 whatever is already cached for the live estimate, instant), and *Prix frais*
 (spends real provider quota fetching genuinely live quotes for the live estimate,
-budgeted). Asked directly whether that is good practice — it was not.
+budgeted). Is that good practice? It was not.
 
 `loadLiveEstimate()` was already being called automatically at the end of every
 `load()` in `Portfolio.tsx` (after import, after a price refresh, after adding or
@@ -2239,7 +2239,7 @@ live quote.
 
 ## Decision 2f.2 — One "Actualiser" button, not two (2026-08-15)
 
-Asked directly again, this time about the remaining two: real platforms don't make
+Revisited, this time about the remaining two: real platforms don't make
 the user choose between "update the history" and "update the live price" — they
 either poll live automatically, or offer one button that means "make everything as
 fresh as possible now." True automatic polling is not realistic here (see Decision
@@ -2269,7 +2269,7 @@ per-symbol retry, it always covers the whole portfolio, so re-running it for a
 three-symbol retry would spend the full live-quote budget for zero new coverage.
 
 **Also fixed while in this area — the live estimate's freshness was unlabelled.**
-Asked whether the "valeur actuelle estimée" figure reflects the live quotes just
+Checked whether the "valeur actuelle estimée" figure reflects the live quotes just
 fetched or older cached closes — it was impossible to tell from the UI in the
 all-cached case (the old "N positions au prix en direct" line only rendered when
 `liveCount > 0`). `LiveEstimatePanel` now always renders a freshness line: either
@@ -2287,7 +2287,7 @@ stat grid, which is easy to stop reading after the first glance.
 
 ## Decision 2f.3 — Primary totals recompute live; the frozen-import design is retired (2026-08-15)
 
-Asked directly for the thing "Decision 2f.2"'s import-date labels had been working
+Wanted the thing "Decision 2f.2"'s import-date labels had been working
 around: stop labelling "Valeur de marché" / "Résultat latent" / "Performance" as
 frozen at import, and make them actually current. This reverses "Bug 2.1"'s original
 call (never recompute the broker's own figures, keep them "trustworthy to the
@@ -2322,7 +2322,7 @@ as the plain GET, fully recomputed with whatever quotes it fetched — so
 `RefreshPanel`'s second phase (see "Decision 2f.2") replaces the page's state
 directly with one response, no extra round trip.
 
-**The secondary "Valeur actuelle estimée" card is retired**, per the user's explicit
+**The secondary "Valeur actuelle estimée" card is retired**, per my explicit
 choice among three options (remove it / shrink it to a freshness note / keep it
 as-is) — asked because it would otherwise duplicate what the primary totals now
 show. Its one genuinely useful bit, per-instrument freshness, already has a home:
@@ -2385,7 +2385,7 @@ comparison — not assumed equal — before `scoring.yaml` gets designed.
 
 ## Decision 3b.1 — A real historical value chart, built on a ledger the export already had (2026-08-15)
 
-Asked for a "historical portfolio value" chart. The naive version — replay *today's*
+Wanted a "historical portfolio value" chart. The naive version — replay *today's*
 holdings against past prices — was rejected on request: it answers "how would my
 current basket have done," not "how did my money actually do," and only the second
 question supports an honest benchmark comparison later (item #9), since it reflects
@@ -2474,7 +2474,7 @@ reconstruction" was chosen over a cheaper backtest in the first place.
 
 ## Decision 3c.1 — Wikidata as a second sector source, for what FMP's free tier can't reach (2026-08-15)
 
-Triggered by the real portfolio's sector breakdown showing 41.8% "Inconnu" — much more
+Triggered by the sector breakdown showing a large "Inconnu" share — much more
 than the ETF-only gap that would be structurally unavoidable. Investigated rather than
 assumed: every US holding already had a correct, FMP-sourced sector; the entire gap was
 9 European stocks (LVMH, ASML, TotalEnergies, Sanofi, Air Liquide, ArcelorMittal, Air
@@ -2533,7 +2533,7 @@ predicted from the manual live testing above (ASML→Technology, LVMH→Consumer
 TotalEnergies→Energy, Sanofi→Healthcare, Air Liquide→Basic Materials,
 ArcelorMittal→Basic Materials, Dassault Systèmes→Technology); Air France-KLM and Orange
 correctly stayed "Inconnu" (no mappable industry data on Wikidata for either — an honest
-gap, not a resolution failure). "Inconnu" dropped from 41.8% to 19.9% of the portfolio,
+gap, not a resolution failure). "Inconnu" shrank to a small residual share,
 the remainder being the 5 ETFs, the CVR, and those two. 8 new tests in
 `test_wikidata.py` (mocked, no live network calls in the suite) covering the rank-order
 selection, the "correct entity, no mappable industry" stop condition, and defensive
@@ -2581,8 +2581,8 @@ verified from English fixture data alone.
 
 ## Decision 3e.1 — Benchmark comparison via a cash-flow-matched shadow portfolio (2026-08-16)
 
-Item #9. The chosen index: **S&P 500**, matching the portfolio's own ~80% US
-concentration — decided with the user rather than assumed.
+Item #9. The chosen index: **S&P 500**, matching a mostly US-listed
+portfolio — a deliberate choice rather than an assumption.
 
 **Not a price-ratio overlay.** For each real `Lot`, the benchmark series asks "how many
 benchmark units would this same cash have bought, on the same real opening date" (a
@@ -2678,7 +2678,7 @@ reappeared mid-stream at its real, current count instead of a blank "Refresh" bu
 ## Decision 3g.1 — Full transaction management: create, correct, delete (2026-08-18)
 
 Item #10 of the original list was only ever half-built ("Decision 3d.1" gave the ledger a
-read-only view). The user caught this directly when it was reported as done in a status
+read-only view). I caught this directly when it was reported as done in a status
 summary — it wasn't, only *visibility* was — so this closes the actual gap: hand-entered
 transactions, correcting a wrong amount/date/account/comment, and deleting a row.
 
@@ -2857,11 +2857,11 @@ the SQLite DB (`data/stock_analyst.db`) was `644` (world-readable), `.env` (prov
 keys, plaintext, "Decision 2.7") was `664`, and the backend has **zero authentication of
 any kind** — CORS restricts what a browser's JS can read back, but does nothing against a
 plain script or another machine, so the only real boundary was "uvicorn happens to default
-to binding `127.0.0.1`." Presented the user with the real trade-off before building
+to binding `127.0.0.1`." Weighed the real trade-off before building
 anything: lightweight permission/network hardening (no new dependency, no friction) versus
 full SQLCipher encryption-at-rest (a new compiled dependency, a data migration, and a
 passphrase entry on every single app start, for a personal single-user tool whose DB has
-never left the local disk). **User chose lightweight hardening.**
+never left the local disk). **I chose lightweight hardening.**
 
 **File permissions**, tightened wherever the file is created or rewritten, not just once:
 `get_settings()` (`config.py`) chmods `DATA_DIR` to `700` and either `.env` location to
@@ -2897,7 +2897,7 @@ guard doesn't break the app's own normal traffic pattern.
 
 ## Decision 3l.1 — Surface rate-limit exhaustion on the Settings page (2026-08-19)
 
-Asked directly: add visibility into API "épuisement" (rate-limit exhaustion) somewhere.
+Needed: add visibility into API "épuisement" (rate-limit exhaustion) somewhere.
 Turned out this was mostly already built and just never wired up: `GET /api/prices/
 providers` (`routers/prices.py:117-151`) already computes a real, per-provider
 `cooling_down` flag (backed by `Cooldown` in `providers/base.py:180-207` — an in-memory,
@@ -2933,7 +2933,7 @@ clean; backend untouched, 349 passed unaffected.
 
 ## Decision 3m.1 — Real per-provider quota counters, not just the cooldown badge (2026-08-19)
 
-Follow-up to "Decision 3l.1": the user actually wanted to know how many requests are
+Follow-up to "Decision 3l.1": I actually wanted to know how many requests are
 left against each provider's real free-tier limit, not just whether one is currently
 backing off. No usage counter existed anywhere — only hardcoded description strings
 like "FMP: 250 req/day free".
@@ -2999,7 +2999,7 @@ near-limit styling turns the note red/bold past 80% — no console errors at any
 
 Reported directly after 3m.1 shipped: Polygon and Alpha Vantage's cards still showed
 only coverage, no usage — the deliberate exclusion (a per-minute figure being "stale
-the instant anyone reads it") wasn't what the user wanted; they wanted the number
+the instant anyone reads it") wasn't what I wanted; I wanted the number
 regardless of how fast it moves. Reversed that call.
 
 Added both to `QUOTA_LIMITS` (5/minute each) and a third `period_key_for` branch —
@@ -3020,13 +3020,13 @@ without any cleanup job. No console errors.
 
 ## Decision 3n.1 — Parallelize the price refresh across instruments, not across providers (2026-08-19)
 
-Asked directly to speed up refreshes. Two ways to parallelize were real options: race
+Next goal: faster refreshes. Two ways to parallelize were real options: race
 several providers in the fallback chain for one instrument and keep whichever answers
 first, or process several *different* instruments concurrently, each still trying its
 own provider fallback chain in order. The first wastes quota on providers whose answer
 turned out not to be needed — exactly what `can_serve()`'s "quota spent to learn
 something already known" design already exists to avoid, and in direct tension with
-the usage tracking just built (3m.1/3m.2). **User picked the second, explicitly.**
+the usage tracking just built (3m.1/3m.2). **I picked the second, explicitly.**
 
 **Nothing about this was safe to just do**, though — three pieces of previously
 single-threaded state needed fixing first:
@@ -3127,8 +3127,8 @@ handling were built to prevent.
 
 ## Decision 3n.2 — Doubled concurrency, then found the real remaining bottleneck was provider order (2026-08-19)
 
-Asked to speed refreshes up further after 3n.1. Bumped `MAX_CONCURRENT_REFRESHES` from
-4 to 8 (user's explicit call, presented with the trade-off — more simultaneous
+Pushed refreshes further after 3n.1. Bumped `MAX_CONCURRENT_REFRESHES` from
+4 to 8 (a deliberate trade-off — more simultaneous
 connections to free tiers, a bit more SQLite write contention, no additional quota
 waste since Throttle still paces each provider individually regardless of pool size).
 
@@ -3137,7 +3137,7 @@ forced refresh with the wider pool took *longer* in absolute terms (361s vs 3n.1
 309s) despite completing strictly more work (38/38 vs 37/38 remaining). Root cause,
 confirmed from `provider_usage`: 24 of 38 instruments (63%) were served by Polygon,
 whose own 12s/request throttle is a hard floor no pool size changes — Polygon alone
-accounted for ~288s of unavoidable serialised time. User confirmed this matches their
+accounted for ~288s of unavoidable serialised time. I confirmed this matches my
 actual daily experience, not just today's testing: a normal "Actualiser" click
 regularly takes several minutes.
 
@@ -3163,13 +3163,13 @@ Yahoo is unavailable (~184s instead of ~276s for that share alone), and hit a
 per-minute cap only a third as restrictive.
 
 Not re-verified with another full forced refresh — two already run today for 3n.1/
-3n.2 testing is enough real quota spent for one day; the next normal refresh (the
-user's own, not a forced test) is the honest measurement.
+3n.2 testing is enough real quota spent for one day; the next normal refresh (a
+regular one, not a forced test) is the honest measurement.
 
 ## Decision 3o.1 — Persist the last live quote, so a reload doesn't lose it (2026-08-19)
 
-Traced from the user comparing our displayed market value against the real XTB
-platform and seeing a real gap (~159€ on this portfolio). Root cause, confirmed with
+Traced from comparing our displayed market value against the real XTB
+platform and seeing a real gap. Root cause, confirmed with
 real data: `quote_service.py`'s live quotes were deliberately never persisted (kept
 in memory, one HTTP response's lifetime only — correct, so they'd never corrupt
 `PriceBar`'s daily-close semantics) — but that meant the instant a user reloaded the
@@ -3218,7 +3218,7 @@ data was left in the user's real portfolio.
 
 Phase-2 open item: XTB's export gives an Open/Close Conversion Rate for every
 closed trade, but the app only ever parsed it into `raw` and never used it. Ask,
-confirmed with the user: split each closed trade's realized P&L into how much came
+confirmed: split each closed trade's realized P&L into how much came
 from the stock's own price moving versus how much came from the exchange rate
 moving since the trade opened. Scoped to **closed trades only** — XTB only reports
 these rates for closed positions; unrealized/open-position attribution would need a
@@ -3342,7 +3342,7 @@ stray Stooq row or broken rendering; no browser console errors.
 DEVLOG's own roadmap flagged a blocker before writing `scoring.yaml`: decide whether
 the score follows one investing philosophy or blends several, since named
 methodologies (value, growth, quality/momentum, technical, sentiment) don't agree
-with each other. Resolved with the user: **blended pillars** — Value, Growth,
+with each other. Resolved: **blended pillars** — Value, Growth,
 Quality, Technical (sentiment/news stays Phase 6's separate news/commentary, kept
 separate per Decision 0.3) — each pillar weighted, missing data dropped and
 weights renormalised, extending Decision 1.2's rule ("a pillar without data is
@@ -3361,7 +3361,7 @@ expected_name calling convention follows `EdgarProvider.resolve()`'s documented
 contract exactly (`broker_symbol` root, `expected_name` only for non-US instruments)
 — the same discipline that avoided Bug 3a.3's ticker-collision class.
 
-**Deliberately no `instruments` schema change.** The user had just chosen Phase 3
+**Deliberately no `instruments` schema change.** I had just chosen Phase 3
 over introducing Alembic; adding fundamentals-bookkeeping columns to `Instrument`
 right now would be exactly the kind of hand-written `ALTER TABLE` that choice was
 meant to defer. "Already checked, and when" is answered by querying the new
@@ -3419,7 +3419,7 @@ mapping; end-to-end API tests). Full suite green at 436 passed. `tsc -b`/lint cl
 root `tsconfig.json` has `files: []` and only project references); the real
 typecheck is `tsc -b`, matching the `build` script. Verified live: real held
 STOCK/ETF holdings show real composite scores (Technical-only for now —
-`SEC_USER_AGENT` isn't set in this deployment's `.env` yet, flagged for the user to
+`SEC_USER_AGENT` isn't set in this deployment's `.env` yet, flagged, to
 add whenever they want the Value/Growth/Quality pillars to actually score — format
 `"First Last email@example.com"`, `.env.example:27-29`); the expand row shows the
 correct per-pillar breakdown, including honestly labelled dropped reasons for every
@@ -3432,7 +3432,7 @@ inspection, to not reflect the app's actual current state).
 
 ## Decision 3s.1 — SEC_USER_AGENT configurable from the Settings page (2026-08-20)
 
-Direct follow-up to 3r.1: the user asked why clicking "Fetch fundamentals" did
+Direct follow-up to 3r.1: I wanted to know why clicking "Fetch fundamentals" did
 nothing useful, and — more generally — asked that anything a fresh clone of this
 repo needs configured to actually work be reachable from Settings, not left as a
 hand-edit-`.env`-and-restart step. The immediate cause: `SEC_USER_AGENT` genuinely
@@ -3570,7 +3570,7 @@ whole portfolio, including NTES/DOYU.
 
 **Symptom.** Fixing 3s.3 immediately exposed a second failure: three tests that
 assert "SEC EDGAR is disabled with no key configured" started failing the moment
-the user saved a *real* `SEC_USER_AGENT` through the running app — in a completely
+I saved a *real* `SEC_USER_AGENT` through the running app — in a completely
 separate process, hitting the real project `.env`, not anything the test process
 itself wrote.
 
@@ -3610,14 +3610,14 @@ Direct follow-up to 3s.1/3r.1: with `SEC_USER_AGENT` finally configured, a real
 fundamentals refresh confirmed 4 real holdings SEC EDGAR genuinely cannot reach —
 Air Liquide (AI.FR), LVMH (MC.FR), Dassault Systèmes (DSY.FR), Air France KLM
 (AF.FR) — none are SEC filers under any discoverable ticker (consistent with Phase
-3a's original finding). Asked directly whether a second source was worth it before
+3a's original finding). Checked whether a second source was worth it before
 building anything: researched real alternatives, not just providers already in this
 app. FMP, EODHD, Alpha Vantage and Twelve Data — all already keyed in this app for
 prices — paywall non-US fundamentals on their free tier, confirmed live with real
 402/403 responses. Found one genuine free, official source:
 **[filings.xbrl.org](https://filings.xbrl.org)**, XBRL International's public
 repository of ESEF filings — the EU's own mandatory XBRL annual-report format for
-listed companies, in force since fiscal year 2020. Confirmed with the real user:
+listed companies, in force since fiscal year 2020. Confirmed:
 exactly two sources, additive — EDGAR (US) primary, ESEF (EU) fallback — a third
 source was explicitly considered and rejected as premature for what a retail
 portfolio like this one holds.
@@ -3677,7 +3677,7 @@ SEC index but file no usable XBRL) still falls through to ESEF; so does a
 disabled EDGAR (no `SEC_USER_AGENT`) and even a transient EDGAR rate-limit, on the
 principle that maximising this run's actual coverage beats leaving an instrument
 empty over something the second source might still answer. Deliberately two
-explicit steps, not a generalised N-provider chain — the user's own choice that two
+explicit steps, not a generalised N-provider chain — my own choice that two
 sources are enough. `NO_PROVIDER` now means something narrower and more honest than
 before: neither source was even *attempted* (EDGAR disabled and the instrument has
 no name to search ESEF with either), distinct from `SYMBOL_NOT_FOUND` (at least one
@@ -3709,7 +3709,7 @@ every metric labelled "Missing data", real numbers everywhere else — no consol
 errors.
 
 **Follow-up, same day: two of the three missing Value tags were real gaps, not a
-structural limit.** Asked directly whether the "Value: No data" case for 3 of the 4
+structural limit.** Checked whether the "Value: No data" case for 3 of the 4
 companies was fixable. Checked live rather than assumed: all three do report
 `ifrs-full:LongtermBorrowings` for debt — a real tag simply absent from
 `IFRS_CONCEPT_TAGS["debt_long_term"]`'s candidate list (which only had
@@ -3767,7 +3767,7 @@ Full suite still green at 462 passed.
 
 ## Decision 3u.1 — Sort every positions-table column, not just four (2026-08-20)
 
-Asked directly for the investments table to be sortable by any column, ascending or
+Wanted the investments table to be sortable by any column, ascending or
 descending. The existing control was a "Sort by" `<select>` covering only 4 of the
 table's 13 columns (value, unrealised, performance, symbol) — replaced entirely
 with clickable column headers, the conventional spreadsheet pattern: click a header
@@ -3803,7 +3803,7 @@ running app has no real error.
 
 ## Bug 3u.2 — The positions table's right-hand columns were reachable, not visible (2026-08-20)
 
-**Symptom.** User reported the table "isn't big enough" and the right-hand columns
+**Symptom.** I noticed the table "isn't big enough" and the right-hand columns
 weren't visible.
 
 **Cause, found live rather than guessed.** Two compounding things. First,
@@ -3834,8 +3834,8 @@ land inside the visible client rect afterward. No console errors. CSS-only chang
 
 ## Decision 3u.3 — Score breakdown: percentages as percentages, not raw decimals (2026-08-20)
 
-Asked directly whether the scoring engine's metrics were clear enough. Real gap
-found on review, confirmed by the user: `ScoreDetailRow` printed every metric's raw
+Checked whether the scoring engine's metrics were clear enough. Real gap
+found on review, confirmed: `ScoreDetailRow` printed every metric's raw
 value through the same generic `formatNumber(value, 3)`, so a 7.2% revenue CAGR
 showed as "0.072" and a 1.91% FCF yield as "0.0184" — technically correct, but
 demanding mental conversion on every read.
@@ -3853,8 +3853,7 @@ sign would be redundant there. `pe_ratio`, `pb_ratio` and `debt_to_equity` are
 deliberately left alone — these are conventionally read as plain ratios, not
 percentages, and converting them would be the opposite mistake. The five binary
 Quality metrics (pass/fail, shown as `1`/`0`) are untouched too — out of scope for
-this round, flagged as a possible further polish but not something the user asked
-for yet.
+this round, flagged as a possible further polish but not something I had asked for yet.
 
 No backend change — purely a display-layer fix, the raw fractional values already
 computed and sent by `scoring/metrics.py` were always correct; only how the
@@ -3889,9 +3888,9 @@ Second flagged item. The app already imports every dividend payment as a
 coverage gap for a pillar named after exactly the investing style (Graham/Buffett)
 that weighs shareholder yield.
 
-Two designs were on the table; the user explicitly chose the more rigorous one.
+Two designs were on the table; I explicitly chose the more rigorous one.
 The simple option (trailing-12mo dividends received ÷ current position value) was
-rejected as a personalized "yield on cost" — it depends on the user's own entry
+rejected as a personalized "yield on cost" — it depends on my own entry
 timing and position size, not a market-comparable yield, and risks misreading as a
 value signal (the classic yield-on-cost trap). Instead: replay the `Lot` ledger
 (the same mechanism `history_service.py::compute_value_history` already uses to
@@ -3947,7 +3946,7 @@ re-checked by hand against ORA.FR's real numbers (4 of 5 metrics scored, weights
 25+20+20+15=80 renormalizing correctly to the pillar's 93.83 composite) — matches
 exactly.
 
-**Follow-up fix, same day**: user caught a real regression from the change above
+**Follow-up fix, same day**: I caught a real regression from the change above
 before it shipped further — SPEA.FR and DCAM.FR (accumulating/swap ETFs, verified
 live to have real lot history but **zero** dividend transactions ever) dropped from
 a composite of ~95 to 38. Cause: these ETFs' Value pillar used to be entirely
@@ -4138,7 +4137,7 @@ something themselves.
 
 ## Decision 3u.9 — Fundamentals refresh gets a real progress bar (2026-08-21)
 
-Asked directly: give the fundamentals refresh the same progress bar price
+Needed: give the fundamentals refresh the same progress bar price
 refresh already has. `FundamentalsRefreshButton.tsx`'s own docstring said a
 full run is "seconds, not minutes" — true when written (Decision 3r.1), no
 longer true since ESEF was added (Decision 3t.1): EDGAR alone is ~28
@@ -4203,7 +4202,7 @@ not_applicable (the ETFs), 0 failed, total wall-clock 41 seconds.
 
 ## Decision 3u.10 — A reference map, not just a log (2026-08-21)
 
-User asked directly why finalizing Phase 4 (Watchlist) took so much exploring,
+I asked directly why finalizing Phase 4 (Watchlist) took so much exploring,
 and whether it was avoidable. Real answer: this app's own "reuse, don't
 duplicate" culture only works if what already exists is actually findable —
 and `WatchlistItem` had sat unused and completely undocumented since the
@@ -4239,7 +4238,7 @@ Added two new root-level files:
 
 Real test of the rule, immediately: this very entry is the fix for the rule
 almost being broken on its first day — the conventions/ARCHITECTURE.md work
-itself had no DEVLOG entry until the user asked "is the DEVLOG up to date?"
+itself had no DEVLOG entry until I checked whether the DEVLOG was up to date
 and the honest answer was no.
 
 ## Decision 3u.11 — Phase 5: hidden gems screener, and a latent Watchlist gap fixed along the way (2026-08-22)
@@ -4319,7 +4318,7 @@ passed.
 Phase 6 was scoped from the start (Decision 0.3) as paid qualitative
 commentary — one instrument at a time, on explicit request, 7-day cache,
 never contributing to the score. That design still stands. What changed:
-the user asked for it alongside a free complement, Alpha Vantage's
+I asked for it alongside a free complement, Alpha Vantage's
 `NEWS_SENTIMENT` endpoint — real recent headlines plus a per-instrument
 sentiment score, no paid commentary involved, at no cost.
 
@@ -4426,7 +4425,7 @@ as "verified live":**
 
 ## Decision 3u.13 — Watchlist target-price alerts, in-app only (2026-08-24)
 
-Asked directly what the app was still missing after all six roadmap phases;
+Took stock of what the app was still missing after all six roadmap phases;
 the answer picked as most impactful: the Watchlist already computes
 `distance_to_target_pct` per item, but nothing surfaces "a target was
 reached" anywhere except the row's own highlighting on the Watchlist page
@@ -4540,8 +4539,8 @@ Verification: 572 backend tests pass (11 new), `tsc -b`/`oxlint` clean.
 
 ## Decision 3u.16 — Reject-on-add guardrail for symbols no provider recognizes (2026-08-26)
 
-Root cause of a real support question ("on n'arrive pas à récupérer les
-fondamentaux et les prix"): the actual portfolio was fine (44/46 prices,
+Root cause of a real problem (fundamentals and prices seemed impossible
+to fetch): the actual portfolio was fine (44/46 prices,
 37/42 relevant fundamentals — the rest were legitimately not-applicable
 indices/ETFs). The genuine failures were three watchlist rows added minutes
 apart while hunting for the right ticker format for the same company
@@ -4724,22 +4723,20 @@ backend tests pass.
 
 ## Decision 3u.19 — Position/watchlist signals: a transparent score+allocation combination, not a verdict (2026-08-27)
 
-User asked directly for an "Acheter/Vendre/Conserver" (Buy/Sell/Hold)
-recommendation "to help decide" — refused the first two times it came up,
-for the same reason a per-position verdict was already rejected once before
-the project even reached allocation targets: it crosses from descriptive
-indicator into personalized investment advice, contradicting the app's own
-disclaimer and Decision 0.3. The user's final framing — "it's our own app,
-we can do what we want with it" — is a legitimate point about their own
-private tool, and a sound reason to stop refusing on their
-behalf. Built it, but designed to stay on the honest side of the line that
-motivated the refusal in the first place: the label is a **fixed, fully
+I wanted an "Acheter/Vendre/Conserver" (Buy/Sell/Hold) label "to help
+decide". I had put it off twice, for the same reason a per-position verdict
+was already rejected once before the project even reached allocation
+targets: it crosses from descriptive indicator into personalized investment
+advice, contradicting the app's own disclaimer and Decision 0.3. In the end
+this is a private tool for my own use, which is reason enough to build it.
+Built it, but designed to stay on the honest side of the line that
+motivated the earlier hesitation: the label is a **fixed, fully
 transparent combination of two indicators the app already computes and
 displays separately** — the composite score and the allocation gap (or
 target-price distance) — never a new analysis, never phrased as a trade
 order.
 
-Design, confirmed with the user via two scoped questions (which instruments,
+Design, confirmed via two scoped questions (which instruments,
 which exact rule): `scoring/service.py::score_band` buckets a composite
 score into "high"/"mid"/"low"/"none" using the same 66/33 thresholds the
 frontend's own `scoreBand` (`ScoreBadge.tsx`) already uses — duplicated
@@ -4848,15 +4845,15 @@ FMP's real stock-screener endpoint — is not available: `GET
 your plan" on this app's actual configured free-tier key, confirmed live
 via a direct request before writing any code against it.
 
-Asked the user how to source candidates given that; answer: scrape
+Weighed how to source candidates given that; answer: scrape
 Finviz's free screener page, reusing the existing Value/Growth pillars for
 "undervalued"/"high potential" rather than inventing a new definition.
 Before building a scraper, checked `https://finviz.com/robots.txt` — it
 disallows `/screener?*` for any custom-filtered query, whitelisting only a
 fixed list of specific preset scans (`Allow: /screener?v=...&s=<preset>`),
 none of which map to a P/E or growth-rate filter. Refused to build a
-custom-filtered scraper against an explicitly disallowed path. Asked the
-user again with the finding in hand: static S&P 500 list + the existing
+custom-filtered scraper against an explicitly disallowed path. Reconsidered
+with the finding in hand: static S&P 500 list + the existing
 scoring engine, or Finviz's whitelisted presets as a narrower, separate
 signal? Answer: **both** — which is what shipped.
 
@@ -4998,7 +4995,7 @@ disappeared and the 10-row result table rendered in its place with
 
 Full suite: 630 backend tests pass. `tsc -b`/`oxlint` clean.
 
-**Third addendum, same day**: the user reported seeing no candidates at
+**Third addendum, same day**: I saw no candidates at
 all on the Pépites page — not a data problem (the backend already had
 scored S&P 500 candidates from earlier verification) but a real bug:
 `DiscoveryPanel.tsx` never fetched `GET /api/discovery/candidates` on
@@ -5016,14 +5013,14 @@ picks up the change). Live-verified: reloading `/gems` cold now shows the
 Full suite still 630 backend tests pass (no backend change this time).
 `tsc -b`/`oxlint` clean.
 
-## Decision 3u.21 — Discovery gets an explicit Buy/Hold/Sell verdict, by deliberate user request (2026-09-02)
+## Decision 3u.21 — Discovery gets an explicit Buy/Hold/Sell verdict, by deliberate request (2026-09-02)
 
-The user asked to change the objective for Discovery specifically: "on veut
-des recommendations et predictions pour les pepites" — a direct request for
-literal recommendations and predictions, overriding this app's own
+I wanted to change the objective for Discovery specifically: actual
+recommendations and predictions for the hidden gems — literal
+recommendations and predictions, overriding this app's own
 established descriptive-only convention (DEVLOG "Decision 0.3", and the
 verb-vs-fact lesson from Decision 3u.19's addendum). Given the size and
-ambiguity of "recommendation" and "prediction" as asked, clarified with the user
+ambiguity of "recommendation" and "prediction" as asked, clarified
 before writing any code:
 
 - **Recommendation**: chose "Verdict Acheter/Vendre/Conserver" over a
@@ -5037,7 +5034,7 @@ before writing any code:
   scores up as a "prediction" without any of that would be dishonest; a
   real one is a multi-week project, not an extension of the Discovery
   feature just built. Scoped out of this decision — a separate design
-  conversation before any code gets written.
+  pass before any code gets written.
 
 **What shipped**: `DiscoveryCandidateOut.recommendation` — "buy" | "hold" |
 "sell" | `None`, computed via a new `discovery/service.py::
@@ -5079,8 +5076,8 @@ pass. `tsc -b`/`oxlint` clean.
 
 ## Decision 3u.22 — Prediction, phase 1: a price-only history backfill (2026-09-03)
 
-Following 3u.21's Buy/Hold/Sell verdict, asked to "on fonce" (proceed) on
-the second half of the earlier request: a real predictive model. Before
+Following 3u.21's Buy/Hold/Sell verdict, moved on to
+the second half of the earlier idea: a real predictive model. Before
 writing any model code, checked the actual data available in the real
 database — this is what determined everything that follows:
 
@@ -5112,8 +5109,8 @@ Two hard constraints fell out of this:
    that day. So any real predictive model here can only use price-based
    (technical/momentum) features for the foreseeable future.
 
-Given both constraints, proposed a 3-phase plan and asked the user to
-choose the backfill's scope before running anything (real quota/time cost:
+Given both constraints, settled on a 3-phase plan, choosing
+the backfill's scope before running anything (real quota/time cost:
 Twelve Data's free tier is 800 requests/day at 8s between calls, so the
 universe size and window directly set the run's wall-clock time). Chose
 **5 years, the same ~87-instrument universe already priced** (not the full
@@ -5175,7 +5172,7 @@ finished it properly (see 3u.23).
 
 ## Decision 3u.23 — Prediction, phase 2: a walk-forward-validated technical model (2026-09-03)
 
-Following up on 3u.22 immediately (user: "on fonce" — proceed) once the
+Following up on 3u.22 immediately (go-ahead given) once the
 5-year backfill was clean: 87/87 instruments updated, 0 failed, 12,358 new
 bars (`price_bars` reached 89,774 rows, 25–1,273 bars per instrument,
 avg ~1,032 — roughly 4 years for most, confirming the deeper window
@@ -5248,13 +5245,12 @@ matters). Full suite: 655 backend tests pass.
 ## Decision 3u.24 — Carhart four-factor exposure for held positions (2026-09-03)
 
 Requested alongside a recommendation on how to present 3u.23's backtest
-result: "on voudrait aussi inclure dans notre outil [le] Carhart 4 factor
-model." A better philosophical fit than the Discovery prediction work —
+result: adding the Carhart four-factor model to the tool. A better philosophical fit than the Discovery prediction work —
 this is explanatory (what has driven a holding's past returns), not
 predictive, squarely inside this app's existing fact-based design without
 needing 3u.21's explicit exception.
 
-Two design forks resolved with the user before writing code: **scope**
+Two design forks resolved before writing code: **scope**
 (held positions only, not Watchlist/Screener/Discovery) and **return
 frequency** (daily, reusing the 5-year price history 3u.22 already built,
 over the traditional monthly academic convention — daily gives ~1,000+
@@ -5411,8 +5407,8 @@ not a fixable problem) and `no_target` allocation rows (nothing configured
 means nothing to flag). Two severities only — `missing` (data absent or
 unreliable: unresolved symbols, price errors) and `warning` (a configured
 gap or a stale figure, worth a look but not broken) — sorted `missing`
-first. No `info` tier for v1: everything surfaced here is something the
-user asked for or something actionable, not ambient trivia.
+first. No `info` tier for v1: everything surfaced here is something
+requested or something actionable, not ambient trivia.
 
 Purely descriptive, same posture as every other indicator in this app:
 `AttentionItemOut` names a fact and where it applies, never phrases it as
@@ -5515,10 +5511,10 @@ the auto-hide-when-complete path, not just the dismiss button).
 Third item from the same beginner-user UX review (3u.25, 3u.26): a
 composite score of 77 means nothing to a first-time user, and nothing on
 the page hints that clicking the badge reveals a full breakdown — the
-review's own words, "je ne comprends pas immédiatement ce que signifie un
-score de 77."
+review's own words, "it isn't immediately clear what a score of 77
+means."
 
-**Two independent fixes, asked and confirmed separately before building.**
+**Two independent fixes, each decided separately before building.**
 
 1. *Discoverability* — `ScoreBadge.tsx` gets a small chevron (▾ collapsed,
    ▴ expanded) after the number, and the tooltip gains a closing line
@@ -5529,10 +5525,10 @@ score de 77."
 2. *Plain-language summary* — this one needed a real decision, since this
    app's whole design premise (DEVLOG "Decision 0.3") is fact-not-verdict,
    and the review's proposed wording ("indicateurs globalement
-   favorables") is a mild interpretation, not a bare fact. Asked the user
+   favorables") is a mild interpretation, not a bare fact. Weighed
    directly: purely factual counts ("3 indicateurs favorables, 1 à
    surveiller, 2 non calculés") vs. the review's interpretive sentence.
-   **User chose the interpretive wording explicitly**, aware of the
+   **I chose the interpretive wording explicitly**, aware of the
    trade-off. Built as asked: `ScoreDetailRow.tsx` now opens with "Score
    {N}/100 : {band adjective} selon les données disponibles" — the band
    adjective from `scoreBand(composite)`, the same 66/33 thresholds
@@ -5540,7 +5536,7 @@ score de 77."
    `défavorable`). Below it, "Points forts" / "Points à contrôler" lists
    stay purely factual: a metric's own translated name, included only when
    *that metric's own score* (not the composite) crosses the same 66/33
-   threshold — the user's second round of answers confirmed this rule over
+   threshold — a second look confirmed this rule over
    an always-show-top/bottom-N alternative, since a fixed threshold can
    legitimately produce an empty list (rendered as "Aucun pour l'instant"),
    which an always-N-items rule would have forced into false signal.
@@ -5568,9 +5564,8 @@ metric scores.
 ## Decision 3u.28 — Dividends by year and account (2026-09-05)
 
 Fourth item from the same beginner-user UX review (3u.25–3u.27), and the
-one the user picked by naming a concrete recurring pain point directly:
-"le moment où tu dois encore aller chercher l'info ailleurs" (the moment
-you still have to go look the information up elsewhere) → dividends and
+one I picked by naming a concrete recurring pain point directly:
+the moment you still have to go look the information up elsewhere → dividends and
 French tax. `GET /api/transactions` already summed dividends/withholding
 globally, but not split by account (PEA and a brokerage account have
 completely different French tax treatment) or by calendar year (what a
@@ -5579,7 +5574,7 @@ declaration needs).
 **Scope, confirmed explicitly before building — a real product design
 back-and-forth this time, not a rubber-stamped default.** Offered a
 purely-factual counting alternative for the score-summary-style wording
-question this feature also raised; the user chose the review's proposed
+question this feature also raised; I chose the review's proposed
 richer output. A whole build order was proposed (contract → endpoints →
 reconciliation tests → UI → filters → CSV → disclaimer → live-verify) and
 followed close to as specified.
@@ -5664,7 +5659,7 @@ Dividends page's more accurate number forever if left alone. Fixed by
 reusing `_is_dividend_withholding` there too: the real total shrank
 accordingly, and the two pages now agree exactly.
 
-**What the view deliberately does not do**, per the user's own explicit
+**What the view deliberately does not do**, per my own explicit
 list: no PFU/barème calculation, no French-vs-foreign tax-credit logic, no
 inferred account tax regime (a target `AllocationTarget`-style "this
 account is a PEA" setting was explicitly rejected — the account name
@@ -5703,9 +5698,8 @@ worth chasing further, but now recurred a third time.
 
 ## Decision 3u.29 — Manual backup and restore for the local database (2026-09-05)
 
-Second item off the roadmap established the same day as 3u.28 (a separate
-planning conversation from the UX-review thread), and the one the user
-picked next explicitly. Rationale, stated plainly: this app has no
+Second item off the roadmap established the same day as 3u.28 (planned
+separately from the UX review), and the one I picked next explicitly. Rationale, stated plainly: this app has no
 server-side redundancy at all — the one `.db` file is the entire portfolio
 history, and by this point holds transactions, manual corrections, account
 data, allocation targets, and dividend reconciliation state, with no way
@@ -5778,12 +5772,12 @@ irreversible operations.
 ## Decision 3u.30 — Stock splits and reverse splits (2026-09-06)
 
 Third item off the same-day roadmap (Decision 3u.28's dividends, Decision
-3u.29's backup), picked next by explicit user choice over the per-position
+3u.29's backup), picked next by explicit choice over the per-position
 detail panel: a
 detail panel would surface numbers a split could make wrong (quantity,
 cost basis, chart, return), so getting splits right came first.
 
-**Audited before writing any code**, per the user's own four questions.
+**Audited before writing any code**, per my own four questions.
 (1) XTB never reports a split in any raw transaction row — every `Type`
 value in the real portfolio (`BUY, SELL, Close trade, Correction, Deposit,
 Dividend, ...`, `ingest/xtb_import.py::_CASH_TYPE_RULES`) has nothing
@@ -5813,7 +5807,7 @@ themselves.
 
 **Design settled through discussion after the audit, not assumed.**
 Proposed the standard "lecture seule" choice (raw prices immutable,
-correct at read time); user's response added the load-bearing refinement:
+correct at read time); my response added the load-bearing refinement:
 don't apply the ratio ad hoc wherever needed, centralize a derived
 adjusted-price view, and — critically — don't trust any provider's
 "adjusted" claim without per-instrument verification, since the audit had
@@ -5863,7 +5857,7 @@ instruments, no new lookup endpoint needed), delete, and a "check for new
 splits" button. No chart annotation or per-position surfacing yet — that
 belongs to the detail-panel chantier, next on the roadmap.
 
-**Scope, per the user's own list**: split and reverse split only —
+**Scope, per my own list**: split and reverse split only —
 mergers, acquisitions, spin-offs, rights issues, stock dividends, ticker
 changes, and any tax treatment of a split are explicitly out, to join a
 broader "corporate actions" chantier later if ever needed.
@@ -5964,9 +5958,9 @@ on `Instrument`/`InstrumentOut`, previously only surfaced in
 `PriceStatusBadge`'s tooltip — now rendered as text in the panel's own
 section.
 
-**No price chart in v1**, by deliberate user decision — a chart raises
+**No price chart in v1**, by deliberate decision — a chart raises
 raw-vs-adjusted, default-period, and benchmark questions that deserve
-their own scoping conversation (and can reuse `GET /api/prices/{id}/
+their own scoping pass (and can reuse `GET /api/prices/{id}/
 history` plus the 3u.30 adjustment factors when that chantier happens).
 The existing 90-day row sparkline is enough for now.
 
@@ -6002,7 +5996,7 @@ fetch, manual position entry, unresolved-symbol correction) — for a new
 user, an import button next to unrealized P&L reads like an investment
 action when it's really data maintenance.
 
-**Pure reorganization, deliberately scoped down twice by the user during
+**Pure reorganization, deliberately scoped down twice during
 planning.** First: two aggregate "data health" views ("éléments non
 valorisables", "qualité des données") were explicitly ruled out — they
 don't exist today (the underlying fields — `not_priceable_reason`,
@@ -6068,8 +6062,8 @@ since none exist to correct right now.
 
 ## Decision 3u.33 — Santé des données: a positions-only data-quality console (2026-09-06)
 
-Next roadmap item after the tracking/administration split, proposed by the
-user as the natural extension of "Intégrité et corrections": diagnosing a
+Next roadmap item after the tracking/administration split, chosen as the
+natural extension of "Intégrité et corrections": diagnosing a
 data problem across the whole portfolio previously meant noticing a single
 instrument's status badge in the positions table, or reading
 `AttentionCard`'s compact counts on Portfolio — neither listed *which*
@@ -6146,7 +6140,7 @@ Closes task from Decision 3u.30/3u.31's addendum, pending since Yahoo's
 undocumented chart endpoint proved impossible to validate against: a raw
 single-symbol check could return `200` while the real `/detect` scan still
 hit `429` on the very first of 47 instruments, repeatedly, over several
-days of the user's own single-check-then-retry protocol. Rather than keep
+days of my own single-check-then-retry protocol. Rather than keep
 retrying an unofficial, inconsistently-behaving provider, the source was
 swapped outright.
 
@@ -6236,7 +6230,7 @@ portfolio after the fix: same counts, now correctly reported as
 `Transaction` untouched throughout (verified by code review —
 `create_corporate_action` only ever writes to `CorporateAction`).
 
-Not built now, left as real future chantiers if FMP's ~19%-of-portfolio
+Not built now, left as real future chantiers if FMP's partial
 coverage turns out to matter enough in practice: a targeted, single-
 instrument EODHD fallback (confirmed working live for APLD specifically)
 for the cases FMP's free tier won't answer, and eventually the same for
@@ -6397,8 +6391,8 @@ sections plus the header-fix confirmation above.
 ## Decision 3u.37 — Beginner-comprehension pilot: Portfolio P0 (score color) + P1 (tooltips) (2026-09-07)
 
 First implementation pass of the beginner-comprehension initiative (see
-the project notes, not yet a doc section of its own): the
-user proposed a product-wide rule — every technical term/status/metric
+the project notes, not yet a doc section of its own): a
+product-wide rule — every technical term/status/metric
 should answer "what is it / why is it shown / what does it change for
 me" — and picked the Portfolio screen as the pilot. A Phase-1 audit
 (inventory of ~19 displayed elements, a short glossary, a disclosure-level
@@ -6451,8 +6445,8 @@ cause; `allocation.gapTooltip` on the État column header reinforcing
 at the column level, not just the paragraph above the table. All seven
 keys added to fr/en/pl.
 
-**Explicitly deferred, per the user's own sequencing**: the audit of the
-per-position detail screen — the user wants the Portfolio's now-stabilized
+**Explicitly deferred, per my own sequencing**: the audit of the
+per-position detail screen — I want the Portfolio's now-stabilized
 color/tooltip conventions to be the reference the next audit reuses,
 rather than re-discovering the same score-color issue a second time.
 
@@ -6469,7 +6463,7 @@ same signal. No backend changes; no `pytest` re-run needed.
 ## Decision 3u.38 — Beginner-comprehension pilot: Position-detail P0 (raw enum + sentiment color) + P1 (disclaimers) (2026-09-07)
 
 Second screen of the beginner-comprehension initiative, following the
-sequencing rule the user set after Decision 3u.37: audit only after the
+sequencing rule I set after Decision 3u.37: audit only after the
 previous screen's conventions were implemented and verified, never
 before. The Phase-1 audit of `PositionDetailRow.tsx` (the consolidated
 per-position "Détails" panel) found two genuine implementation bugs
@@ -6550,7 +6544,7 @@ changes; no `pytest` re-run needed.
 
 ## Decision 3u.39 — Importing Amundi ESR and Mintos, with an honest P2P aggregate (2026-09-07)
 
-The user asked to import two more real holdings into the tracked
+I wanted to import two more real holdings into the tracked
 portfolio: an Amundi ESR employee-savings account (PEG/PERCO, via
 ArcelorMittal Méditerranée) and a Mintos P2P-lending account. Both
 brokers' real exports were inspected before writing any code, and both
@@ -6567,12 +6561,12 @@ turned out structurally unlike XTB's per-transaction ledger:
   valued by Mintos only as one portfolio-level quarterly balance — never
   per-fragment.
 
-The user was explicit, after seeing the real numbers, that the Mintos
+I was explicit, after seeing the real numbers, that the Mintos
 Core P2P aggregate must never be given a PRU or a computed gain/loss.
 Both obvious choices are misleading: "PRU = last declared value" implies
 a real cost that was never disclosed, and "PRU = cumulative
 `Investments`" double-counts principal that gets automatically
-reinvested every quarter (worked example the user supplied: if [montant]
+reinvested every quarter (worked example I supplied: if [montant]
 is invested once and Mintos auto-reinvests every repayment, `Investments`
 sums to far more than that amount even though only [montant] was ever
 actually deposited). Decision: **value shown, PRU and gain/loss deliberately not
@@ -6743,7 +6737,7 @@ a successful response from this endpoint now means the bytes are
 confirmed on disk, not just handed to the kernel. Does not protect
 against a lost/reformatted disk or a `.env` deleted by something outside
 the app (fsync only closes the "recent write lost to an unclean
-reboot" gap) — the user was told plainly that keeping an external copy
+reboot" gap) — noted plainly that keeping an external copy
 of the actual key values (password manager, secure note) is the only
 real protection against that, since this project will never back the
 file up anywhere by design.
@@ -6751,7 +6745,7 @@ file up anywhere by design.
 Recovery for this specific incident: `.env` recreated at the project
 root from `.env.example` (comments and variable names only, no values —
 safe to copy verbatim since the template never held secrets), `chmod
-0600`. The user re-enters their real keys through the existing Settings
+0600`. I re-entered my real keys through the existing Settings
 → clés API UI, which now uses the fsync'd write path.
 
 Full backend suite: 850 passed, unchanged. No test added for the fsync
@@ -6762,7 +6756,7 @@ inspection and by confirming `/api/health`'s `env_files` flips to
 
 ## Decision 3u.42 — A P2P position's whole value, not just its P&L, was silently excluded from every total (2026-09-07)
 
-Found live: the user reported the portfolio total looked wrong — XTB's
+Found live: I noticed the portfolio total looked wrong — XTB's
 own total matched the broker's site, but Mintos Core P2P
 (declared value on the real Mintos site) wasn't reflected anywhere in
 the app's totals at all, and Amundi's total (on the real site)
@@ -6774,7 +6768,7 @@ one:
 **A real bug in `_aggregate()` (`app/routers/portfolio.py`).** Since
 Decision 3u.39, a P2P position (Mintos Core) deliberately gets a real,
 broker-declared `value` but a permanently `None` `pl` from
-`_current_position_figures` — the user explicitly rejected ever
+`_current_position_figures` — I explicitly rejected ever
 fabricating a cost basis for it. `_aggregate()`'s exclusion check was
 `if value is None or pl is None: excluded += 1; continue` — treating
 "P&L unknown" exactly like "value unknown" and dropping the position from
@@ -6807,25 +6801,25 @@ included, `excluded_positions` from 1 to 0, `has_incomplete_data` from
 `true` to `false`.
 
 **A separate, non-code problem: both imports are stale.** Even after the
-fix, Mintos's imported value still doesn't match the user's stated
+fix, Mintos's imported value still doesn't match my stated
 current total — traced to the imported source file itself: a quarterly
 statement covering 2025-07-01 to 2025-09-30, a full year
 before the date of this entry (2026-09-08). Nothing in the code can recover
 a balance the source document itself doesn't contain; re-importing a
 current Mintos statement is the only fix. Amundi's total (well under
-what the user reported) is very likely the same root cause — Amundi
+what I noticed) is very likely the same root cause — Amundi
 only publishes periodic/annual snapshot PDFs (Decision 3u.39), and the
 imported filename (`DOCINT_RAC (copy 1).pdf`) carries no date to confirm
 directly, but a code-side explanation was ruled out (its `broker_net_pl`
 is populated and correctly summed, unlike Mintos's `_aggregate()` gap
-above) — told to the user as "probably the same staleness issue, needs a
+above) — noted as "probably the same staleness issue, needs a
 fresh statement" rather than asserted as fact.
 
 Full backend suite: 901 passed (899 + 2 new).
 
 ## Decision 3u.43 — A live "Investments" .xlsx import for Mintos Core, alongside the stale quarterly PDF (2026-09-08)
 
-Direct follow-up to Decision 3u.42: the user tried three different Mintos
+Direct follow-up to Decision 3u.42: I tried three different Mintos
 exports to fix Mintos's stale value, in order — each inspected before
 building anything, rather than assumed usable:
 
@@ -6842,7 +6836,7 @@ building anything, rather than assumed usable:
    the wrong metric, not a stale one.
 3. **`Investments-08-09-2026.xlsx`** (from Mintos's "My investments" page,
    several hundred active note fragments): usable. Summing its `Montant investi`
-   column matches the user's own stated real total (read directly off the
+   column matches my own stated real total (read directly off the
    Mintos site the same day) closely enough to attribute the small
    remaining gap to the two observations not being the exact same instant
    rather than a wrong column. `Principal restant`
@@ -6866,7 +6860,7 @@ fresh Investments export always supersedes an older PDF's closing
 balance automatically, and an accidentally-old Investments file can never
 regress a newer PDF period either — verified by two explicit persistence
 tests, not just asserted. The "Finished-Investments" export (matured/
-repaid loans) the user also added was not parsed — irrelevant to
+repaid loans) I also added was not parsed — irrelevant to
 *current* portfolio value, the only problem being solved here.
 
 11 new tests (`tests/test_mintos_investments_import.py`): pure-parsing
@@ -6888,7 +6882,7 @@ accordingly. Full backend suite: 912 passed (901
 
 ## Decision 3u.44 — The same live-snapshot fix for Amundi, plus a second, recurring `_current_position_figures` gap it exposed (2026-09-08)
 
-Same day, same pattern as Decision 3u.43: the user added a fresh Amundi
+Same day, same pattern as Decision 3u.43: I added a fresh Amundi
 export — `Synthese_20260908_104534.xlsb`, downloaded directly from the
 ESR portal's own data feed, a genuinely different format from the annual
 "Relevé annuel de situation" PDF (`amundi_import.py`). Inspected before
@@ -6901,7 +6895,7 @@ have several rows here — this account's real export had two maturities
 for "the company-shareholding fund" alone — summed per fund
 to match the existing one-position-per-fund
 model. Live cross-check: summing `Montant évalué` across every fund
-matched the user's stated real Amundi total far
+matched my stated real Amundi total far
 more closely than the already-imported annual PDF's figure — which
 undercounted specifically because it was missing that second, more
 recently allocated tranche of the company-shareholding fund, not because
@@ -6978,13 +6972,13 @@ without needing this investigation again.
 
 ## Decision 3u.45 — Target allocation's Edit/Delete buttons were reachable only after scrolling the table (2026-09-08)
 
-The user reported "no button/interface to configure targets" for the
+I noticed "no button/interface to configure targets" for the
 Portfolio page's "Target allocation" table. Investigation showed the
 opposite of a missing feature: `GET /api/portfolio/allocation` and the
 `PUT`/`DELETE` endpoints all worked correctly, and by the time this was
-checked the user had *already* found and used it — all four categories
+checked I had *already* found and used it — all four categories
 (including the two Decision 3u.44 just fixed the totals for) had real
-15–40% targets saved. The actual problem, confirmed by the user directly:
+15–40% targets saved. The actual problem, confirmed directly:
 `AllocationTargets.tsx`'s table put the Edit/Delete/"Set target" actions
 in the *last* column, after a column that can hold a full sentence
 ("About 4,030.09 in new contributions would reach the minimum of this
@@ -7005,9 +6999,8 @@ row instead of after a sentence-length cell.
 
 ## Decision 3u.46 — An account with no known P&L anywhere showed a fabricated "0.00 / 0.00%" instead of "unknown" (2026-09-08)
 
-Reported directly by the user right after Decision 3u.44 landed: "il nous
-manque le latent et perf pour l'amundi et mintos" (missing unrealised/perf
-for Amundi and Mintos). Root cause, in `_aggregate()`
+Noticed right after Decision 3u.44 landed: unrealised gain and
+performance were missing for Amundi and Mintos. Root cause, in `_aggregate()`
 (`app/routers/portfolio.py`): `unrealized` is a running sum initialised to
 `0.0`, only ever incremented for a position whose `pl` is known — so an
 account where *every* position's P&L is unknown (Mintos Core P2P, by
@@ -7062,10 +7055,10 @@ always known.
 
 Direct follow-up to Decision 3u.46: with `unrealized_pl`/`unrealized_pl_pct`
 now correctly showing "—" for Mintos/Amundi instead of a fabricated
-"0.00", the user asked for the missing piece back — real performance
+"0.00", I asked for the missing piece back — real performance
 figures, computed from what the already-imported exports actually
-contain, "avec tous les exports fournis il est possible de calculer
-combien pourcent on a gagné." Investigated what each broker's real data
+contain: with every export already provided, the percentage gained
+should be computable. Investigated what each broker's real data
 supports *before* building anything:
 
 - **Amundi**: the annual PDF's own `aggregate_totals` (versements
@@ -7086,7 +7079,7 @@ supports *before* building anything:
   deposited. This sidesteps the missing-data problem entirely rather than
   working around it.
 
-Asked the user directly how to handle the Amundi gap (present the
+Weighed how to handle the Amundi gap (present the
 options: wait for the missing file, compute anyway with an explicit
 caveat, or show only real absolute figures instead of a ratio) — chose
 "calculate with what we have, with an explicit mention." Built
@@ -7189,7 +7182,7 @@ now shows a real invested amount and gain, "depuis le 2024-04-01" (the
 account's real, provable inception date, opening_balance 0.0 in its first
 quarterly PDF); Amundi PEG shows a real amount and gain, "depuis le
 2023-12-31" (the earliest year actually imported — explicitly and
-honestly a likely overstatement, per the user's own chosen tradeoff);
+honestly a likely overstatement, per my own chosen tradeoff);
 Amundi PERCO shows its own real amount and gain. Global portfolio totals
 (which mix these with ordinary priced holdings) rose unrealised
 accordingly. Full backend suite: 947
@@ -7201,8 +7194,8 @@ end-to-end, not just present in the catalogue).
 ## Decision 3u.48 — Exact per-fund Amundi gain when a fund's quantity hasn't changed (2026-09-08)
 
 Direct refinement of Decision 3u.47's Amundi pro-rata fallback, triggered
-by the user's own audit question ("est-ce que tout ça c'est correctement
-calculé... ?"). Answering it honestly surfaced that Amundi's real
+by my own audit question: is all of this actually computed correctly?
+Answering it honestly surfaced that Amundi's real
 2024 annual PDF (`DOCINT_RAC-1.pdf`) had never been imported — the
 project's local `Extractions/Amundi/` folder held it unimported all
 along. Importing it didn't recover the account-level contributions table
@@ -7278,9 +7271,8 @@ locales.
 
 ## Decision 3u.49 — "Depuis" showed today's date for Amundi/Mintos after a fresh snapshot import (2026-09-08)
 
-User-caught, same day as Decision 3u.48: "dans les transactions il est
-marqué que les investissements Amundi avaient lieu aujourd'hui, ce qui est
-faux." Traced to `Position.opened_at` — rendered in the UI as "Depuis"
+Caught, same day as Decision 3u.48: the transactions page dated the
+Amundi investments to today, which is wrong. Traced to `Position.opened_at` — rendered in the UI as "Depuis"
 ("since"/held-since) — being silently overloaded with a second, unrelated
 meaning for these two brokers: for Amundi, `_persist_amundi_export` used
 it both to decide *whether this import is newer than what's stored*
@@ -7357,7 +7349,7 @@ every total whenever its P&L was unknown — and, at the time, reported
 Mintos Core P2P's value as stale (from a 2025-07-01→09-30
 quarterly PDF, a year old) and flagged Amundi's total as "probably
 the same staleness issue." Between that decision and this one, Decision
-3u.49 had the user re-import a live Mintos "Investments" export and
+3u.49 had me re-import a live Mintos "Investments" export and
 fresh Amundi Synthese/PDF statements the same day (2026-09-08) — so as
 of *this* entry, both Mintos Core P2P and Amundi PEG+PERCO
 combined match the real, current site values the
@@ -7469,7 +7461,7 @@ Portfolio total unchanged throughout, `excluded_positions: 0`.
 
 ## Bug 3u.51 — The "By account" table gave Mintos Core P2P no context for its bare "—" cells (2026-09-08)
 
-User-caught, same day as 3u.50, from a screenshot of the "By account"
+Caught, same day as 3u.50, from a screenshot of the "By account"
 table: every Amundi row carries a `*` on Invested/Unrealised/Perf. with a
 footnote explaining the approximate-gain caveat (3u.47), but the Mintos
 Core P2P row showed bare "—" in those same columns with nothing at all —
@@ -7523,9 +7515,8 @@ their existing `*` performance footnote and the new `†` valuation one.
 
 ## Bug 3u.52 — Mintos Core P2P's real, already-computed gain was silently wiped by a later value-only re-import (2026-09-08)
 
-User pushed back directly on Bug 3u.51's framing: "tu veux dire qu'il n'y
-a pas de moyen de calculer les performances? C'est faux, on peut se
-baser sur toutes les données que j'ai partagées" — correctly. Tracing the
+Bug 3u.51's framing was wrong: the performance *can* be computed from
+the exports already imported. Tracing the
 real database rather than trusting the earlier live-check: the account
 *did* have a computed gain at one point. Full history of
 `Mintos Core P2P`'s `ImportBatch`es, in order:
@@ -7597,8 +7588,7 @@ whenever a figure that ought to be known instead reads as unknown.
 
 ## Step 3u.53 — Confirm before deleting a position (2026-09-08)
 
-User-requested: "quand on supprime un titre on voudrait un popup qui nous
-demande si on est sûr" — the Portfolio positions table's "Delete" button
+Needed: a confirmation prompt before deleting a holding — the Portfolio positions table's "Delete" button
 called `DELETE /api/portfolio/positions/{id}` on a single click, no
 confirmation at all, for an action that also removes the position's open
 `Lot` (irreversible — no undo, no trash). `PositionsTable.tsx`'s delete
@@ -7641,9 +7631,8 @@ i18n key (`table.deleteConfirm`) × 3 locales.
 
 ## Step 3u.54 — Price filter on the Hidden gems page (2026-09-08)
 
-User-requested: "dans les pépites on n'a toujours pas de filtre pour par
-exemple pouvoir afficher les actions qui coûtent sous un certain seuil."
-Neither `ScreenerTable` (the hand-picked "Candidats" list) nor
+Needed: a price filter on the hidden-gems page, for example to show only
+stocks below a given price. Neither `ScreenerTable` (the hand-picked "Candidats" list) nor
 `DiscoveryPanel` (the S&P 500 universe scan and the two Finviz presets)
 had any numeric filter at all — only `ScreenerTable` had a text search.
 Added a `filters.priceMin`/`filters.priceMax` pair (same "From/To" range
@@ -7667,8 +7656,7 @@ the full list. Frontend `tsc -b`/`oxlint` clean. 2 new i18n keys
 
 ## Step 3u.55 — One shared price filter for the whole Hidden gems page (2026-09-08)
 
-Immediate follow-up, user-requested: "il y a un moyen qu'on puisse
-filtrer tous les titres d'un coup?" — 3u.54 gave `ScreenerTable` its own
+Immediate follow-up: filter every list on the page at once — 3u.54 gave `ScreenerTable` its own
 min/max fields and `DiscoveryPanel` a second, separate pair covering its
 own three lists, so filtering the whole page meant setting the same
 bound twice. Lifted `priceMin`/`priceMax` state from both components up
@@ -7700,7 +7688,7 @@ That same evening's last resume run only checked 1 instrument
 (`candidate_single_source`, no cross-source confirmation) before the
 day's Alpha Vantage quota ran out.
 
-User reviewed the corporate-actions backend state today, gave a
+I reviewed the corporate-actions backend state today, gave a
 prioritized roadmap (see the 2026-09 roadmap notes, item 15) naming Corporate Actions Phase 4 as priority 1, and asked to
 check this gate cheaply first (`GET .../resume/status` +
 `GET .../incomplete`, no quota spent) before spending quota on a real
@@ -7729,7 +7717,7 @@ the classification logic. Zero `provider_conflict`, zero
 `suspect_ticker_reuse` — the isolation-window fix from Decision 3u.41
 holds up under a real, larger batch.
 
-**Unblocks Phase 4**: per the user's roadmap, next is building the
+**Unblocks Phase 4**: per my roadmap, next is building the
 frontend around these real states (manual resume button showing pending
 count/quota cost before the click, per-event trust labels, a
 "Couverture automatique" summary) — not started yet, this entry only
@@ -7738,7 +7726,7 @@ incomplete for a future resume run (tomorrow, once quota resets again).
 
 ## Step 3u.57 — Corporate Actions Phase 4 frontend (2026-09-08)
 
-User-prioritized (see the 2026-09 roadmap notes, item 15) as the single active chantier once 3u.56's validation gate
+Prioritized (see the 2026-09 roadmap notes, item 15) as the single active chantier once 3u.56's validation gate
 cleared. Scope: make the multi-source states from Decision 3u.41 visible
 — never redesign the underlying detection engine. Strict rule enforced
 throughout: **instrument counts and event counts are never conflated** —
@@ -7962,7 +7950,7 @@ after Data Health v2 (Decision 3u.58): a page where the user makes their
 *own* investment rules explicit — objective, horizon, liquidity need,
 risk tolerance, personal concentration limits — and the app compares the
 current portfolio against them, stated as a fact, never a suggestion.
-Explicit guardrails from the user's own spec, carried through the whole
+Explicit guardrails from my own spec, carried through the whole
 design: no forced "prudent/balanced/dynamic" profile, no "your portfolio
 is/isn't suited" verdict, no instrument recommendation, no PEA/CTO tax
 calculation, no unnecessary personal data (no exact income, full net
@@ -7998,7 +7986,7 @@ no partial-update ambiguity). `POST .../limits` validates via
 `PersonalPolicyLimitIn.check_shape`: at least one bound, `min_pct <=
 max_pct`, and target required/forbidden exactly per dimension.
 
-`GET .../gaps` is the comparison engine, and — per the user's explicit
+`GET .../gaps` is the comparison engine, and — per my explicit
 step 1 ("auditer d'abord l'emplacement actuel de l'allocation cible,
 des poids, des catégories") — it reuses rather than reinvents:
 `get_breakdown`'s and `_current_allocation_values`'s near-identical
@@ -8032,19 +8020,19 @@ Reuses `allocation.state.under`/`.over` i18n keys for the gap state tag
 **Live-verified in-browser against the real portfolio**: filled and saved
 a real policy (objective, horizon, liquidity, risk note, loss capacity)
 — consultation view rendered every field correctly. Added a `currency`/
-`USD` limit at 20%: real USD exposure is 17.13% (`GET
+`USD` limit at 20%: actual USD exposure sat below it (`GET
 /breakdown?by=currency` confirms), correctly reported as "toutes vos
 limites sont respectées" — not a bug, a real and mildly surprising fact
 about this portfolio's actual currency mix (dominated by EUR-denominated
 PEA/Amundi/Mintos holdings, not the US-heavy My Trades account alone).
-Lowered the same limit to 10% to confirm the breach path: rendered
+Lowered the same limit below the current exposure to confirm the breach path: rendered
 "Devise — USD : 17,13 % (Surpondéré votre limite : ≤ 10 %)" correctly.
 Test data cleaned up afterward (limit deleted, policy fields reset to
 null) so the user finds a genuinely empty policy to fill in themselves,
 not synthetic verification data. `tsc -b`/`oxlint` clean (same two
 pre-existing warnings).
 
-**Deliberately not built in this pass, per the user's own explicit
+**Deliberately not built in this pass, per my own explicit
 ordering**: linking this policy to a future full portfolio-risk view
 (sector/country/currency concentration beyond what a configured limit
 already checks, liquidity-by-asset-class, valuation-risk breakdown,
@@ -8054,8 +8042,7 @@ rationale/thesis/review-date log) is the chantier after that.
 
 ## Decision 3u.60 — Annual tax-year reconciliation: a rapprochement aid, deliberately not a tax calculator (2026-09-10)
 
-The user asked for tax-declaration help ("calculer les taxes pour les
-déclarations"), explicitly accepting the legal risk after this project's
+I wanted help with the tax declaration, explicitly accepting the legal risk after this project's
 own standing rule against it (roadmap notes, and the earlier
 "pas de calcul fiscal PEA/CTO prétendument définitif" guardrail) was
 raised. A detailed follow-up spec reframed the goal correctly before any
@@ -8127,7 +8114,7 @@ Live-verified against the real portfolio across four real tax years
 a contribution-only Amundi year, and the always-true "no PEA withdrawal"
 state. `tsc -b`/`oxlint` clean (same two pre-existing warnings).
 
-**Deliberately not built in this v1, per the user's own "ordre de mise en
+**Deliberately not built in this v1, per my own "ordre de mise en
 œuvre"**: the versioned `TaxRuleSet`/`TaxClassification` model (steps 2–3
 of their spec — no PFU rate is hardcoded anywhere yet, so there is nothing
 to version), reconciliation against an imported IFU/Mintos tax-report
@@ -8190,7 +8177,7 @@ in `scripts/export_portfolio.py`'s own module docstring.
 
 Roadmap item 14 (raised in passing at the end of the corporate-actions
 Phase 3 discussion, 2026-09-07): filter Discovery candidates by verdict
-in addition to the existing price range — the user's own example, a
+in addition to the existing price range — my own example, a
 "buy" verdict under a given price threshold.
 
 **Scoped to `DiscoveryPanel` only, not lifted to `Screener.tsx`**: unlike
@@ -8223,7 +8210,7 @@ earlier (see the 2026-09 roadmap notes, item
 (market/country, sector, instrument type, cap, valuation/growth data
 availability, data quality, analysis score, dividend yield, debt, minimum
 history, fresh-data-only) plus an explicit "not a recommendation"
-disclaimer — with the user's own suggested starting point: a single
+disclaimer — with my own suggested starting point: a single
 toggle for "instruments avec données suffisamment complètes ET cours
 récent ET sans problème de mapping ET sans corporate action en attente",
 data-quality gating before adding financial criteria. Built exactly that
@@ -8275,7 +8262,7 @@ chantier of its own, not a filter-UI addition.
 
 Continuing the same slice-by-slice build of the fuller Pépites-filters
 vision (2026-09 roadmap notes, item 5): market/pays
-and secteur next, user-requested by name.
+and secteur next, requested by name.
 
 **Zero backend work, unlike 3u.63's data-quality gate**: `Instrument.country`/
 `.sector` were already columns, already populated (`country` from
@@ -8314,7 +8301,7 @@ minimum-history-length, and the "not a recommendation" disclaimer rework
 
 ## Decision 3u.65 — Personal Policy added to the read-only portfolio export, closing a gap found by asking the question directly (2026-09-16)
 
-User asked, exploratory: what would an investor who wants to follow an
+I asked, exploratory: what would an investor who wants to follow an
 automated, rules-based process need from this site? Answered without building
 anything first (this app has no trade-execution capability at all, and
 never will unless that's a deliberate future scope change — XTB's own
@@ -8325,7 +8312,7 @@ the investor's *own* stated rules. Recommended the latter — reusing
 Personal Policy (Decision 3u.59) rather than adding a new recommendation
 engine that would contradict this app's whole "never tell the user what
 to do" posture everywhere except Discovery's narrow, disclosed exception.
-User agreed to pursue this direction.
+I agreed to pursue this direction.
 
 **Found by re-reading `scripts/export_portfolio.py` (Decision 3u.61-era,
 commit `c08d67c5`) before writing anything**: the export already
@@ -8355,10 +8342,10 @@ breaches). No new data-sensitivity concern — the export already carries
 every position's real broker symbol via the existing `portfolio` field;
 this only repeats the same already-flowing identifiers in a new field,
 into the same already-authorized destination (a separate local tool's read-only
-bind mount, requested by the user in Decision-adjacent work,
+bind mount, requested in Decision-adjacent work,
 never a public or shared surface).
 
-**Not built, explicitly out of scope per the user's own agreed
+**Not built, explicitly out of scope per my own agreed
 direction**: any execution/trading capability, any endpoint that lets
 an external tool *write* to this app rather than only read, and any new
 independent "recommendation" surface for such a tool to consume beyond
@@ -8368,22 +8355,21 @@ descriptive, same posture as everywhere else.
 
 ## Decision 3u.66 — Wiring up the backtest report, the deliberate framing decision Decision 3u.23 deferred (2026-09-16)
 
-Direct follow-up to the "philosophy evolving" exchange: the user asked
-for a real prediction module first. `POST /api/prediction/backtest` has
+Direct follow-up to the "philosophy evolving" line of thought: I wanted a real prediction module first. `POST /api/prediction/backtest` has
 existed, fully working and tested, since Decision 3u.23 (2026-09-03) —
 `instruments_used`/train-test sample counts and date ranges/`test_accuracy`/
 `avg_return_predicted_{up,down}`/`low_sample_warning`/`single_class_warning`
 — but no frontend code ever called it (confirmed by grep before writing
 anything: zero references in `client.ts` or any component). That commit's
 own words: *"presenting a number like this responsibly needs its own
-framing decision, a separate conversation from building the number
-itself."* This is that conversation, finally had.
+framing decision, a separate step from building the number
+itself."* This is that decision, finally made.
 
-**The real choice, put to the user explicitly before coding**: an
+**The real choice, made explicitly before coding**: an
 aggregate report of the model's own historical performance (what it
 already does, just never shown), or a per-instrument "predicted up/down"
 label on Discovery candidates/positions. Chose the aggregate report.
-Reasoning laid out for the user: the model's real, live-measured result
+Reasoning laid out: the model's real, live-measured result
 (`test_accuracy: 0.542` — barely above chance — over exactly one walk-
 forward test period, even though the predicted-up/predicted-down buckets'
 average *realized* returns are genuinely separated by ~15 points) does
@@ -8422,7 +8408,7 @@ implicitly by shipping a UI element.
 
 ## Decision 3u.67 — "Risques du portefeuille": unconditional exposure facts, split from Personal Policy (2026-09-16)
 
-Direct follow-up, same "philosophy evolving" conversation: after the
+Direct follow-up, same "philosophy evolving" line of thought: after the
 prediction module, the next question was what an investor following a
 rules-based process would still be missing from this site. Answered by re-reading, not
 guessing: Personal Policy (Decision 3u.59) already closes with an
@@ -8434,7 +8420,7 @@ historical drawdown)"* — this is that chantier, finally picked up.
 **Real finding before writing anything**: two of the facets that follow-up
 named are **already shipped**, mounted directly on `Portfolio.tsx` —
 `PortfolioBreakdown.tsx` (category/currency/country/sector concentration)
-and `FactorExposures.tsx` (Carhart four-factor exposure). Asked the user
+and `FactorExposures.tsx` (Carhart four-factor exposure). Weighed
 how to organize the new page given this; chose a **new dedicated page
 that reunites everything** — the two existing components moved (same
 code, new home, not duplicated), alongside three genuinely new facets.
@@ -8509,12 +8495,11 @@ clean; i18n catalogues at parity (792 keys × 3 locales).
 **Live-verified against the real portfolio, end to end**: `/portfolio` no
 longer shows breakdown/factors; `/risk` shows all five sections with real
 numbers. Cross-checks, all exact matches: `PositionConcentration`'s top
-row (17,504.04€, 39.98%) against `GET /api/portfolio`'s own
-`weight_percent` for the same instrument; `Liquidity`'s total (70.94%)
+row (value and weight) against `GET /api/portfolio`'s own
+`weight_percent` for the same instrument; `Liquidity`'s total
 against `/policy/gaps`'s already-configured `declared_valuation` limit's
 `current_pct` (same real figure surfacing unconditionally now instead of
-only as a breach). Real drawdown: **34.75%**, peak 2025-08-28
-(11,636.57€) → trough 2025-09-08 (7,593.40€), recovered 2026-05-06 — a
+only as a breach). The maximum drawdown, with its peak, trough and recovery dates, is a
 real, previously-invisible fact about this portfolio's actual volatility
 history, now visible for the first time anywhere in the app.
 
@@ -8530,13 +8515,13 @@ avoids everywhere else.
 The chantier DEVLOG "Decision 3u.58" named and deferred (2026-09-10):
 *"a decision journal (per-trade rationale/thesis/review-date log)"* — one
 line, never scoped further anywhere else in the codebase. Picked up right
-after Risques du portefeuille, on the user's "on y va."
+after Risques du portefeuille.
 
-Asked directly what an entry should be tied to, since "per-trade" is
+First question: what should an entry be tied to, since "per-trade" is
 ambiguous between three real shapes with different implications: tied to
 a specific `Lot` (fragile once that lot closes), tied to an instrument
 (survives lots being closed/sold, can be written *before* a trade even
-happens), or untied entirely. The user chose **an instrument, optional** —
+happens), or untied entirely. I chose **an instrument, optional** —
 not a specific `Lot`. This means the actual "thesis" — arguably the most
 valuable moment to capture it — can be written before any trade exists,
 and a general/macro entry with no instrument at all is a first-class case,
@@ -8667,7 +8652,7 @@ own "one screen at a time, verify before generalizing" rule.
 
 Live-verified against the real running app: a `Buy`/`Deposit`/`Withdrawal`
 row's Montant is now plain white (`rgb(232, 234, 237)`) regardless of
-sign — a real -177.60€ `Buy` and a real -200.00€ reversed `Deposit` both
+sign — a negative `Buy` and a reversed `Deposit` both
 render uncolored — while `Closed position` rows still color correctly by
 their real P&L (green `rgb(95, 211, 154)` / red `rgb(255, 138, 128)`,
 confirmed on real rows). Dividends' "Automatic" reconciliation tag now
@@ -8905,9 +8890,9 @@ it to `GET /api/health` reporting `"edgar": false` on the live host —
 is_enabled()` (`bool("")` is falsy) had disabled EDGAR entirely, for
 every fetch, not just this one. Pre-existing, unrelated to this change —
 not something to silently patch: setting a real `SEC_USER_AGENT` needs a
-real contact string per SEC's fair-use policy, the user's own choice, not
-something to invent. Flagged it and asked; the user set it and asked for
-a backend restart. Once EDGAR came back (`"edgar": true`), the exact same
+real contact string per SEC's fair-use policy, my own choice, not
+something to invent. I set it and restarted
+the backend. Once EDGAR came back (`"edgar": true`), the exact same
 already-committed code worked correctly on the very next real request —
 no code change was needed once the environment was actually fixed. A
 useful general lesson: when a fetch-based feature produces uniformly-zero
@@ -8936,7 +8921,7 @@ dividend yield, endettement, historique minimal) are now shipped.
 
 ## Decision 3u.74 — Two real bugs found running the dividend backfill for real (2026-09-17)
 
-Asked to actually run Decision 3u.73's backfill against the real 291
+Time to actually run Decision 3u.73's backfill against the real 291
 remaining candidates. Running it live surfaced two genuine bugs neither
 the plan nor the first round of testing had caught.
 
@@ -9018,8 +9003,8 @@ Went back to the original 2026-09-08 backlog wording for "Pépites
 filters" (item 15.5) to check what was actually still open beyond the
 four dimensions Decisions 3u.72-3u.74 shipped. Three items in that list
 had never been precisely scoped: "score d'analyse," "valorisation
-disponible," "croissance disponible." Asked directly how to define them
-rather than guess; the user chose a single minimum-composite-score
+disponible," "croissance disponible." Decided how to define them
+rather than guess; I chose a single minimum-composite-score
 threshold — covering "score d'analyse" directly, and "valorisation/
 croissance disponible" implicitly (a candidate with no Value/Growth
 data has no composite score either, so it's excluded by the same
@@ -9138,9 +9123,8 @@ genuine-non-match-is-permanent test).
 
 ## Decision 3u.77 — Visual design pass: the app "looked like a draft" (2026-09-18/20)
 
-User feedback, verbatim: "il faudrait refaire l'interface car actuellement
-il ressemble plutôt à un brouillon" (the interface should be redone, it
-currently looks more like a draft). Scoped before touching any code, via
+The interface needed redoing: it
+looked more like a draft than a finished app. Scoped before touching any code, via
 three explicit choices: pilot one screen first (Portfolio) rather than a
 big-bang rewrite; the complaint was lack of hierarchy/spacing, a generic
 look, and inconsistency between screens (not, e.g., colors specifically);
