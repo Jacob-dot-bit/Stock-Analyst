@@ -212,11 +212,11 @@ class TestRealFormat:
         apld = [c for c in result.closed_positions if c["broker_symbol"] == "APLD.US"]
 
         assert len(apld) == 2
-        assert apld[0]["position_id"] == apld[1]["position_id"] == "1677685567"
+        assert apld[0]["position_id"] == apld[1]["position_id"] == "1900000107"
         assert apld[0]["external_id"] != apld[1]["external_id"]
 
     def test_numeric_ids_are_not_rendered_as_floats(self, xtb_export):
-        """openpyxl returns integers as floats: expect "1677685567", not "1677685567.0"."""
+        """openpyxl returns integers as floats: expect "1900000107", not "1900000107.0"."""
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
 
         assert all(not c["position_id"].endswith(".0") for c in result.closed_positions)
@@ -233,7 +233,7 @@ class TestRealFormat:
         result = parse_xtb_export(xtb_export, "EUR_1234567.xlsx")
         dividend = next(op for op in result.cash_operations if op["type"] == TxType.DIVIDEND)
 
-        assert dividend["external_id"] == "1386991257"
+        assert dividend["external_id"] == "1900000301"
         assert dividend["broker_symbol"] == "ASML.NL"
 
 
@@ -344,7 +344,7 @@ class TestCsvExport:
     def test_semicolon_csv_is_parsed(self):
         csv_content = (
             ";".join(CASH_HEADERS) + "\n"
-            "Dividend;ASML;ASML.NL;STOCK;2026-08-05 09:59:25;1,88;1386991257;DIV;My Trades;123\n"
+            "Dividend;ASML;ASML.NL;STOCK;2026-08-05 09:59:25;1,88;1900000301;DIV;My Trades;123\n"
         ).encode("utf-8")
 
         result = parse_xtb_export(csv_content, "cash.csv")
