@@ -1329,6 +1329,7 @@ export const pl: Catalogue = {
   'budget.category.bank_fees': 'Opłaty bankowe',
   'budget.category.cash': 'Wypłaty gotówki',
   'budget.category.loan': 'Kredyty',
+  'budget.category.vehicle': 'Pojazd',
   'budget.category.transfers_out': 'Przelewy wysłane',
   'budget.category.other': 'Inne wydatki',
   'budget.category.investment': 'Inwestycje',

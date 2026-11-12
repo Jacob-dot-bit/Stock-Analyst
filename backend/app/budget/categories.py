@@ -17,6 +17,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from app.config import DATA_DIR
+from app.ingest.bank_import import broker_of
+
 #: What a category counts as. ``investment`` and ``internal`` are money that
 #: stays mine (sent to a broker, moved to the savings book): neither spending
 #: nor income.
@@ -48,6 +51,7 @@ CATEGORY_KIND: dict[str, str] = {
     "bank_fees": SPENDING,
     "cash": SPENDING,
     "loan": SPENDING,
+    "vehicle": SPENDING,
     "transfers_out": SPENDING,
     "other": SPENDING,
     "investment": INVESTMENT,
@@ -77,16 +81,60 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("housing", _rx(r"LOYER", r"FONCIA", r"NEXITY", r"CITYA", r"SYNDIC", r"COPROPRIETE", r"BAILLEUR", r"HABITAT", r"OPAC", r"OPH")),
     ("utilities", _rx(r"EDF", r"ENGIE", r"TOTALENERGIES ELECTRICITE", r"TOTAL DIRECT ENERGIE", r"EKWATEUR", r"VEOLIA", r"SUEZ", r"EAU", r"GRDF", r"ENEDIS", r"OHM ENERGIE", r"MINT ENERGIE")),
     ("telecom", _rx(r"FREE MOBILE", r"FREE TELECOM", r"FREE", r"ORANGE", r"SFR", r"BOUYGUES TELECOM", r"BOUYGUES TEL", r"SOSH", r"RED BY SFR", r"B AND YOU", r"PRIXTEL", r"SYMA", r"LEBARA")),
-    ("insurance", _rx(r"ASSURANCE", r"ASSURANCES", r"MAIF", r"MACIF", r"MATMUT", r"AXA", r"ALLIANZ", r"GMF", r"MMA", r"GROUPAMA", r"LUKO", r"ACHEEL", r"LOVYS", r"GENERALI", r"APRIL")),
+    ("insurance", _rx(r"DIRECT ASSURANCE", r"ASSURANCE", r"ASSURANCES", r"MAIF", r"MACIF", r"MATMUT", r"AXA", r"ALLIANZ", r"GMF", r"MMA", r"GROUPAMA", r"LUKO", r"ACHEEL", r"LOVYS", r"GENERALI", r"APRIL")),
     ("subscriptions", _rx(r"NETFLIX", r"SPOTIFY", r"DEEZER", r"DISNEY", r"CANAL", r"PRIME VIDEO", r"AMAZON PRIME", r"AMZN PRIME", r"APPLE COM BILL", r"APPLE\.COM", r"ITUNES", r"GOOGLE", r"YOUTUBE", r"MICROSOFT", r"XBOX", r"PLAYSTATION", r"SONY", r"NINTENDO", r"OPENAI", r"CHATGPT", r"ANTHROPIC", r"CLAUDE\.AI", r"GITHUB", r"PATREON", r"TWITCH", r"DROPBOX", r"ICLOUD", r"PROTON", r"NORDVPN", r"OVH", r"HETZNER", r"SCALEWAY", r"BASIC FIT", r"FITNESS PARK", r"KEEP COOL", r"ON AIR", r"NEONESS")),
-    ("groceries", _rx(r"CARREFOUR", r"CRF", r"LECLERC", r"E LECLERC", r"AUCHAN", r"INTERMARCHE", r"ITM", r"SUPER U", r"HYPER U", r"U EXPRESS", r"SYSTEME U", r"MONOPRIX", r"MONOP", r"FRANPRIX", r"CASINO", r"LIDL", r"ALDI", r"NETTO", r"LEADER PRICE", r"PICARD", r"GRAND FRAIS", r"BIOCOOP", r"NATURALIA", r"G20", r"SPAR", r"COCCINELLE", r"PROXI", r"CORA", r"MATCH", r"BOULANGERIE", r"BOUCHERIE", r"PRIMEUR", r"FROMAGERIE", r"SUPERMARCHE", r"EPICERIE", r"MARCHE")),
+    ("groceries", _rx(r"CARREFOUR", r"CARREF\w*", r"CRF", r"LECLERC", r"E LECLERC", r"AUCHAN", r"INTERMARCHE", r"ITM", r"SUPER U", r"HYPER U", r"U EXPRESS", r"SYSTEME U", r"MONOPRIX", r"MONOP", r"FRANPRIX", r"CASINO", r"LIDL", r"ALDI", r"NETTO", r"LEADER PRICE", r"PICARD", r"GRAND FRAIS", r"BIOCOOP", r"NATURALIA", r"G20", r"SPAR", r"COCCINELLE", r"PROXI", r"CORA", r"MATCH", r"BOULANGERIE", r"BOUCHERIE", r"PRIMEUR", r"FROMAGERIE", r"SUPERMARCHE", r"EPICERIE", r"MARCHE")),
     ("restaurants", _rx(r"RESTAURANT", r"RESTO", r"BRASSERIE", r"PIZZA", r"PIZZERIA", r"SUSHI", r"KEBAB", r"BURGER", r"MCDONALDS", r"MC DONALDS", r"MCDO", r"BURGER KING", r"KFC", r"QUICK", r"SUBWAY", r"STARBUCKS", r"PAUL", r"BRIOCHE DOREE", r"CAFE", r"BAR", r"BISTROT", r"TRAITEUR", r"UBER EATS", r"UBEREATS", r"DELIVEROO", r"JUST EAT", r"CROUS", r"IZLY", r"O TACOS", r"FIVE GUYS")),
+    ("vehicle", _rx(r"REPAR", r"REPARATION", r"GARAGE", r"CARROSSERIE", r"NORAUTO", r"FEU VERT", r"SPEEDY", r"MIDAS", r"POINT S", r"EUROMASTER", r"PNEUS?", r"CONTROLE TECHNIQUE", r"DEKRA", r"AUTOSUR", r"SECURITEST", r"AUTO ECOLE", r"AUTO-ECOLE", r"ECF", r"ANTS")),
     ("fuel", _rx(r"TOTALENERGIES", r"TOTAL", r"ESSO", r"SHELL", r"BP", r"AVIA", r"STATION", r"CARBURANT", r"INTERMARCHE CARBU", r"DYNEFF")),
     ("transport", _rx(r"SNCF", r"OUIGO", r"TGV", r"TER", r"RATP", r"NAVIGO", r"TCL", r"TISSEO", r"TAN", r"STAR", r"KEOLIS", r"TRANSDEV", r"UBER", r"BOLT", r"HEETCH", r"G7", r"TAXI", r"BLABLACAR", r"FLIXBUS", r"PEAGE", r"SANEF", r"APRR", r"VINCI AUTOROUTES", r"VINCI", r"ASF", r"COFIROUTE", r"PARKING", r"INDIGO", r"EFFIA", r"LIME", r"DOTT", r"TIER", r"VELIB")),
     ("travel", _rx(r"AIRBNB", r"BOOKING", r"HOTEL", r"HOTELS", r"IBIS", r"ACCOR", r"AIR FRANCE", r"RYANAIR", r"EASYJET", r"TRANSAVIA", r"VUELING", r"WIZZ", r"LOT POLISH", r"LUFTHANSA", r"EXPEDIA", r"TRAINLINE", r"OPODO", r"EDREAMS")),
     ("health", _rx(r"PHARMACIE", r"PHARMA", r"DOCTEUR", r"DR", r"MEDECIN", r"CABINET MEDICAL", r"DENTISTE", r"DENTAIRE", r"OPTICIEN", r"OPTIQUE", r"LABORATOIRE", r"LABO", r"HOPITAL", r"CLINIQUE", r"KINE", r"OSTEO", r"DOCTOLIB")),
     ("leisure", _rx(r"CINEMA", r"UGC", r"PATHE", r"GAUMONT", r"MK2", r"FNAC SPECTACLES", r"TICKETMASTER", r"STEAM", r"STEAMGAMES", r"EPIC GAMES", r"INSTANT GAMING", r"GAMES WORKSHOP", r"WARHAMMER", r"PHILIBERT", r"CULTURA", r"MUSEE", r"CONCERT", r"BOWLING", r"ESCAPE", r"PISCINE", r"DECATHLON", r"GO SPORT", r"INTERSPORT")),
     ("shopping", _rx(r"AMAZON", r"AMZN", r"FNAC", r"DARTY", r"BOULANGER", r"LDLC", r"CDISCOUNT", r"ALIEXPRESS", r"TEMU", r"SHEIN", r"ZALANDO", r"VINTED", r"LEBONCOIN", r"IKEA", r"LEROY MERLIN", r"CASTORAMA", r"BRICO", r"BRICOMARCHE", r"ACTION", r"HEMA", r"PRIMARK", r"H&M", r"H M", r"ZARA", r"KIABI", r"UNIQLO", r"CELIO", r"JULES", r"SEPHORA", r"NOCIBE", r"MARIONNAUD", r"YVES ROCHER", r"GIFI", r"LA POSTE", r"PAYPAL", r"APPLE STORE", r"BACK MARKET", r"RAKUTEN", r"ETSY", r"EBAY")),
+)
+
+#: My own keywords: shop names, insurers, places. Kept out of the repository
+#: (it is public, and they say where I live and who insures me), in
+#: `data/budget_rules.txt`, which `.gitignore` covers. One line per category:
+#:
+#:     insurance: MY BROKER, MY INSURER
+#:     groceries: MY LOCAL SHOP
+#:
+#: `#` starts a comment; an unknown category is ignored. Checked before the
+#: generic rules, re-read whenever the file changes. No re-import needed.
+LOCAL_RULES_PATH = DATA_DIR / "budget_rules.txt"
+_local_cache: tuple[float, tuple[tuple[str, re.Pattern[str]], ...]] | None = None
+
+
+def parse_local_rules(text: str) -> tuple[tuple[str, re.Pattern[str]], ...]:
+    rules = []
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if ":" not in line:
+            continue
+        category, words = (part.strip() for part in line.split(":", 1))
+        keywords = [re.escape(" ".join(w.upper().split())) for w in words.split(",") if w.strip()]
+        if category in CATEGORY_KIND and keywords:
+            rules.append((category, re.compile(r"(?:^|\b)(?:" + "|".join(keywords) + r")")))
+    return tuple(rules)
+
+
+def local_rules() -> tuple[tuple[str, re.Pattern[str]], ...]:
+    global _local_cache
+    try:
+        mtime = LOCAL_RULES_PATH.stat().st_mtime
+    except OSError:
+        return ()
+    if _local_cache is None or _local_cache[0] != mtime:
+        _local_cache = (mtime, parse_local_rules(LOCAL_RULES_PATH.read_text(encoding="utf-8")))
+    return _local_cache[1]
+
+
+#: A credit that undoes a purchase.
+_REFUND_RE = re.compile(
+    r"^\s*(?:AVOIR|PAIEMENT\s+(?:CB|PSC)|CARTE|CB|REMBOURSEMENT\s+CB|ANNULATION)\b"
+    r"|\b(?:AVOIR|REMBOURSEMENT|REMB|RBT|ANNULATION|ANNUL|RETOUR)\b"
 )
 
 #: A VIR / VIREMENT nobody recognised: money sent to someone, or received.
@@ -125,6 +173,7 @@ def merchant(label: str) -> str:
     text = " ".join(label.upper().split())
     text = _PREFIX_RE.sub("", text, count=1)
     text = _DATE_RE.sub(" ", text)
+    text = re.sub(r"^\s*MOB\s+", "", text)  # paid with the phone
     text = _CARD_RE.sub("", text)
     text = _REF_RE.sub("", text)
     text = " ".join(token for token in text.split() if not _is_reference(token))
@@ -144,20 +193,34 @@ def categorize(
     name = merchant(label)
     if own_transfer:
         return Categorized("internal", INTERNAL, name)
+    if broker is None:
+        # Lines imported before a broker pattern learnt a new form (a
+        # truncated "MINTO", "INVES") still count as invested.
+        broker = broker_of(label)
     if broker is not None:
         # Profit-sharing Amundi pays straight to the bank is pay, not a
         # withdrawal from the plan (same split as `BrokerTransfer.kind`).
         if amount > 0 and ("PARTICIPATION" in upper or "INTERESSEMENT" in upper):
             return Categorized("salary", INCOME, name)
         return Categorized("investment", INVESTMENT, name)
+    for category, pattern in local_rules():
+        if pattern.search(upper):
+            kind = CATEGORY_KIND[category]
+            if kind == SPENDING and amount > 0 and not _REFUND_RE.search(upper):
+                return Categorized("other_income", INCOME, name)
+            return Categorized(category, kind, name)
     if amount > 0:
         for category, pattern in _CREDIT_RULES:
             if pattern.search(upper):
                 return Categorized(category, INCOME, name)
     for category, pattern in _RULES:
         if pattern.search(upper):
-            # A credit here is a refund or a cancelled payment: it lowers
-            # that category's spending, it is not income.
+            # A credit here lowers that category's spending only when it is
+            # a refund: a card credit, or a label that says so. Money a
+            # payment service passes on (a PayPal transfer from a sale or a
+            # friend) is income, not a negative purchase.
+            if amount > 0 and not _REFUND_RE.search(upper):
+                return Categorized("other_income", INCOME, name)
             return Categorized(category, SPENDING, name)
     if amount > 0:
         return Categorized("other_income", INCOME, name)

@@ -1315,6 +1315,7 @@ export const en: Catalogue = {
   'budget.category.bank_fees': 'Bank fees',
   'budget.category.cash': 'Cash withdrawals',
   'budget.category.loan': 'Loans',
+  'budget.category.vehicle': 'Vehicle',
   'budget.category.transfers_out': 'Transfers sent',
   'budget.category.other': 'Other spending',
   'budget.category.investment': 'Investment',

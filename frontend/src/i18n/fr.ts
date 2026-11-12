@@ -1325,6 +1325,7 @@ export const fr: Catalogue = {
   'budget.category.bank_fees': 'Frais bancaires',
   'budget.category.cash': 'Retraits',
   'budget.category.loan': 'Crédits',
+  'budget.category.vehicle': 'Véhicule',
   'budget.category.transfers_out': 'Virements envoyés',
   'budget.category.other': 'Autres dépenses',
   'budget.category.investment': 'Investissement',
