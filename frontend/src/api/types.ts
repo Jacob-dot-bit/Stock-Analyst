@@ -1128,3 +1128,69 @@ export interface WeeklySummary {
   journal_due: WeeklyJournalDue[]
   data_reliability: AttentionItem[]
 }
+
+// --- Budget (`/api/budget`, DEVLOG "Step 3u.92") ---------------------------
+
+export type BudgetKind = 'income' | 'spending' | 'investment' | 'internal'
+
+export interface BudgetMonth {
+  month: string
+  partial: boolean
+  income: number
+  spending: number
+  net: number
+  invested: number
+  categories: Record<string, number>
+}
+
+export interface BudgetAverages {
+  months: number
+  income: number
+  spending: number
+  net: number
+  invested: number
+  categories: Record<string, number>
+}
+
+export interface BudgetMerchant {
+  merchant: string
+  total: number
+  count: number
+  category: string
+  last: string
+}
+
+export interface BudgetRecurring {
+  merchant: string
+  monthly: number
+  category: string
+  months: number
+  last: string
+}
+
+export interface BudgetSummary {
+  as_of: string | null
+  accounts: string[]
+  months: BudgetMonth[]
+  averages: BudgetAverages | null
+  recurring: BudgetRecurring[]
+  top_merchants: BudgetMerchant[]
+  to_sort: BudgetMerchant[]
+}
+
+export interface BudgetOperation {
+  id: number
+  date: string
+  account: string
+  merchant: string
+  category: string
+  kind: BudgetKind
+  amount: number
+  currency: string
+}
+
+export interface BudgetOperations {
+  as_of: string | null
+  since: string | null
+  operations: BudgetOperation[]
+}

@@ -7,6 +7,8 @@ import type {
   Backup,
   BreakdownDimension,
   BreakdownItem,
+  BudgetOperations,
+  BudgetSummary,
   CorporateAction,
   CorporateActionCoverage,
   CorporateActionDetection,
@@ -222,6 +224,16 @@ export const api = {
     if (params?.instrumentId) q.set('instrument_id', String(params.instrumentId))
     const query = q.toString()
     return request<TransactionList>(`/api/transactions${query ? `?${query}` : ''}`)
+  },
+
+  getBudgetSummary: (months = 12) => request<BudgetSummary>(`/api/budget/summary?months=${months}`),
+
+  getBudgetOperations: (params: { days?: number; category?: string; account?: string } = {}) => {
+    const q = new URLSearchParams()
+    q.set('days', String(params.days ?? 90))
+    if (params.category) q.set('category', params.category)
+    if (params.account) q.set('account', params.account)
+    return request<BudgetOperations>(`/api/budget/operations?${q.toString()}`)
   },
 
   getDividendSummary: () => request<DividendSummaryRow[]>('/api/dividends/summary'),
