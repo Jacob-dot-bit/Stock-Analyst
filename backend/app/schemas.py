@@ -1622,3 +1622,80 @@ class ScoreBacktestOut(BaseModel):
     top_minus_bottom: float | None = None
     hit_rate: float | None = None
     periods: list[ScoreBacktestPeriodOut]
+
+
+# --- Budget (`app/budget/`, DEVLOG "Step 3u.92") ----------------------------
+
+
+class BudgetMonthOut(BaseModel):
+    """One calendar month of my bank accounts. `spending` and `invested` are
+    positive amounts going out; `categories` holds each category's net
+    (spending categories positive when money went out, income ones positive
+    when it came in)."""
+
+    month: str
+    #: The export starts or stops inside this month.
+    partial: bool
+    income: float
+    spending: float
+    net: float
+    invested: float
+    categories: dict[str, float]
+
+
+class BudgetAveragesOut(BaseModel):
+    """Over the full months only."""
+
+    months: int
+    income: float
+    spending: float
+    net: float
+    invested: float
+    categories: dict[str, float]
+
+
+class BudgetMerchantOut(BaseModel):
+    merchant: str
+    total: float
+    count: int
+    category: str
+    last: date
+
+
+class BudgetRecurringOut(BaseModel):
+    merchant: str
+    monthly: float
+    category: str
+    months: int
+    last: date
+
+
+class BudgetSummaryOut(BaseModel):
+    #: Last operation on file: every period is counted back from here.
+    as_of: date | None
+    accounts: list[str]
+    months: list[BudgetMonthOut]
+    averages: BudgetAveragesOut | None
+    recurring: list[BudgetRecurringOut]
+    #: Biggest spending over the last 90 days.
+    top_merchants: list[BudgetMerchantOut]
+    #: Spending no rule recognised, biggest first: what to add a keyword for.
+    to_sort: list[BudgetMerchantOut]
+
+
+class BudgetOperationOut(BaseModel):
+    id: int
+    date: date
+    account: str
+    #: The label without the operation prefix, card number or references.
+    merchant: str
+    category: str
+    kind: Literal["income", "spending", "investment", "internal"]
+    amount: float
+    currency: str
+
+
+class BudgetOperationsOut(BaseModel):
+    as_of: date | None
+    since: date | None
+    operations: list[BudgetOperationOut]
