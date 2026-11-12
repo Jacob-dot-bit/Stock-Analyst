@@ -51,6 +51,12 @@ class MessageCode:
     #: the same site, and the first one carries no portfolio value at all.
     MINTOS_ACCOUNT_STATEMENT_NOT_INVESTMENTS = "import.mintosAccountStatementNotInvestments"  # {filename}
 
+    #: Funds of the Amundi operations journal whose cost could not be
+    #: applied: no matching position yet, or units that don't add up to the
+    #: units held (journal incomplete for that fund). Their gain stays the
+    #: previous estimate.
+    AMUNDI_OPERATIONS_NOT_APPLIED = "import.amundiOperationsNotApplied"  # {funds}
+
     # --- Single upload slot (`ingest/detect.py`) -----------------------------
     #: Which export was recognised, as ``import.detected.<FileKind value>`` —
     #: one code per kind so each locale words it fully. Shown first in the
@@ -162,6 +168,11 @@ class PerformanceNote:
     #: fund's quantity hasn't changed since then, i.e. no new contribution
     #: to *this* fund muddies the comparison. See DEVLOG "Decision 3u.48".
     AMUNDI_REAL_GAIN_SINCE_SNAPSHOT = "performance.amundiRealGainSinceSnapshot"  # {since}
+    #: Exact gain for one Amundi fund: current value minus everything the
+    #: operations journal shows going into it since {since}. Only used when
+    #: the journal's units add up to the units held, i.e. it is complete
+    #: for that fund. See DEVLOG "Step 3u.88".
+    AMUNDI_GAIN_FROM_OPERATIONS = "performance.amundiGainFromOperations"  # {since}
 
 
 class ValuationNote:

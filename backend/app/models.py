@@ -62,6 +62,13 @@ class TxType:
     P2P_PRINCIPAL_REPAYMENT = "P2P_PRINCIPAL_REPAYMENT"
     P2P_INTEREST = "P2P_INTEREST"
     P2P_FEE = "P2P_FEE"
+
+    #: One line of Amundi ESR's operations journal (payment, employer match,
+    #: arbitrage, capitalised dividend, fee...). Kept apart from DEPOSIT/
+    #: DIVIDEND/FEE: most rows are units moving between funds inside the
+    #: plan, not cash crossing the account boundary. Only read to rebuild
+    #: each fund's cost basis. See DEVLOG "Step 3u.88".
+    AMUNDI_OPERATION = "AMUNDI_OP"
     #: Not a cash flow — one per statement period, preserving the historical
     #: valuation point (`amount` = closing balance) since `Position` only
     #: ever holds the current snapshot, replaced wholesale on each import.
