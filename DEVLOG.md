@@ -9556,3 +9556,33 @@ Checked with the real journal against a simulated position as of 2026-09-08
 units at the 2026-10-31 value.
 
 Verification: backend suite 1142 passed; `tsc -b` clean.
+
+## Step 3u.90 — "Invested" on Amundi is my own money; the employer match is gain (2026-11-12)
+
+With 3u.88/3u.89 in place the PEG showed about 12,500 € invested, and I knew
+I had not put that much in. The figure was right for what it measured: every
+euro that entered the funds, including the employer match (abondement,
+4,060 € over the period). For me that match is not money I invested, it is
+part of what the plan earned me.
+
+`fund_pools` now replays the journal and keeps two costs per fund: own money
+(voluntary payments, plus profit-sharing and incentive bonuses, which were
+mine to take as cash) and the match (rows with origin `ABD`). "Invested" and
+the gain use own money only; the note under the table gives the match.
+
+Arbitrages and reallocations had to change too. 3u.88 gave the destination
+fund a cost equal to the value it received, which quietly turned the source's
+gain (and match) into cost. Now a fund that loses a share of its units gives
+up the same share of each cost, and the day's destinations receive it in
+proportion to what each got. A transfer can cross from the PEG to the PERCO,
+so a day's arbitrages form one group whatever the account. Redemptions
+remove their share of both costs; the invalid-address fee still removes
+none (a loss).
+
+On the real journal: 8,563 € of own money (7,950 € of payments, 613 € of
+profit-sharing and bonuses) and 4,060.45 € of match. The PERCO fund fed by
+the 2025 transfer now carries 41.38 € of own money and 112.09 € of match
+instead of the 201.40 € of value it received.
+
+Verification: backend suite 1140 passed (the cost-rule table is replaced by
+`fund_pools` tests); `tsc -b` clean.

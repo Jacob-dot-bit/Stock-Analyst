@@ -86,7 +86,7 @@ export const pl: Catalogue = {
   'performance.amundiRealGainSinceSnapshot':
     'Rzeczywisty zysk tego funduszu od {since}: obliczony na podstawie ostatniego wyciągu, który ujawnił jego zysk — liczba posiadanych jednostek nie zmieniła się od tego czasu.',
   'performance.amundiGainFromOperations':
-    'Rzeczywisty zysk tego funduszu: bieżąca wartość minus wszystko, co do niego wpłacono od {since}, według dziennika operacji Amundi.',
+    'Rzeczywisty zysk tego funduszu: bieżąca wartość minus to, co sam wpłaciłeś od {since} (wpłaty, udział w zyskach, premie), według dziennika operacji Amundi. Dopłata pracodawcy ({match} €) liczy się jako zysk.',
 
   // --- Aktualność zadeklarowanych wycen (DEVLOG "Decision 3u.50") ----------
   'valuation.declaredFresh':
