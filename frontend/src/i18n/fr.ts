@@ -164,6 +164,8 @@ export const fr: Catalogue = {
   'import.detected.amundi_operations': 'Fichier reconnu : journal des opérations Amundi (.xlsb).',
   'import.amundiOperationsNotApplied':
     "Gain non recalculé pour : {funds}. Soit le fonds n'a pas encore de position (importez la Synthèse), soit le journal ne couvre pas tout son historique (ses parts ne correspondent pas aux parts détenues) : exportez une période plus longue.",
+  'import.amundiPositionsUpdatedFromOperations':
+    'Mis à jour avec les opérations plus récentes du journal (parts et valeur à la dernière valeur liquidative connue) : {funds}. La date entre parenthèses est celle de la position avant la mise à jour.',
   'import.fileNotRecognised':
     'Fichier non reconnu. Formats acceptés : relevé XTB, relevé trimestriel Mintos (PDF), Mintos My investments (.xlsx), relevé de compte Mintos (.xlsx, .csv), relevé annuel Amundi (PDF), Synthèse Amundi ou journal des opérations Amundi (.xlsb).',
   'import.noTableRecognised':
