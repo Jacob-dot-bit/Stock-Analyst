@@ -78,7 +78,7 @@ export const fr: Catalogue = {
   'performance.amundiRealGainSinceSnapshot':
     "Gain réel de ce fonds depuis le {since} : calculé à partir du dernier relevé ayant communiqué son gain, la quantité détenue n'ayant pas changé depuis.",
   'performance.amundiGainFromOperations':
-    "Gain réel de ce fonds : valeur actuelle moins tout ce qui y a été versé depuis le {since}, d'après le journal des opérations Amundi.",
+    "Gain réel de ce fonds : valeur actuelle moins ce que vous y avez versé vous-même depuis le {since} (versements, participation, intéressement), d'après le journal des opérations Amundi. L'abondement de l'entreprise ({match} €) compte dans le gain.",
 
   // --- Fraîcheur des valorisations déclarées (DEVLOG "Decision 3u.50") -----
   'valuation.declaredFresh':

@@ -84,7 +84,7 @@ export const en: Catalogue = {
   'performance.amundiRealGainSinceSnapshot':
     "This fund's real gain since {since}: computed from the last statement that disclosed its gain, since the quantity held hasn't changed since then.",
   'performance.amundiGainFromOperations':
-    "This fund's real gain: current value minus everything paid into it since {since}, from the Amundi operations journal.",
+    "This fund's real gain: current value minus what you paid into it yourself since {since} (payments, profit-sharing, incentive bonuses), from the Amundi operations journal. The employer match ({match} €) counts as gain.",
 
   // --- Declared valuation freshness (DEVLOG "Decision 3u.50") --------------
   'valuation.declaredFresh':
