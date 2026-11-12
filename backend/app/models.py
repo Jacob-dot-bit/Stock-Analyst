@@ -73,6 +73,13 @@ class TxType:
     #: valuation point (`amount` = closing balance) since `Position` only
     #: ever holds the current snapshot, replaced wholesale on each import.
     P2P_SNAPSHOT = "P2P_SNAPSHOT"
+    #: Money between my bank account and a broker, seen from the bank's
+    #: export (`ingest/bank_import.py`). Kept apart from DEPOSIT/WITHDRAWAL,
+    #: which are the broker's own record of the same money: counting both
+    #: would show every euro twice. `amount` is signed from the bank side
+    #: (negative = sent to the broker); `raw["broker"]` names the broker.
+    #: See DEVLOG "Step 3u.91".
+    BROKER_TRANSFER = "BROKER_TRANSFER"
 
 
 class MappingStatus:
