@@ -196,3 +196,38 @@ class TestImportOperations:
         position = _positions(db)[30.5]
         assert position.broker_net_pl == pytest.approx(2135.0 - 1500.0)
         assert position.performance_note["code"] == "performance.amundiGainFromOperations"
+
+
+class TestCatchUpOlderPosition:
+    """The Synthese on file predates the journal's last payments."""
+
+    def _older_holdings(self, db, quantity_a):
+        parsed = _synthese(ParsedFund("Amundi PEG", FUND_A, 50.0, quantity_a, quantity_a * 50.0, None))
+        parsed.as_of = date(2025, 4, 1)  # after the March payment, before the August dividend
+        with patch("app.ingest.service.parse_amundi_synthese_export", return_value=parsed):
+            import_amundi_synthese_file(db, b"old-synthese", "Synthese_20250401_100000.xlsb")
+
+    def test_units_matching_at_its_date_bring_it_up_to_the_journal(self, db):
+        self._older_holdings(db, quantity_a=30.0)
+
+        batch = _import_journal(db)
+
+        position = _positions(db)[30.5]
+        assert position.value_as_of == date(2025, 8, 7)
+        assert position.market_price == 60.0
+        assert position.broker_market_value == pytest.approx(30.5 * 60.0)
+        assert position.broker_net_pl == pytest.approx(30.5 * 60.0 - 1500.0)
+        codes = [w["code"] for w in batch.warnings]
+        assert "import.amundiPositionsUpdatedFromOperations" in codes
+        assert "2025-04-01" in batch.warnings[codes.index("import.amundiPositionsUpdatedFromOperations")]["params"]["funds"]
+
+    def test_units_not_matching_at_its_date_change_nothing(self, db):
+        # 35 units on 2025-04-01 but the journal only explains 30 by then.
+        self._older_holdings(db, quantity_a=35.0)
+
+        batch = _import_journal(db)
+
+        position = _positions(db)[35.0]
+        assert position.value_as_of == date(2025, 4, 1)
+        assert position.performance_note is None
+        assert batch.warnings[-1]["code"] == "import.amundiOperationsNotApplied"

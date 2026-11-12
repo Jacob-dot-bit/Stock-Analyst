@@ -56,6 +56,10 @@ class MessageCode:
     #: units held (journal incomplete for that fund). Their gain stays the
     #: previous estimate.
     AMUNDI_OPERATIONS_NOT_APPLIED = "import.amundiOperationsNotApplied"  # {funds}
+    #: Positions from an older Synthese/PDF brought up to date by the
+    #: journal's newer operations (units and value at its last NAV).
+    #: {funds} lists each fund with the date it was at before.
+    AMUNDI_POSITIONS_UPDATED_FROM_OPERATIONS = "import.amundiPositionsUpdatedFromOperations"  # {funds}
 
     # --- Single upload slot (`ingest/detect.py`) -----------------------------
     #: Which export was recognised, as ``import.detected.<FileKind value>`` —
