@@ -9661,3 +9661,22 @@ Follow-up, same day: `/api/budget/operations?month=YYYY-MM` returns one
 calendar month instead of the last N days. Hermes reads the whole history
 as the monthly summary, then zooms on a month (and a category) when
 something stands out, rather than pulling three years of lines at once.
+
+Second follow-up, after a first analysis on my real export: several lines
+were misread. Fixed without a re-import, since the category is worked out at
+read time:
+
+- a hypermarket name that arrives cut and glued (`CARREF...`), sometimes
+  behind `MOB` (paid with the phone): now groceries;
+- a new `vehicle` category: repairs, garage, tyres, MOT, driving school;
+- a credit in a spending category is a refund only when it looks like one
+  (card credit, "avoir", "remboursement"...). A payment-service transfer in
+  was counted as negative shopping and made whole months' spending
+  negative; it is income now;
+- Mintos labels cut at a fixed width (`... MINTO`, `<8 digits> - INVES`)
+  are recognised, by the importer (the next import adds the missing
+  transfers to the ledger) and at read time for lines already stored;
+- my own keywords (local shops, my insurers, places) live in
+  `data/budget_rules.txt`, ignored by git: this repository is public and
+  those names say where I live. One `category: KEYWORD, KEYWORD` line each,
+  checked before the generic rules, re-read when the file changes.

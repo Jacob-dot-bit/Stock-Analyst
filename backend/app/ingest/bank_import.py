@@ -55,7 +55,8 @@ BANK_NAMES = {
 #: to Mintos appear, before the bank started showing the beneficiary's name.
 BROKER_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("XTB", re.compile(r"\bXTB\b|XTB\.COM")),
-    ("Mintos", re.compile(r"MINTOS|\b\d{8} - INVEST")),
+    # Labels are cut at a fixed width: "LV RIGA CROWDCUBE MINTO", "12345678 - INVES".
+    ("Mintos", re.compile(r"MINTOS?\b|MINTOS|\b\d{8} - INVES")),
     ("Amundi", re.compile(r"AMUNDI")),
 )
 

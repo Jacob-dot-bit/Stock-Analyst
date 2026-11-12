@@ -87,6 +87,7 @@ class TestMerchant:
             ("PRLV SEPA FREE MOBILE FM-123456-01 ECH/020726", "FREE MOBILE"),
             ("VIR SEPA A MARC DUPONT REMBOURSEMENT WEEKEND", "MARC DUPONT REMBOURSEMENT WEEKEND"),
             ("RETRAIT DAB 1907 PARIS CARTE 1234", "PARIS"),
+            ("PAIEMENT PSC 0101 MOB CANTINE EXEMPLE CARTE 1234", "CANTINE EXEMPLE"),
         ],
     )
     def test_no_card_number_nor_reference(self, label, expected):
@@ -107,6 +108,17 @@ class TestCategorize:
             ("VIR SEPA SALAIRE OCTOBRE", 2000, "salary", "income"),
             ("VIR SEPA A MARC DUPONT", -60, "transfers_out", "spending"),
             ("PAIEMENT CB 2107 PARIS MYSTERE SARL CARTE 1234", -12, "other", "spending"),
+            # The hypermarket's name cut and glued, behind "MOB" (paid by phone).
+            ("PAIEMENT PSC 0101 MOB CARREFHYPERXYZ CARTE 1234", -55, "groceries", "spending"),
+            ("PAIEMENT CB 0101 CARREFMARKETABC CARTE 1234", -40, "groceries", "spending"),
+            ("PAIEMENT CB 0101 VILLE GARAGE DU CENTRE CARTE 1234", -350, "vehicle", "spending"),
+            ("PAIEMENT CB 0101 AUTO ECOLE EXEMPLE CARTE 1234", -443, "vehicle", "spending"),
+            # A PayPal transfer in is money received, not a negative purchase.
+            ("VIR SEPA PAYPAL EUROPE", 870, "other_income", "income"),
+            ("AVOIR CB 0101 PAYPAL CARTE 1234", 20, "shopping", "spending"),
+            # Labels cut at a fixed width.
+            ("VIR SEPA LV RIGA CROWDCUBE MINTO", -515, "investment", "investment"),
+            ("VIR SEPA 12345678 - INVES", -500, "investment", "investment"),
         ],
     )
     def test_rules(self, label, amount, category, kind):
@@ -117,6 +129,34 @@ class TestCategorize:
         assert categorize("VIR SEPA XTB S.A", -300, broker="XTB").kind == "investment"
         assert categorize("VIR AMUNDI VIRT PARTICIPATION", 150, broker="Amundi").category == "salary"
         assert categorize("VIR LIVRET A", -100, own_transfer=True).kind == "internal"
+
+
+class TestLocalRules:
+    def test_parsed_and_checked_first(self, tmp_path, monkeypatch):
+        from app.budget import categories
+
+        rules = tmp_path / "budget_rules.txt"
+        rules.write_text(
+            "# mes mots-clés\n"
+            "insurance: Courtier Exemple, ASSUREUR X\n"
+            "groceries: VILLE EXEMPLE  # une supérette sans nom\n"
+            "nope: IGNORED\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(categories, "LOCAL_RULES_PATH", rules)
+        monkeypatch.setattr(categories, "_local_cache", None)
+
+        assert categorize("PRLV SEPA COURTIER EXEMPLE 123", -59).category == "insurance"
+        assert categorize("PAIEMENT CB 0101 VILLE EXEMPLE CARTE 1234", -12).category == "groceries"
+        # Still a refund only when it looks like one.
+        assert categorize("VIR SEPA ASSUREUR X INDEMNISATION", 300).category == "other_income"
+        assert categorize("PAIEMENT CB 0101 IGNORED CARTE 1234", -5).category == "other"
+
+    def test_no_file_no_rule(self, tmp_path, monkeypatch):
+        from app.budget import categories
+
+        monkeypatch.setattr(categories, "LOCAL_RULES_PATH", tmp_path / "absent.txt")
+        assert categories.local_rules() == ()
 
 
 class TestImportKeepsEveryLine:

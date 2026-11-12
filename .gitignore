@@ -18,6 +18,8 @@ data/*.db*
 data/*.sqlite*
 data/cache/
 data/imports/
+# My own budget keywords (shops, insurers, places): personal, see app/budget/categories.py.
+data/budget_rules*.txt
 
 # Database backups — real portfolio snapshots, same sensitivity as data/.
 backups/
