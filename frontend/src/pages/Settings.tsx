@@ -198,12 +198,7 @@ export default function Settings() {
           <h2>{t('settings.groupPortfolioData.title')}</h2>
           <p className="muted">{t('settings.groupPortfolioData.subtitle')}</p>
 
-          <ImportPanel kind="xtb" onImported={() => {}} />
-          <ImportPanel kind="mintos" onImported={() => {}} />
-          <ImportPanel kind="mintos-investments" onImported={() => {}} />
-          <ImportPanel kind="mintos-transactions" onImported={() => {}} />
-          <ImportPanel kind="amundi" onImported={() => {}} />
-          <ImportPanel kind="amundi-synthese" onImported={() => {}} />
+          <ImportPanel kind="auto" onImported={() => {}} />
           <FundamentalsRefreshButton onRefreshed={() => {}} />
           <ManualPositionForm onCreated={() => {}} />
         </section>

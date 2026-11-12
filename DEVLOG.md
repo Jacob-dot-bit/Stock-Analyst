@@ -9467,3 +9467,33 @@ The repository is public, so it was re-read as a stranger would find it.
 
 Verification: backend suite 1103 passed; `npm run lint` and `npm run build`
 clean.
+
+## Step 3u.87 — One upload slot for every broker file (2026-11-12)
+
+The settings page had grown to six import panels: XTB, three for Mintos
+(quarterly PDF, "My investments", account statement) and two for Amundi
+(annual PDF, "Synthèse"). Each was added when its format came along, never
+merged back. Picking the right one was left to me, and on 2026-11-12 I
+dropped the Mintos account statement in the "My investments" panel and got
+a bare "no date found in filename".
+
+Every one of these files can be told apart from its content alone, so there
+is now a single panel backed by `POST /api/imports/auto` (and `/preview`):
+
+- PDF: Mintos or Amundi, from the first pages' text;
+- zip holding `xl/workbook.bin`: Amundi "Synthèse" (.xlsb);
+- sheet or csv whose first row has `Montant investi`: Mintos "My investments";
+- first row with `Mouvement` and `Type de paiement`: Mintos account statement;
+- any other .xlsx/.csv: XTB, whose tables don't start on row one — its own
+  parser says if nothing was found.
+
+The filename is never used, since Mintos already changed its naming once.
+The recognised type is the first line of the preview report, so a wrong file
+shows before confirming. The per-broker endpoints stay for scripts.
+
+Checked against the real 2026-11-12 Mintos account statement (.xlsx,
+185,641 rows): recognised in 10 ms, parsed as before. The real Amundi PDFs
+were not re-checked here; the hints are "amundi", "épargne salariale",
+"perco" and "relevé annuel de situation".
+
+Verification: backend suite 1123 passed; `tsc -b` and `npm run lint` clean.
