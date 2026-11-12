@@ -77,6 +77,8 @@ export const fr: Catalogue = {
     "Gain approché : part proportionnelle du gain du compte « {account} », basé sur les versements/abondement/intéressement connus depuis {since} — les années non importées ne comptent pas dans ce total, ce qui peut surestimer ce gain.",
   'performance.amundiRealGainSinceSnapshot':
     "Gain réel de ce fonds depuis le {since} : calculé à partir du dernier relevé ayant communiqué son gain, la quantité détenue n'ayant pas changé depuis.",
+  'performance.amundiGainFromOperations':
+    "Gain réel de ce fonds : valeur actuelle moins tout ce qui y a été versé depuis le {since}, d'après le journal des opérations Amundi.",
 
   // --- Fraîcheur des valorisations déclarées (DEVLOG "Decision 3u.50") -----
   'valuation.declaredFresh':
@@ -87,7 +89,7 @@ export const fr: Catalogue = {
   // --- Import panel --------------------------------------------------------
   'import.auto.title': 'Importer un fichier',
   'import.auto.instructions':
-    "Déposez n'importe quel export, le courtier et le type de fichier sont reconnus tout seuls. XTB : xStation → Account history → Export, période « All », format Excel. Mintos : le relevé trimestriel PDF, My investments → Export (.xlsx) pour la valeur du jour, ou le relevé de compte (.xlsx, .csv) pour les intérêts et frais. Amundi ESR : le relevé annuel PDF ou l'export Synthèse (.xlsb).",
+    "Déposez n'importe quel export, le courtier et le type de fichier sont reconnus tout seuls. XTB : xStation → Account history → Export, période « All », format Excel. Mintos : le relevé trimestriel PDF, My investments → Export (.xlsx) pour la valeur du jour, ou le relevé de compte (.xlsx, .csv) pour les intérêts et frais. Amundi ESR : le relevé annuel PDF, l'export Synthèse (.xlsb) pour la valeur du jour, ou le journal « Mes opérations » (.xlsb) pour le gain réel de chaque fonds.",
   'import.auto.multiAccount':
     "Un fichier déjà importé ne crée pas de doublons. Pour une même valeur (prêts Mintos, fonds Amundi), l'export le plus récent l'emporte toujours. Un export XTB ne couvre qu'un compte : importez chacun séparément.",
   'import.auto.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx, .csv, .pdf, .xlsb)',
@@ -158,9 +160,12 @@ export const fr: Catalogue = {
   'import.detected.mintos_investments': 'Fichier reconnu : export Mintos My investments (valeur du portefeuille de prêts).',
   'import.detected.mintos_account_statement': 'Fichier reconnu : relevé de compte Mintos (intérêts, frais et impôts).',
   'import.detected.amundi_statement': 'Fichier reconnu : relevé annuel Amundi ESR (PDF).',
-  'import.detected.amundi_synthese': 'Fichier reconnu : export Synthèse Amundi (.xlsb).',
+  'import.detected.amundi_synthese': 'Fichier reconnu : export Synthèse Amundi ou journal des opérations Amundi (.xlsb).',
+  'import.detected.amundi_operations': 'Fichier reconnu : journal des opérations Amundi (.xlsb).',
+  'import.amundiOperationsNotApplied':
+    "Gain non recalculé pour : {funds}. Soit le fonds n'a pas encore de position (importez la Synthèse), soit le journal ne couvre pas tout son historique (ses parts ne correspondent pas aux parts détenues) : exportez une période plus longue.",
   'import.fileNotRecognised':
-    'Fichier non reconnu. Formats acceptés : relevé XTB, relevé trimestriel Mintos (PDF), Mintos My investments (.xlsx), relevé de compte Mintos (.xlsx, .csv), relevé annuel Amundi (PDF), Synthèse Amundi (.xlsb).',
+    'Fichier non reconnu. Formats acceptés : relevé XTB, relevé trimestriel Mintos (PDF), Mintos My investments (.xlsx), relevé de compte Mintos (.xlsx, .csv), relevé annuel Amundi (PDF), Synthèse Amundi ou journal des opérations Amundi (.xlsb).',
   'import.noTableRecognised':
     "Aucune table reconnue dans ce fichier. Vérifiez qu'il s'agit bien d'un rapport exporté depuis Account history.",
   'import.nothingImportable': "Aucune position ni opération exploitable n'a été trouvée.",
