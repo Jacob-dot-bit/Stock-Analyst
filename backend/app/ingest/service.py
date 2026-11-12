@@ -29,6 +29,7 @@ from app.ingest.amundi_operations_import import (
     parse_amundi_operations_export,
 )
 from app.ingest.amundi_synthese_import import parse_amundi_synthese_export
+from app.ingest.bank_import import BrokerTransfer, ParsedBankExport, parse_bank_export
 from app.ingest.mintos_import import (
     MINTOS_CORE_ACCOUNT,
     MINTOS_CORE_BROKER_SYMBOL,
@@ -1569,6 +1570,149 @@ def import_amundi_operations_file(
             *batch.warnings,
             Message(MessageCode.AMUNDI_OPERATIONS_NOT_APPLIED, {"funds": ", ".join(not_applied)}).as_dict(),
         ]
+
+    return _finish_import(db, batch, commit)
+
+
+#: `Instrument.not_priceable_reason` of a bank account: its value is the
+#: balance the bank declared, there is no market price to look up. Not in
+#: the portfolio's declared-valuation lists on purpose: cash is the most
+#: liquid thing I hold, not an illiquid statement value.
+BANK_ACCOUNT_REASON = "bank_account"
+
+
+def _bank_transfer_external_id(transfer: BrokerTransfer, occurrence: int) -> str:
+    """Same idea as `_operation_external_id`: the row's own fields, plus
+    its rank among identical rows (two 50 € card top-ups on XTB the same
+    day stay two), so an overlapping later export inserts nothing twice."""
+    key = "|".join(
+        str(part)
+        for part in (transfer.executed_on.isoformat(), transfer.account.symbol, transfer.label,
+                     f"{transfer.amount:.2f}", occurrence)
+    )
+    return "bank-" + hashlib.sha256(key.encode()).hexdigest()[:40]
+
+
+def _bank_transfer_totals(transfers: list[BrokerTransfer]) -> str:
+    sums: dict[str, list[float]] = {}
+    for transfer in transfers:
+        if transfer.kind == "payout":
+            continue
+        sent_back = sums.setdefault(transfer.broker, [0.0, 0.0])
+        sent_back[0 if transfer.amount < 0 else 1] += transfer.amount
+    return "; ".join(
+        f"{broker} {sent:.2f} +{back:.2f} = {sent + back:.2f}"
+        for broker, (sent, back) in sorted(sums.items())
+    )
+
+
+def import_bank_file(
+    db: Session, content: bytes, filename: str, *, commit: bool = True
+) -> ImportBatch | dict[str, Any]:
+    """Parse then persist a bank's "Vos comptes" export
+    (`ingest/bank_import.py`): one CASH position per account, valued at the
+    balance on the export date, and the transfers to and from my brokers
+    as `BROKER_TRANSFER` transactions. Spending is not stored. A balance
+    already on file from a more recent export is kept. See DEVLOG
+    "Step 3u.91".
+    """
+    parsed: ParsedBankExport = parse_bank_export(content, filename)
+
+    batch = ImportBatch(
+        filename=filename,
+        file_hash=hashlib.sha256(content).hexdigest(),
+        warnings=[m.as_dict() for m in parsed.warnings],
+        sections=[sec.as_dict() for sec in parsed.sections],
+        accounts=sorted(account.label for account in parsed.accounts),
+        positions_found=0,
+        transactions_found=len(parsed.transfers),
+    )
+    db.add(batch)
+    db.flush()
+
+    if parsed.is_empty:
+        return _finish_import(db, batch, commit)
+
+    overrides = _load_overrides(db)
+    kept: list[str] = []
+    for account in parsed.accounts:
+        instrument = get_or_create_instrument(
+            db,
+            account.symbol,
+            overrides,
+            currency=account.currency,
+            name=f"{account.bank} — {account.product}",
+            category="CASH",
+        )
+        if not instrument.not_priceable_reason:
+            instrument.not_priceable_reason = BANK_ACCOUNT_REASON
+
+        existing = db.execute(
+            select(Position).where(Position.account == account.label, Position.source == Source.IMPORT)
+        ).scalars().all()
+        newer = [p for p in existing if p.value_as_of and parsed.as_of and p.value_as_of > parsed.as_of]
+        if newer:
+            kept.append(f"{account.label} ({newer[0].value_as_of.isoformat()})")
+            continue
+        opened = min(
+            [p.opened_at for p in existing if p.opened_at]
+            + ([datetime.combine(account.first_operation, datetime.min.time())] if account.first_operation else []),
+            default=None,
+        )
+        db.execute(delete(Position).where(Position.account == account.label, Position.source == Source.IMPORT))
+        db.flush()
+        db.add(
+            Position(
+                instrument_id=instrument.id,
+                source=Source.IMPORT,
+                account=account.label,
+                quantity=1,
+                # Placeholder, as for Mintos Core: a balance has no unit cost.
+                avg_price=account.balance,
+                broker_market_value=account.balance,
+                currency=account.currency,
+                opened_at=opened,
+                value_as_of=parsed.as_of,
+                import_batch_id=batch.id,
+            )
+        )
+        batch.positions_found += 1
+
+    seen: set[tuple[str, str, str]] = set()
+    occurrences: dict[tuple, int] = {}
+    inserted = 0
+    for transfer in parsed.transfers:
+        identity = (transfer.executed_on, transfer.account.symbol, transfer.label, transfer.amount)
+        occurrence = occurrences.get(identity, 0)
+        occurrences[identity] = occurrence + 1
+        inserted += _insert_transaction(
+            db,
+            external_id=_bank_transfer_external_id(transfer, occurrence),
+            tx_type=TxType.BROKER_TRANSFER,
+            instrument=None,
+            batch=batch,
+            seen=seen,
+            executed_at=datetime.combine(transfer.executed_on, datetime.min.time()),
+            account=transfer.account.label,
+            amount=transfer.amount,
+            currency=transfer.account.currency,
+            comment=f"{transfer.broker} — {transfer.label}",
+            raw={
+                "broker": transfer.broker,
+                "kind": transfer.kind,
+                "label": transfer.label,
+                "value_date": transfer.value_date.isoformat() if transfer.value_date else None,
+            },
+        )
+    batch.transactions_inserted = inserted
+
+    extra: list[dict] = []
+    if parsed.transfers:
+        extra.append(Message(MessageCode.BANK_BROKER_TRANSFERS, {"totals": _bank_transfer_totals(parsed.transfers)}).as_dict())
+    if kept:
+        extra.append(Message(MessageCode.BANK_BALANCE_KEPT, {"accounts": ", ".join(kept)}).as_dict())
+    if extra:
+        batch.warnings = [*batch.warnings, *extra]
 
     return _finish_import(db, batch, commit)
 

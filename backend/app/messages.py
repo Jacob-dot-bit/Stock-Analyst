@@ -61,6 +61,14 @@ class MessageCode:
     #: {funds} lists each fund with the date it was at before.
     AMUNDI_POSITIONS_UPDATED_FROM_OPERATIONS = "import.amundiPositionsUpdatedFromOperations"  # {funds}
 
+    # --- Bank export (`ingest/bank_import.py`) --------------------------------
+    #: Per broker: {totals} = "XTB: -14830.00 / +8300.00 / -6530.00; ..."
+    #: (sent, back, net, in EUR). Payouts (profit-sharing) are left out.
+    BANK_BROKER_TRANSFERS = "import.bankBrokerTransfers"  # {totals}
+    #: An account whose balance on file is more recent than this export's:
+    #: kept as it is. {accounts} lists each with the date on file.
+    BANK_BALANCE_KEPT = "import.bankBalanceKept"  # {accounts}
+
     # --- Single upload slot (`ingest/detect.py`) -----------------------------
     #: Which export was recognised, as ``import.detected.<FileKind value>`` —
     #: one code per kind so each locale words it fully. Shown first in the

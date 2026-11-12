@@ -11,6 +11,7 @@ from app.ingest.service import (
     import_amundi_file,
     import_amundi_operations_file,
     import_amundi_synthese_file,
+    import_bank_file,
     import_export_file,
     import_mintos_file,
     import_mintos_investments_file,
@@ -47,6 +48,7 @@ _IMPORTERS = {
     FileKind.AMUNDI_STATEMENT: (import_amundi_file, "amundi-statement.pdf"),
     FileKind.AMUNDI_SYNTHESE: (import_amundi_synthese_file, "Synthese.xlsb"),
     FileKind.AMUNDI_OPERATIONS: (import_amundi_operations_file, "ExportOperations.xlsb"),
+    FileKind.BANK_STATEMENT: (import_bank_file, "comptes.xlsx"),
 }
 
 
@@ -63,7 +65,7 @@ def _detected(kind: FileKind) -> MessageOut:
 @router.post("/auto", response_model=ImportBatchOut)
 async def import_auto(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
     """Import any supported export — XTB, the three Mintos files or the
-    three Amundi ones. The content decides which importer runs (`ingest/detect.py`);
+    three Amundi ones, or a bank account export. The content decides which importer runs (`ingest/detect.py`);
     the per-broker endpoints below stay for scripts that already call them.
     See DEVLOG "Step 3u.87".
     """

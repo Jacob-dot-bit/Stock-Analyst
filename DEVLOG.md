@@ -9586,3 +9586,40 @@ instead of the 201.40 € of value it received.
 
 Verification: backend suite 1140 passed (the cost-rule table is replaced by
 `fund_pools` tests); `tsc -b` clean.
+
+## Step 3u.91 — My bank account in the single upload slot (2026-11-12)
+
+Stock Analyst knew everything I hold at my brokers but nothing of the cash
+sitting at the bank, and nothing of how much actually left my account to be
+invested. Monabanq's "Vos comptes" export (.xlsx, same workbook at Crédit
+Mutuel and CIC) now goes in the same "Importer un fichier" slot.
+
+The detector recognises it by its first cell, `Votre situation financière
+au DD/MM/YYYY`. `ingest/bank_import.py` reads the summary sheet (one row per
+account: label, R.I.B., balance) and one sheet per account (`Cpt <branch>
+<number>`: date, value date, label, debit, credit). Two things are kept:
+
+- each account's balance on the export date, as a position in a new `CASH`
+  category, valued at that balance (not priceable, reason `bank_account`).
+  It counts in the total and in the allocation. It is deliberately not in
+  the declared-valuation lists: the liquidity view is about money that is
+  hard to get out, and a current account is the opposite. A balance already
+  on file from a more recent export is kept, and the report says so;
+- the transfers to and from XTB, Mintos and Amundi, as a new
+  `BROKER_TRANSFER` transaction type signed from the bank side. Not
+  DEPOSIT/WITHDRAWAL: those are the brokers' own record of the same money,
+  and counting both would show every euro twice. The early Mintos transfers
+  carry only the investor reference (`<8 digits> - INVESTOR`), so that form
+  is matched too. Profit-sharing Amundi pays into the account is tagged
+  `payout` and left out of the totals: it never was my money in the plan.
+
+Card payments, bills and transfers between my own accounts are read and
+dropped. The account number is never stored whole, only its last four
+digits in the symbol (`MONABANQ-PRATIQ-1234`).
+
+Checked on my real export (two accounts, three years): every broker
+transfer found, nothing else. The net sent to Amundi is exactly the
+voluntary payments total of the operations journal (3u.90), from a
+completely different file, which is the check I trust most here.
+
+Verification: backend suite 1157 passed; `tsc -b` clean.

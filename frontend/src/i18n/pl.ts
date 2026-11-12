@@ -167,8 +167,13 @@ export const pl: Catalogue = {
   'import.detected.mintos_investments': 'Rozpoznano: eksport Mintos My investments (wartość portfela pożyczek).',
   'import.detected.mintos_account_statement': 'Rozpoznano: wyciąg z konta Mintos (odsetki, opłaty i podatek).',
   'import.detected.amundi_statement': 'Rozpoznano: roczny wyciąg Amundi ESR (PDF).',
-  'import.detected.amundi_synthese': 'Rozpoznano: eksport Synthèse Amundi lub dziennik operacji Amundi (.xlsb).',
+  'import.detected.amundi_synthese': 'Rozpoznano: eksport Synthèse Amundi lub dziennik operacji Amundi (.xlsb), eksport rachunków Monabanq (.xlsx).',
   'import.detected.amundi_operations': 'Rozpoznano: dziennik operacji Amundi (.xlsb).',
+  'import.detected.bank_statement': 'Rozpoznano: eksport rachunków bankowych (Monabanq, Crédit Mutuel, CIC).',
+  'import.bankBrokerTransfers':
+    'Przelewy między bankiem a brokerami (wysłane, zwrócone = netto, w €): {totals}. Udział w zyskach wypłacony przez Amundi na konto nie jest liczony.',
+  'import.bankBalanceKept':
+    'Saldo jest już aktualne z nowszego eksportu, pozostawione bez zmian: {accounts}.',
   'import.amundiOperationsNotApplied':
     'Nie przeliczono zysku dla: {funds}. Albo fundusz nie ma jeszcze pozycji (zaimportuj Synthèse), albo dziennik nie obejmuje całej jego historii (jednostki nie zgadzają się z posiadanymi): wyeksportuj dłuższy okres.',
   'import.amundiPositionsUpdatedFromOperations':
@@ -553,6 +558,7 @@ export const pl: Catalogue = {
   'transactions.type.WITHDRAWAL': 'Wypłata',
   'transactions.type.INTEREST': 'Odsetki',
   'transactions.type.OTHER': 'Inne',
+  'transactions.type.BROKER_TRANSFER': 'Przelew bank ↔ broker',
   // Zagregowane przepływy Mintos Core (P2P) — celowo odrębne od zwykłych
   // etykiet DEPOSIT/WITHDRAWAL/INTEREST powyżej, ponieważ są to
   // wewnętrzne ruchy automatycznego reinwestowania, a nie środki
