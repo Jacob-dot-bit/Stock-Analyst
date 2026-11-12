@@ -102,6 +102,28 @@ class TestParseMintosInvestmentsExport:
         assert result.is_empty
         assert result.warnings
 
+    @pytest.mark.parametrize(
+        "filename",
+        ["20261112-investments.xlsx", "Investments-2026-11-12.xlsx", "Investments-12-11-2026.xlsx"],
+    )
+    def test_year_first_and_day_first_filenames_both_give_the_date(self, filename):
+        content = _workbook(_REAL_HEADER, [_real_shaped_row(100.0)])
+
+        result = parse_mintos_investments_export(content, filename)
+
+        assert result.as_of == date(2026, 11, 12)
+        assert result.total_invested == pytest.approx(100.0)
+
+    def test_account_statement_dropped_here_says_so(self):
+        header = ["Date", "ID de transaction :", "Détails", "Mouvement", "Solde", "Devise", "Type de paiement"]
+        content = _workbook(header, [["2026-11-12 10:00:00", "tx", "d", 0.05, 100.0, "EUR", "Intérêt perçu"]])
+
+        result = parse_mintos_investments_export(content, "20261112-account-statement.xlsx")
+
+        assert result.is_empty
+        assert [w.code for w in result.warnings] == ["import.mintosAccountStatementNotInvestments"]
+        assert result.warnings[0].params == {"filename": "20261112-account-statement.xlsx"}
+
     def test_missing_expected_column_is_a_warning_not_a_crash(self):
         content = _workbook(["Some", "Other", "Header"], [[1, 2, 3]])
 
