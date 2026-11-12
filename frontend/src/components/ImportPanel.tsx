@@ -3,7 +3,7 @@ import { api } from '../api/client'
 import type { ImportBatch, ImportPreview } from '../api/types'
 import { useI18n } from '../i18n'
 
-type BrokerKind = 'xtb' | 'mintos' | 'mintos-investments' | 'amundi' | 'amundi-synthese'
+type BrokerKind = 'xtb' | 'mintos' | 'mintos-investments' | 'mintos-transactions' | 'amundi' | 'amundi-synthese'
 
 interface Props {
   kind: BrokerKind
@@ -14,6 +14,7 @@ const ACCEPT_BY_KIND: Record<BrokerKind, string> = {
   xtb: '.xlsx,.xlsm,.csv',
   mintos: '.pdf',
   'mintos-investments': '.xlsx',
+  'mintos-transactions': '.xlsx,.csv',
   amundi: '.pdf',
   'amundi-synthese': '.xlsb',
 }
