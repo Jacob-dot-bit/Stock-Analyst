@@ -39,8 +39,11 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import date, datetime
+
+import openpyxl
 
 from app.messages import Message, MessageCode
 
@@ -94,13 +97,59 @@ class ParsedMintosTransactionsExport:
         return round(self.income_total + self.cost_total, 2)
 
 
+def _is_xlsx(content: bytes, filename: str) -> bool:
+    # An .xlsx is a zip archive; checking the magic bytes too covers a file
+    # renamed (or saved by a browser) without its extension.
+    return filename.lower().endswith((".xlsx", ".xlsm")) or content[:2] == b"PK"
+
+
+def _xlsx_rows(content: bytes) -> Iterator[list[object]]:
+    workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    for row in workbook.worksheets[0].iter_rows(values_only=True):
+        yield list(row)
+
+
+def _csv_rows(content: bytes) -> Iterator[list[object]]:
+    yield from csv.reader(io.StringIO(content.decode("utf-8-sig")))
+
+
+def _cell_date(value: object) -> date | None:
+    """The .csv gives ``2025-01-01 10:00:00`` as text; the .xlsx export of the
+    same statement may hand back a real datetime cell instead."""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.strptime(value.strip()[:10], "%Y-%m-%d").date()
+        except ValueError:
+            return None
+    return None
+
+
+def _cell_amount(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value.strip())
+        except ValueError:
+            return None
+    return None
+
+
 def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMintosTransactionsExport:
+    """Reads the account statement in either format Mintos offers it in:
+    .csv (what this was first built against) or .xlsx (same columns, same
+    ``YYYYMMDD-account-statement`` name)."""
     result = ParsedMintosTransactionsExport()
 
     try:
-        text = content.decode("utf-8-sig")
-        reader = csv.reader(io.StringIO(text))
-        header = next(reader)
+        reader = _xlsx_rows(content) if _is_xlsx(content, filename) else _csv_rows(content)
+        header = [str(cell).strip() if cell is not None else "" for cell in next(reader)]
     except Exception as exc:  # noqa: BLE001 - surfaced as a warning, not a crash
         result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": str(exc)}))
         return result
@@ -123,12 +172,11 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     for row in reader:
         if len(row) <= max(idx_date, idx_amount, idx_type):
             continue
-        try:
-            when = datetime.strptime(row[idx_date][:10], "%Y-%m-%d").date()
-            amount = float(row[idx_amount])
-        except (ValueError, IndexError):
+        when = _cell_date(row[idx_date])
+        amount = _cell_amount(row[idx_amount])
+        if when is None or amount is None:
             continue
-        payment_type = row[idx_type]
+        payment_type = str(row[idx_type] or "").strip()
 
         earliest = when if earliest is None or when < earliest else earliest
         latest = when if latest is None or when > latest else latest

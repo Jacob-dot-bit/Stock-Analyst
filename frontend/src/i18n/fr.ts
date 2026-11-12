@@ -103,6 +103,12 @@ export const fr: Catalogue = {
   'import.mintos-investments.multiAccount':
     "Un export plus récent remplace toujours l'affichage, qu'il vienne de ce fichier ou du relevé PDF trimestriel — le plus récent des deux est toujours celui montré.",
   'import.mintos-investments.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx)',
+  'import.mintos-transactions.title': 'Gains Mintos (relevé de compte)',
+  'import.mintos-transactions.instructions':
+    "Sur Mintos : Relevé de compte (Account statement) → Export, en .xlsx ou .csv. Ce fichier liste chaque intérêt, bonus, frais et retenue d'impôt : il sert à calculer le gain réel du portefeuille de prêts. Il ne change pas sa valeur — pour ça, utilisez l'export My investments ci-dessus.",
+  'import.mintos-transactions.multiAccount':
+    'Réimporter le même relevé ne crée pas de doublons. Un relevé couvrant une période plus longue complète les précédents.',
+  'import.mintos-transactions.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx, .csv)',
   'import.amundi.title': 'Importer un relevé Amundi ESR',
   'import.amundi.instructions':
     "Votre espace amundi-ee.com → Relevé annuel de situation (PDF). Chaque relevé est une photo annuelle, pas un historique de transactions daté — importez chaque année séparément.",
@@ -139,6 +145,8 @@ export const fr: Catalogue = {
   'import.unsupportedFileType':
     "Type de fichier « {extension} » non pris en charge. Exportez depuis xStation au format Excel (.xlsx) ou CSV.",
   'import.fileUnreadable': 'Fichier illisible : {error}',
+  'import.mintosAccountStatementNotInvestments':
+    "« {filename} » est le relevé de compte Mintos (toutes les opérations), pas l'export My investments : il ne contient pas la valeur du portefeuille. Importez-le dans « Gains Mintos (relevé de compte) », et pour la valeur exportez My investments → Export.",
   'import.noTableRecognised':
     "Aucune table reconnue dans ce fichier. Vérifiez qu'il s'agit bien d'un rapport exporté depuis Account history.",
   'import.nothingImportable': "Aucune position ni opération exploitable n'a été trouvée.",

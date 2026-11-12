@@ -109,6 +109,12 @@ export const en: Catalogue = {
   'import.mintos-investments.multiAccount':
     'A more recent export always wins the displayed value, whether it comes from this file or the quarterly PDF statement — whichever of the two is newer is always the one shown.',
   'import.mintos-investments.dropzone': 'Drop the file here, or pick it manually (.xlsx)',
+  'import.mintos-transactions.title': 'Mintos gains (account statement)',
+  'import.mintos-transactions.instructions':
+    "On Mintos: Account statement → Export, as .xlsx or .csv. This file lists every interest payment, bonus, fee and tax withheld: it is used to compute the loan portfolio's real gain. It does not change its value — use the My investments export above for that.",
+  'import.mintos-transactions.multiAccount':
+    'Re-importing the same statement never creates duplicates. A statement covering a longer period completes the earlier ones.',
+  'import.mintos-transactions.dropzone': 'Drop the file here, or pick it manually (.xlsx, .csv)',
   'import.amundi.title': 'Import an Amundi ESR statement',
   'import.amundi.instructions':
     'Your amundi-ee.com account → annual statement (PDF). Each statement is a yearly snapshot, not a dated transaction history — import each year separately.',
@@ -146,6 +152,8 @@ export const en: Catalogue = {
   'import.unsupportedFileType':
     'Unsupported "{extension}" file type. Export from xStation as Excel (.xlsx) or CSV.',
   'import.fileUnreadable': 'Unreadable file: {error}',
+  'import.mintosAccountStatementNotInvestments':
+    '"{filename}" is the Mintos account statement (every transaction), not the My investments export: it does not hold the portfolio value. Import it under "Mintos gains (account statement)", and for the value export My investments → Export.',
   'import.noTableRecognised':
     'No table recognised in this file. Check that it is a report exported from Account history.',
   'import.nothingImportable': 'No usable position or operation was found.',

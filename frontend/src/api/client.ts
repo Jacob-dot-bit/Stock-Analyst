@@ -90,7 +90,7 @@ export const api = {
 
   getPortfolio: () => request<Portfolio>('/api/portfolio'),
 
-  // "xtb" | "mintos" | "mintos-investments" | "amundi" | "amundi-synthese" —
+  // "xtb" | "mintos" | "mintos-investments" | "mintos-transactions" | "amundi" | "amundi-synthese" —
   // one preview-then-confirm flow shared by every broker importer, each
   // backed by its own parser but the identical ImportBatch/ImportPreview
   // response shape. "mintos-investments" and "amundi-synthese" are live
@@ -98,7 +98,7 @@ export const api = {
   // complement, not replace, their respective periodic PDF statements — see
   // DEVLOG "Decision 3u.43"/"Decision 3u.44".
   importBrokerFile: (
-    kind: 'xtb' | 'mintos' | 'mintos-investments' | 'amundi' | 'amundi-synthese',
+    kind: 'xtb' | 'mintos' | 'mintos-investments' | 'mintos-transactions' | 'amundi' | 'amundi-synthese',
     file: File,
   ) => {
     const form = new FormData()
@@ -109,7 +109,7 @@ export const api = {
   listImports: () => request<ImportBatch[]>('/api/imports'),
 
   previewBrokerFile: (
-    kind: 'xtb' | 'mintos' | 'mintos-investments' | 'amundi' | 'amundi-synthese',
+    kind: 'xtb' | 'mintos' | 'mintos-investments' | 'mintos-transactions' | 'amundi' | 'amundi-synthese',
     file: File,
   ) => {
     const form = new FormData()

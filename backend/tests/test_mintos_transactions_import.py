@@ -19,6 +19,7 @@ import io
 from datetime import date, datetime
 from unittest.mock import patch
 
+import openpyxl
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
@@ -56,6 +57,17 @@ def _csv(rows: list[list[str]]) -> bytes:
     for row in rows:
         buffer.write(",".join(f'"{c}"' if "," in c else c for c in row) + "\n")
     return buffer.getvalue().encode("utf-8")
+
+
+def _xlsx(rows: list[list[object]]) -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(_HEADER)
+    for row in rows:
+        ws.append(row)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
 
 
 class TestParseMintosTransactionsExport:
@@ -123,6 +135,27 @@ class TestParseMintosTransactionsExport:
         result = parse_mintos_transactions_export(content, "20260908-account-statement.csv")
 
         assert result.income_total == 0.0
+
+    def test_xlsx_export_reads_like_the_csv(self):
+        # Date cells come back either as text or as real datetimes depending
+        # on how the sheet was written — both must work, amounts as numbers.
+        content = _xlsx(
+            [
+                [datetime(2025, 1, 13, 15, 15, 2), "tx", "d", 0.05, 100.0, "EUR", "Intérêt perçu"],
+                ["2025-02-01 10:00:00", "tx", "d", "0.02", 100.0, "EUR", "Bonus"],
+                [datetime(2025, 3, 1), "tx", "d", -0.01, 100.0, "EUR", "Tax withholding"],
+                [datetime(2025, 3, 2), "tx", "d", 50.0, 150.0, "EUR", "Dépôts"],
+            ]
+        )
+
+        result = parse_mintos_transactions_export(content, "20261112-account-statement.xlsx")
+
+        assert result.income_total == pytest.approx(0.07)
+        assert result.cost_total == pytest.approx(-0.01)
+        assert result.deposits_total == pytest.approx(50.0)
+        assert result.period_start == date(2025, 1, 13)
+        assert result.period_end == date(2025, 3, 2)
+        assert result.transaction_count == 4
 
     def test_no_rows_is_a_warning(self):
         content = _csv([])

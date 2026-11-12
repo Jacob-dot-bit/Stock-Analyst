@@ -45,6 +45,12 @@ class MessageCode:
     #: mis-parsed or silently dropped. See DEVLOG "Decision 3u.39".
     AMUNDI_FISCAL_DOCUMENT_SKIPPED = "import.amundiFiscalDocumentSkipped"  # {filename}
 
+    # --- Mintos-specific ------------------------------------------------------
+    #: The "account-statement" export (every transaction) dropped where the
+    #: "My investments" export was expected — both are .xlsx files offered on
+    #: the same site, and the first one carries no portfolio value at all.
+    MINTOS_ACCOUNT_STATEMENT_NOT_INVESTMENTS = "import.mintosAccountStatementNotInvestments"  # {filename}
+
 
 class PriceOutcome:
     """Result of trying to refresh one instrument's price history.

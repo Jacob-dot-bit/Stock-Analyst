@@ -201,6 +201,7 @@ export default function Settings() {
           <ImportPanel kind="xtb" onImported={() => {}} />
           <ImportPanel kind="mintos" onImported={() => {}} />
           <ImportPanel kind="mintos-investments" onImported={() => {}} />
+          <ImportPanel kind="mintos-transactions" onImported={() => {}} />
           <ImportPanel kind="amundi" onImported={() => {}} />
           <ImportPanel kind="amundi-synthese" onImported={() => {}} />
           <FundamentalsRefreshButton onRefreshed={() => {}} />

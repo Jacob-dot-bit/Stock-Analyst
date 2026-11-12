@@ -33,9 +33,20 @@ import openpyxl
 
 from app.messages import Message, MessageCode
 
-_FILENAME_DATE_RE = re.compile(r"(\d{2})-(\d{2})-(\d{4})")
+#: ``Investments-08-09-2026.xlsx`` (day-month-year, the 2026-09 naming).
+_FILENAME_DMY_RE = re.compile(r"(?<!\d)(\d{2})-(\d{2})-(\d{4})(?!\d)")
+#: ``20261112-...xlsx`` or ``2026-11-12...`` — the year-first prefix Mintos
+#: already uses for the account statement (``20260908-account-statement.csv``).
+#: Accepted here too so a site-side rename doesn't block the import again.
+_FILENAME_YMD_RE = re.compile(r"(?<!\d)(\d{4})-?(\d{2})-?(\d{2})(?!\d)")
 
 _VALUE_COLUMN = "Montant investi"
+
+#: Columns of the "account-statement" export (every transaction, see
+#: `mintos_transactions_import.py`). Both exports are .xlsx and sit next to
+#: each other on the Mintos site, so picking the wrong one is easy — this
+#: lets the import say so instead of a generic "no table recognised".
+_ACCOUNT_STATEMENT_COLUMNS = {"Mouvement", "Type de paiement", "Turnover", "Payment Type"}
 
 
 @dataclass
@@ -51,18 +62,20 @@ class ParsedMintosInvestmentsSnapshot:
 
 
 def _extract_filename_date(filename: str) -> date | None:
-    """``Investments-08-09-2026.xlsx`` -> 2026-09-08. Mintos's own export
-    naming convention (day-month-year) is the only "as of" signal this
-    file format carries — there is no date printed inside the sheet
-    itself."""
-    match = _FILENAME_DATE_RE.search(filename)
-    if not match:
-        return None
-    day, month, year = match.groups()
-    try:
-        return date(int(year), int(month), int(day))
-    except ValueError:
-        return None
+    """``Investments-08-09-2026.xlsx`` -> 2026-09-08, ``20261112-investments.xlsx``
+    -> 2026-11-12. The filename is the only "as of" signal this format
+    carries — there is no date printed inside the sheet itself. Year-first
+    is tried first: a run of 8 digits can't be mistaken for day-month-year,
+    while the dashed form can only be read one way."""
+    for pattern, order in ((_FILENAME_YMD_RE, "ymd"), (_FILENAME_DMY_RE, "dmy")):
+        for match in pattern.finditer(filename):
+            a, b, c = match.groups()
+            year, month, day = (a, b, c) if order == "ymd" else (c, b, a)
+            try:
+                return date(int(year), int(month), int(day))
+            except ValueError:
+                continue
+    return None
 
 
 def parse_mintos_investments_export(content: bytes, filename: str) -> ParsedMintosInvestmentsSnapshot:
@@ -73,12 +86,6 @@ def parse_mintos_investments_export(content: bytes, filename: str) -> ParsedMint
     one malformed row), and simply doesn't contribute to the total."""
     result = ParsedMintosInvestmentsSnapshot()
 
-    as_of = _extract_filename_date(filename)
-    if as_of is None:
-        result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": "no date found in filename"}))
-        return result
-    result.as_of = as_of
-
     try:
         workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
         sheet = workbook.worksheets[0]
@@ -88,9 +95,19 @@ def parse_mintos_investments_export(content: bytes, filename: str) -> ParsedMint
         result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": str(exc)}))
         return result
 
-    if header is None or _VALUE_COLUMN not in header:
-        result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
+    header = tuple(str(cell).strip() if cell is not None else "" for cell in (header or ()))
+    if _VALUE_COLUMN not in header:
+        if _ACCOUNT_STATEMENT_COLUMNS & set(header):
+            result.warnings.append(Message(MessageCode.MINTOS_ACCOUNT_STATEMENT_NOT_INVESTMENTS, {"filename": filename}))
+        else:
+            result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
         return result
+
+    as_of = _extract_filename_date(filename)
+    if as_of is None:
+        result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": "no date found in filename"}))
+        return result
+    result.as_of = as_of
 
     idx = header.index(_VALUE_COLUMN)
     total = 0.0

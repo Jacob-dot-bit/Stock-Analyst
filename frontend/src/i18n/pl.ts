@@ -111,6 +111,12 @@ export const pl: Catalogue = {
   'import.mintos-investments.multiAccount':
     'Nowszy eksport zawsze wygrywa w wyświetlanej wartości, niezależnie czy pochodzi z tego pliku, czy z kwartalnego wyciągu PDF — zawsze pokazywany jest ten nowszy z obu.',
   'import.mintos-investments.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx)',
+  'import.mintos-transactions.title': 'Zyski Mintos (wyciąg z konta)',
+  'import.mintos-transactions.instructions':
+    'Na Mintos: Wyciąg z konta (Account statement) → Export, jako .xlsx lub .csv. Ten plik zawiera każde odsetki, bonusy, opłaty i pobrany podatek: służy do obliczenia rzeczywistego zysku portfela pożyczek. Nie zmienia jego wartości — do tego służy eksport My investments powyżej.',
+  'import.mintos-transactions.multiAccount':
+    'Ponowny import tego samego wyciągu nie tworzy duplikatów. Wyciąg obejmujący dłuższy okres uzupełnia poprzednie.',
+  'import.mintos-transactions.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx, .csv)',
   'import.amundi.title': 'Zaimportuj wyciąg Amundi ESR',
   'import.amundi.instructions':
     'Twoje konto na amundi-ee.com → roczny wyciąg (PDF). Każdy wyciąg to zdjęcie stanu na koniec roku, a nie historia transakcji z datami — zaimportuj każdy rok osobno.',
@@ -146,6 +152,8 @@ export const pl: Catalogue = {
   'import.unsupportedFileType':
     'Nieobsługiwany typ pliku „{extension}”. Wyeksportuj z xStation w formacie Excel (.xlsx) lub CSV.',
   'import.fileUnreadable': 'Nie można odczytać pliku: {error}',
+  'import.mintosAccountStatementNotInvestments':
+    '„{filename}” to wyciąg z konta Mintos (wszystkie operacje), a nie eksport My investments: nie zawiera wartości portfela. Zaimportuj go w „Zyski Mintos (wyciąg z konta)”, a dla wartości wyeksportuj My investments → Export.',
   'import.noTableRecognised':
     'Nie rozpoznano żadnej tabeli w tym pliku. Sprawdź, czy to raport wyeksportowany z Account history.',
   'import.nothingImportable': 'Nie znaleziono żadnej użytecznej pozycji ani operacji.',
