@@ -164,23 +164,112 @@ def parse_operations_rows(rows: list[list]) -> ParsedAmundiOperations:
     return result
 
 
-def counts_toward_cost(op_type: str, op_subtype: str | None) -> bool:
-    """Whether an operation's amount is money put into (or taken out of) a
-    fund, as opposed to a result of holding it.
+#: Origin code of the employer match ("abondement") on a payment or a
+#: profit-sharing line — the company's money, not the holder's.
+EMPLOYER_MATCH_ORIGIN = "ABD"
 
-    - ``SOUS`` (payments, employer match, profit-sharing): money in.
-    - ``ARB`` (arbitrage, reallocation): money moved between funds — out of
-      one at its value that day, into another. The source fund's gain up to
-      then is realised and no longer shows; the destination's cost is what
-      actually arrived in it.
-    - ``RACH`` (redemption): money out, except fees (``NPAI``, charged for
-      an invalid postal address), which are a loss, not a withdrawal — they
-      stay out of the cost so the gain reflects them.
-    - ``OST`` (capitalised dividends, readjustments): what holding the fund
-      produced, never new money.
+
+@dataclass
+class LedgerOp:
+    """The fields `fund_pools` needs from one stored operation."""
+
+    executed_on: date
+    account: str
+    symbol: str
+    units: float
+    amount: float
+    origin: str | None
+    op_type: str
+    op_subtype: str | None
+
+
+@dataclass
+class FundPool:
+    units: float = 0.0
+    #: Money the holder put in: voluntary payments, plus profit-sharing and
+    #: incentive bonuses (theirs to take as cash, invested by choice).
+    own: float = 0.0
+    #: The employer match. For the holder it is a gain, not money they put in.
+    match: float = 0.0
+    first: date | None = None
+
+
+def fund_pools(ops: list[LedgerOp]) -> dict[str, FundPool]:
+    """Rebuild, per fund, the units held and what they cost — split between
+    the holder's own money and the employer match.
+
+    Operations are replayed in date order; on a given day, payments and
+    other single-fund lines first, then that day's arbitrages and
+    reallocations (``ARB``) as one group — a transfer can cross from the PEG
+    to the PERCO, so the group is not split by account. A fund an arbitrage takes units out of
+    gives up the same *share* of its own-money and match costs (selling a
+    third of the units moves a third of each), and the destinations receive
+    them in proportion to the amount each received. Moving money between
+    funds therefore never turns gain into cost, nor the match into the
+    holder's money.
+
+    - ``SOUS`` (payments, profit-sharing): cost; ``ABD`` origin goes to the
+      match, everything else to own money.
+    - ``RACH`` (redemption): removes the same share of both costs, except
+      the invalid-address fee (``NPAI``), a loss that leaves costs alone.
+    - ``OST`` (capitalised dividends, readjustments): units only.
     """
-    if op_type in {"SOUS", "ARB"}:
-        return True
-    if op_type == "RACH":
-        return op_subtype != "NPAI"
-    return False
+    pools: dict[str, FundPool] = {}
+
+    def pool(symbol: str) -> FundPool:
+        return pools.setdefault(symbol, FundPool())
+
+    def take_share(target: FundPool, units_out: float) -> tuple[float, float]:
+        fraction = min(1.0, units_out / target.units) if target.units > 0 else 1.0
+        own, match = target.own * fraction, target.match * fraction
+        target.own -= own
+        target.match -= match
+        return own, match
+
+    by_day: dict[date, list[LedgerOp]] = {}
+    for op in ops:
+        by_day.setdefault(op.executed_on, []).append(op)
+
+    for day in sorted(by_day):
+        arbitrages: list[LedgerOp] = []
+        for op in by_day[day]:
+            target = pool(op.symbol)
+            target.first = day if target.first is None or day < target.first else target.first
+            if op.op_type == "ARB":
+                arbitrages.append(op)
+                continue
+            if op.op_type == "SOUS":
+                if op.origin == EMPLOYER_MATCH_ORIGIN:
+                    target.match += op.amount
+                else:
+                    target.own += op.amount
+            elif op.op_type == "RACH" and op.op_subtype != "NPAI" and op.units < 0:
+                take_share(target, -op.units)
+            target.units += op.units
+
+        for group in [arbitrages] if arbitrages else []:
+            moved_own = moved_match = 0.0
+            for op in group:
+                if op.units < 0:
+                    own, match = take_share(pool(op.symbol), -op.units)
+                    moved_own += own
+                    moved_match += match
+                    pool(op.symbol).units += op.units
+            incoming = [op for op in group if op.units >= 0]
+            received = sum(op.amount for op in incoming)
+            any_source = any(op.units < 0 for op in group)
+            for op in incoming:
+                target = pool(op.symbol)
+                if any_source and received > 0:
+                    share = op.amount / received
+                    target.own += moved_own * share
+                    target.match += moved_match * share
+                else:
+                    # Nothing left another fund that day: count it as it came.
+                    target.own += op.amount
+                target.units += op.units
+
+    for item in pools.values():
+        item.own = round(item.own, 2)
+        item.match = round(item.match, 2)
+    return pools

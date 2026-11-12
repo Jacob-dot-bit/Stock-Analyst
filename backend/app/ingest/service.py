@@ -24,7 +24,8 @@ from sqlalchemy.orm import Session
 from app.ingest.amundi_import import AMUNDI_ACCOUNTS, ParsedAmundiExport, parse_amundi_statement
 from app.ingest.amundi_operations_import import (
     ParsedAmundiOperations,
-    counts_toward_cost,
+    LedgerOp,
+    fund_pools,
     parse_amundi_operations_export,
 )
 from app.ingest.amundi_synthese_import import parse_amundi_synthese_export
@@ -1286,10 +1287,12 @@ def _persist_amundi_export(
                 # Exact cost from the operations journal — preferred over
                 # every estimate below, and over the PDF's own figure, which
                 # is only as fresh as the statement. See DEVLOG "Step 3u.88".
-                cost, since = from_operations
+                # "Cost" is the holder's own money: the employer match is
+                # part of their gain (DEVLOG "Step 3u.90").
+                cost, match, since = from_operations
                 gain = round(fund.gross_value - cost, 2)
                 gain_pct = round(gain / cost * 100, 2) if cost else None
-                note = Message(PerformanceNote.AMUNDI_GAIN_FROM_OPERATIONS, {"since": since.isoformat()}).as_dict()
+                note = _amundi_gain_note(since, match)
             elif fund.estimated_gain_loss is not None:
                 # Derived from Amundi's own two published figures, not
                 # invented — see DEVLOG "Decision 3u.39". Amundi discloses
@@ -1373,31 +1376,41 @@ def _persist_amundi_export(
 _AMUNDI_UNITS_TOLERANCE = 0.005
 
 
-def _amundi_cost_from_operations(db: Session, broker_symbol: str, quantity_held: float) -> tuple[float, date] | None:
-    """(cost, first operation date) for one fund from the imported
-    operations journal, or None when there is no journal for it or its
-    units don't add up to `quantity_held` — then the journal doesn't cover
-    the fund's whole history and its sum would understate the cost."""
+def _amundi_cost_from_operations(
+    db: Session, broker_symbol: str, quantity_held: float
+) -> tuple[float, float, date] | None:
+    """(own money in, employer match in, first operation date) for one fund
+    from the imported operations journal (`fund_pools`), or None when there
+    is no journal for it or its units don't add up to `quantity_held` — then
+    the journal doesn't cover the fund's whole history and its sums would
+    understate the cost. See DEVLOG "Step 3u.88" and "Step 3u.90"."""
     rows = db.execute(
-        select(Transaction.quantity, Transaction.amount, Transaction.executed_at, Transaction.raw).where(
-            Transaction.type == TxType.AMUNDI_OPERATION
-        )
+        select(Transaction.quantity, Transaction.amount, Transaction.executed_at, Transaction.account, Transaction.raw)
+        .where(Transaction.type == TxType.AMUNDI_OPERATION)
     ).all()
-    units = 0.0
-    cost = 0.0
-    first: date | None = None
-    for quantity, amount, executed_at, raw in rows:
-        raw = raw or {}
-        if raw.get("broker_symbol") != broker_symbol:
-            continue
-        units += quantity or 0.0
-        if counts_toward_cost(raw.get("op_type", ""), raw.get("op_subtype")):
-            cost += amount or 0.0
-        when = executed_at.date()
-        first = when if first is None or when < first else first
-    if first is None or abs(units - quantity_held) > _AMUNDI_UNITS_TOLERANCE:
+    ledger = [
+        LedgerOp(
+            executed_on=executed_at.date(),
+            account=account or "",
+            symbol=(raw or {}).get("broker_symbol", ""),
+            units=quantity or 0.0,
+            amount=amount or 0.0,
+            origin=(raw or {}).get("origin"),
+            op_type=(raw or {}).get("op_type", ""),
+            op_subtype=(raw or {}).get("op_subtype"),
+        )
+        for quantity, amount, executed_at, account, raw in rows
+    ]
+    found = fund_pools(ledger).get(broker_symbol)
+    if found is None or found.first is None or abs(found.units - quantity_held) > _AMUNDI_UNITS_TOLERANCE:
         return None
-    return round(cost, 2), first
+    return found.own, found.match, found.first
+
+
+def _amundi_gain_note(since: date, match: float) -> dict:
+    return Message(
+        PerformanceNote.AMUNDI_GAIN_FROM_OPERATIONS, {"since": since.isoformat(), "match": f"{match:.2f}"}
+    ).as_dict()
 
 
 def _catch_up_amundi_position(db: Session, position: Position, broker_symbol: str) -> bool:
@@ -1531,15 +1544,13 @@ def import_amundi_operations_file(
             from_operations = _amundi_cost_from_operations(db, symbol, position.quantity)
         if from_operations is None or position.broker_market_value is None:
             continue
-        cost, since = from_operations
+        cost, match, since = from_operations
         gain = round(position.broker_market_value - cost, 2)
         position.broker_gross_pl = gain
         position.broker_net_pl = gain
         position.broker_net_pl_pct = round(gain / cost * 100, 2) if cost else None
         position.avg_price = cost / position.quantity if position.quantity else position.avg_price
-        position.performance_note = Message(
-            PerformanceNote.AMUNDI_GAIN_FROM_OPERATIONS, {"since": since.isoformat()}
-        ).as_dict()
+        position.performance_note = _amundi_gain_note(since, match)
         applied.add(symbol)
     batch.positions_found = len(applied)
 

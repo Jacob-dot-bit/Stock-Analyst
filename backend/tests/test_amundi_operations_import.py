@@ -23,7 +23,8 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base
 from app.ingest.amundi_import import ParsedAmundiExport, ParsedFund
 from app.ingest.amundi_operations_import import (
-    counts_toward_cost,
+    LedgerOp,
+    fund_pools,
     parse_operations_rows,
 )
 from app.ingest.service import import_amundi_operations_file, import_amundi_synthese_file
@@ -105,14 +106,52 @@ class TestParseOperations:
         assert [w.code for w in result.warnings] == ["import.nothingImportable"]
 
 
-class TestCountsTowardCost:
-    @pytest.mark.parametrize(
-        ("op_type", "subtype", "expected"),
-        [("SOUS", "VVIND", True), ("ARB", "LIBRE", True), ("RACH", None, True),
-         ("RACH", "NPAI", False), ("OST", "CAPIT", False), ("OST", "REAJUS", False)],
-    )
-    def test_rule(self, op_type, subtype, expected):
-        assert counts_toward_cost(op_type, subtype) is expected
+def _ledger(day, account, symbol, units, amount, origin, op_type, subtype=None):
+    return LedgerOp(day, account, symbol, units, amount, origin, op_type, subtype)
+
+
+class TestFundPools:
+    def test_employer_match_is_kept_apart_from_own_money(self):
+        pools = fund_pools([
+            _ledger(date(2025, 1, 1), "PEG", "A", 10.0, 100.0, "VV", "SOUS"),
+            _ledger(date(2025, 1, 1), "PEG", "A", 5.0, 50.0, "ABD", "SOUS"),
+            _ledger(date(2025, 2, 1), "PEG", "A", 2.0, 30.0, "RSP", "SOUS"),
+        ])
+
+        assert (pools["A"].units, pools["A"].own, pools["A"].match) == (17.0, 130.0, 50.0)
+
+    def test_arbitrage_moves_each_cost_in_proportion_not_the_value(self):
+        pools = fund_pools([
+            _ledger(date(2025, 1, 1), "PERCO", "A", 10.0, 100.0, "VV", "SOUS"),
+            _ledger(date(2025, 1, 1), "PERCO", "A", 10.0, 100.0, "ABD", "SOUS"),
+            # Half the units leave A, now worth 300 (a 50% gain), into B and C.
+            _ledger(date(2025, 6, 1), "PERCO", "A", -10.0, -300.0, None, "ARB", "LIBRE"),
+            _ledger(date(2025, 6, 1), "PERCO", "B", 20.0, 200.0, None, "ARB", "LIBRE"),
+            _ledger(date(2025, 6, 1), "PERCO", "C", 5.0, 100.0, None, "ARB", "LIBRE"),
+        ])
+
+        assert (pools["A"].own, pools["A"].match) == (50.0, 50.0)
+        # B got 2/3 of the 300, so 2/3 of the 50 own and 50 match that moved.
+        assert (pools["B"].own, pools["B"].match) == (pytest.approx(33.33), pytest.approx(33.33))
+        assert (pools["C"].own, pools["C"].match) == (pytest.approx(16.67), pytest.approx(16.67))
+
+    def test_capitalised_dividends_and_address_fee_leave_costs_alone(self):
+        pools = fund_pools([
+            _ledger(date(2025, 1, 1), "PEG", "A", 10.0, 100.0, "VV", "SOUS"),
+            _ledger(date(2025, 3, 1), "PEG", "A", 0.5, 6.0, None, "OST", "CAPIT"),
+            _ledger(date(2025, 4, 1), "PEG", "A", -1.0, -20.0, None, "RACH", "NPAI"),
+        ])
+
+        assert (pools["A"].units, pools["A"].own, pools["A"].match) == (9.5, 100.0, 0.0)
+
+    def test_redemption_removes_its_share_of_both_costs(self):
+        pools = fund_pools([
+            _ledger(date(2025, 1, 1), "PEG", "A", 10.0, 100.0, "VV", "SOUS"),
+            _ledger(date(2025, 1, 1), "PEG", "A", 10.0, 100.0, "ABD", "SOUS"),
+            _ledger(date(2026, 1, 1), "PEG", "A", -5.0, -80.0, None, "RACH", "LIBRE"),
+        ])
+
+        assert (pools["A"].units, pools["A"].own, pools["A"].match) == (15.0, 75.0, 75.0)
 
 
 def _synthese(*funds: ParsedFund) -> ParsedAmundiExport:
@@ -147,15 +186,16 @@ class TestImportOperations:
         batch = _import_journal(db)
 
         positions = _positions(db)
-        # 1000 + 500 paid in; the capitalised dividend is gain, not cost.
-        assert positions[30.5].broker_net_pl == pytest.approx(1830.0 - 1500.0)
-        # 300 paid in, 100 arbitraged out; the 20 address fee is a loss.
-        assert positions[18.0].broker_net_pl == pytest.approx(180.0 - 200.0)
-        # Its cost is what arrived from the arbitrage.
-        assert positions[5.0].broker_net_pl == pytest.approx(110.0 - 100.0)
+        # 1000 of own money; the 500 match and the dividend are gain.
+        assert positions[30.5].broker_net_pl == pytest.approx(1830.0 - 1000.0)
+        # 300 in; 10 of the 28 units (and so 10/28 of the cost) left by
+        # arbitrage; the 20 address fee is a loss, not a withdrawal.
+        assert positions[18.0].broker_net_pl == pytest.approx(180.0 - 300.0 * 18 / 28, abs=0.01)
+        # The destination takes the cost that left, not the 100 of value.
+        assert positions[5.0].broker_net_pl == pytest.approx(110.0 - 300.0 * 10 / 28, abs=0.01)
         assert positions[30.5].performance_note == {
             "code": "performance.amundiGainFromOperations",
-            "params": {"since": "2025-03-01"},
+            "params": {"since": "2025-03-01", "match": "500.00"},
         }
         assert batch.positions_found == 3
         assert batch.transactions_inserted == 7
@@ -194,7 +234,7 @@ class TestImportOperations:
             import_amundi_synthese_file(db, b"synthese-2", "Synthese_20251201_100000.xlsb")
 
         position = _positions(db)[30.5]
-        assert position.broker_net_pl == pytest.approx(2135.0 - 1500.0)
+        assert position.broker_net_pl == pytest.approx(2135.0 - 1000.0)
         assert position.performance_note["code"] == "performance.amundiGainFromOperations"
 
 
@@ -216,7 +256,7 @@ class TestCatchUpOlderPosition:
         assert position.value_as_of == date(2025, 8, 7)
         assert position.market_price == 60.0
         assert position.broker_market_value == pytest.approx(30.5 * 60.0)
-        assert position.broker_net_pl == pytest.approx(30.5 * 60.0 - 1500.0)
+        assert position.broker_net_pl == pytest.approx(30.5 * 60.0 - 1000.0)
         codes = [w["code"] for w in batch.warnings]
         assert "import.amundiPositionsUpdatedFromOperations" in codes
         assert "2025-04-01" in batch.warnings[codes.index("import.amundiPositionsUpdatedFromOperations")]["params"]["funds"]

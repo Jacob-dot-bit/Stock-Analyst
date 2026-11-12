@@ -172,11 +172,12 @@ class PerformanceNote:
     #: fund's quantity hasn't changed since then, i.e. no new contribution
     #: to *this* fund muddies the comparison. See DEVLOG "Decision 3u.48".
     AMUNDI_REAL_GAIN_SINCE_SNAPSHOT = "performance.amundiRealGainSinceSnapshot"  # {since}
-    #: Exact gain for one Amundi fund: current value minus everything the
-    #: operations journal shows going into it since {since}. Only used when
+    #: Exact gain for one Amundi fund: current value minus the holder's own
+    #: money the operations journal shows going into it since {since}; the
+    #: employer match ({match} euros) is part of that gain. Only used when
     #: the journal's units add up to the units held, i.e. it is complete
-    #: for that fund. See DEVLOG "Step 3u.88".
-    AMUNDI_GAIN_FROM_OPERATIONS = "performance.amundiGainFromOperations"  # {since}
+    #: for that fund. See DEVLOG "Step 3u.88" and "Step 3u.90".
+    AMUNDI_GAIN_FROM_OPERATIONS = "performance.amundiGainFromOperations"  # {since, match}
 
 
 class ValuationNote:
