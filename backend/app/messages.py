@@ -51,6 +51,14 @@ class MessageCode:
     #: the same site, and the first one carries no portfolio value at all.
     MINTOS_ACCOUNT_STATEMENT_NOT_INVESTMENTS = "import.mintosAccountStatementNotInvestments"  # {filename}
 
+    # --- Single upload slot (`ingest/detect.py`) -----------------------------
+    #: Which export was recognised, as ``import.detected.<FileKind value>`` —
+    #: one code per kind so each locale words it fully. Shown first in the
+    #: report so a wrong file is obvious before confirming.
+    FILE_DETECTED = "import.detected"
+    #: None of the supported exports.
+    FILE_NOT_RECOGNISED = "import.fileNotRecognised"
+
 
 class PriceOutcome:
     """Result of trying to refresh one instrument's price history.

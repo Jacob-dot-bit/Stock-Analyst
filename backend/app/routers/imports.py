@@ -15,8 +15,10 @@ from app.ingest.service import (
     import_mintos_investments_file,
     import_mintos_transactions_file,
 )
+from app.ingest.detect import FileKind, detect_file
+from app.messages import MessageCode
 from app.models import ImportBatch, Lot, Position, Transaction
-from app.schemas import ImportBatchOut, ImportPreviewOut
+from app.schemas import ImportBatchOut, ImportPreviewOut, MessageOut
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 
@@ -32,6 +34,73 @@ def _check_upload_size(content: bytes) -> None:
         raise HTTPException(status_code=400, detail="Empty file.")
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="File too large (25 MB limit).")
+
+
+#: Importer and fallback filename per recognised file. The filename matters
+#: only to the XTB parser, which picks .xlsx or .csv reading from it.
+_IMPORTERS = {
+    FileKind.XTB: (import_export_file, "export.xlsx"),
+    FileKind.MINTOS_STATEMENT: (import_mintos_file, "mintos-statement.pdf"),
+    FileKind.MINTOS_INVESTMENTS: (import_mintos_investments_file, "Investments.xlsx"),
+    FileKind.MINTOS_ACCOUNT_STATEMENT: (import_mintos_transactions_file, "account-statement.csv"),
+    FileKind.AMUNDI_STATEMENT: (import_amundi_file, "amundi-statement.pdf"),
+    FileKind.AMUNDI_SYNTHESE: (import_amundi_synthese_file, "Synthese.xlsb"),
+}
+
+
+def _fallback_name(kind: FileKind, content: bytes) -> str:
+    if kind == FileKind.XTB and not content.startswith(b"PK"):
+        return "export.csv"
+    return _IMPORTERS[kind][1]
+
+
+def _detected(kind: FileKind) -> MessageOut:
+    return MessageOut(code=f"{MessageCode.FILE_DETECTED}.{kind.value}")
+
+
+@router.post("/auto", response_model=ImportBatchOut)
+async def import_auto(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
+    """Import any supported export — XTB, the three Mintos files or the two
+    Amundi ones. The content decides which importer runs (`ingest/detect.py`);
+    the per-broker endpoints below stay for scripts that already call them.
+    See DEVLOG "Step 3u.87".
+    """
+    content = await file.read()
+    _check_upload_size(content)
+
+    kind = detect_file(content)
+    if kind is None:
+        raise HTTPException(status_code=400, detail="Not a recognised broker export.")
+    importer = _IMPORTERS[kind][0]
+    batch = importer(db, content, file.filename or _fallback_name(kind, content))
+    out = ImportBatchOut.model_validate(batch)
+    out.warnings.insert(0, _detected(kind))
+    return out
+
+
+@router.post("/auto/preview", response_model=ImportPreviewOut)
+async def preview_auto(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportPreviewOut:
+    """Dry-run any supported export: detection, then the same parse/dedup
+    logic as a real import, rolled back instead of committed. The detected
+    file type is the first line of the report."""
+    content = await file.read()
+    _check_upload_size(content)
+
+    kind = detect_file(content)
+    if kind is None:
+        return ImportPreviewOut(
+            filename=file.filename or "",
+            positions_found=0,
+            transactions_found=0,
+            transactions_inserted=0,
+            warnings=[MessageOut(code=MessageCode.FILE_NOT_RECOGNISED)],
+            sections=[],
+            accounts=[],
+        )
+    importer = _IMPORTERS[kind][0]
+    preview = ImportPreviewOut(**importer(db, content, file.filename or _fallback_name(kind, content), commit=False))
+    preview.warnings.insert(0, _detected(kind))
+    return preview
 
 
 @router.post("/xtb", response_model=ImportBatchOut)
