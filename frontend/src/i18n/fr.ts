@@ -160,8 +160,13 @@ export const fr: Catalogue = {
   'import.detected.mintos_investments': 'Fichier reconnu : export Mintos My investments (valeur du portefeuille de prêts).',
   'import.detected.mintos_account_statement': 'Fichier reconnu : relevé de compte Mintos (intérêts, frais et impôts).',
   'import.detected.amundi_statement': 'Fichier reconnu : relevé annuel Amundi ESR (PDF).',
-  'import.detected.amundi_synthese': 'Fichier reconnu : export Synthèse Amundi ou journal des opérations Amundi (.xlsb).',
+  'import.detected.amundi_synthese': 'Fichier reconnu : export Synthèse Amundi ou journal des opérations Amundi (.xlsb), export de comptes Monabanq (.xlsx).',
   'import.detected.amundi_operations': 'Fichier reconnu : journal des opérations Amundi (.xlsb).',
+  'import.detected.bank_statement': 'Fichier reconnu : export de comptes bancaires (Monabanq, Crédit Mutuel, CIC).',
+  'import.bankBrokerTransfers':
+    'Virements entre la banque et les courtiers (envoyé, revenu = net, en €) : {totals}. La participation versée par Amundi sur le compte n\'est pas comptée.',
+  'import.bankBalanceKept':
+    'Solde déjà à jour depuis un export plus récent, laissé tel quel : {accounts}.',
   'import.amundiOperationsNotApplied':
     "Gain non recalculé pour : {funds}. Soit le fonds n'a pas encore de position (importez la Synthèse), soit le journal ne couvre pas tout son historique (ses parts ne correspondent pas aux parts détenues) : exportez une période plus longue.",
   'import.amundiPositionsUpdatedFromOperations':
@@ -546,6 +551,7 @@ export const fr: Catalogue = {
   'transactions.type.WITHDRAWAL': 'Retrait',
   'transactions.type.INTEREST': 'Intérêts',
   'transactions.type.OTHER': 'Autre',
+  'transactions.type.BROKER_TRANSFER': 'Virement banque ↔ courtier',
   // Mouvements agrégés Mintos Core (P2P) — volontairement distincts des
   // libellés DEPOSIT/WITHDRAWAL/INTEREST ci-dessus, car ce sont des
   // mouvements internes de réinvestissement automatique, pas de l'argent

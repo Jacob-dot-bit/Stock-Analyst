@@ -310,7 +310,7 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
                         : undefined
                     }
                   >
-                    {position.instrument.category === 'P2P' ? (
+                    {position.instrument.category === 'P2P' || position.instrument.category === 'CASH' ? (
                       t('common.notApplicable')
                     ) : (
                       <>

@@ -502,6 +502,7 @@ export type TxType =
   | 'WITHDRAWAL'
   | 'INTEREST'
   | 'OTHER'
+  | 'BROKER_TRANSFER'
 
 export interface Transaction {
   id: number

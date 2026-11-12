@@ -16,7 +16,7 @@ const TYPE_GROUPS: { key: string; types: TxType[] }[] = [
   { key: 'dividends', types: ['DIVIDEND', 'TAX'] },
   { key: 'trades', types: ['BUY', 'SELL', 'CLOSED_TRADE'] },
   { key: 'fees', types: ['FEE'] },
-  { key: 'cash', types: ['DEPOSIT', 'WITHDRAWAL', 'INTEREST'] },
+  { key: 'cash', types: ['DEPOSIT', 'WITHDRAWAL', 'INTEREST', 'BROKER_TRANSFER'] },
 ]
 
 /**
