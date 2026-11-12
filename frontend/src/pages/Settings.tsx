@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { api } from '../api/client'
-import type { Instrument, ProviderAvailability } from '../api/types'
+import type { Instrument, ProviderAvailability, ProviderStatus } from '../api/types'
 import { BackupPanel } from '../components/BackupPanel'
 import { CorporateActionsPanel } from '../components/CorporateActionsPanel'
 import { DataHealthPanel } from '../components/DataHealthPanel'
@@ -11,14 +11,6 @@ import { ManualPositionForm } from '../components/ManualPositionForm'
 import { UnresolvedPanel } from '../components/UnresolvedPanel'
 import { useI18n } from '../i18n'
 import { SkeletonCards } from '../components/Skeleton'
-
-interface ProviderStatus {
-  name: string
-  enabled: boolean
-  description?: string
-  signup_url?: string | null
-  has_api_key: boolean
-}
 
 interface Notice {
   type: 'success' | 'error'
@@ -41,7 +33,6 @@ export default function Settings() {
   const { t } = useI18n()
   const location = useLocation()
   const [providers, setProviders] = useState<ProviderStatus[]>([])
-  const [availability, setAvailability] = useState<ProviderAvailability[]>([])
   const [apiKeysStatus, setApiKeysStatus] = useState<Record<string, boolean>>({})
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
@@ -60,15 +51,13 @@ export default function Settings() {
     const loadSettings = async () => {
       try {
         setLoading(true)
-        const [providerList, keysStatus, availabilityList] = await Promise.all([
+        const [providerList, keysStatus] = await Promise.all([
           api.getProviderStatus(),
           api.getApiKeysStatus(),
-          api.getProviderAvailability(),
           loadUnresolved(),
         ])
         setProviders(providerList)
         setApiKeysStatus(keysStatus)
-        setAvailability(availabilityList)
       } catch (err) {
         setNotice({
           type: 'error',
@@ -101,14 +90,9 @@ export default function Settings() {
 
       // Reload provider status after update — a newly saved key can flip a
       // provider from disabled to enabled, or clear a cooldown it was under.
-      const [providerList, keysStatus, availabilityList] = await Promise.all([
-        api.getProviderStatus(),
-        api.getApiKeysStatus(),
-        api.getProviderAvailability(),
-      ])
+      const [providerList, keysStatus] = await Promise.all([api.getProviderStatus(), api.getApiKeysStatus()])
       setProviders(providerList)
       setApiKeysStatus(keysStatus)
-      setAvailability(availabilityList)
     } catch (err) {
       setNotice({
         type: 'error',
@@ -156,7 +140,6 @@ export default function Settings() {
   // with no control behind it.
   const keyedProviders = providers.filter((p) => p.has_api_key)
   const keylessProviders = providers.filter((p) => !p.has_api_key)
-  const availabilityByName = new Map(availability.map((a) => [a.name, a]))
 
   if (loading) {
     return (
@@ -246,12 +229,12 @@ export default function Settings() {
               <div key={provider.name} className="provider-row">
                 <div className="provider-info">
                   <h3>{isContactField ? t('settings.secEdgarName') : provider.name}</h3>
-                  <p>{provider.description}</p>
+                  <p>{t(`provider.description.${provider.name}`)}</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                     <span className={`status-badge ${provider.enabled ? 'enabled' : 'disabled'}`}>
                       {provider.enabled ? t('settings.enabled') : t('settings.disabled')}
                     </span>
-                    <ProviderAvailabilityInfo availability={availabilityByName.get(provider.name)} />
+                    <ProviderAvailabilityInfo availability={provider.availability} />
                     {provider.signup_url && (
                       <a href={provider.signup_url} target="_blank" rel="noopener noreferrer" className="signup-link">
                         {isContactField ? t('settings.learnMore') : t('settings.getFreeKey')} ↗
@@ -315,7 +298,7 @@ export default function Settings() {
               {keylessProviders.map((provider) => (
                 <li key={provider.name}>
                   <span>{provider.name}</span>
-                  <ProviderAvailabilityInfo availability={availabilityByName.get(provider.name)} />
+                  <ProviderAvailabilityInfo availability={provider.availability} />
                 </li>
               ))}
             </ul>
@@ -344,9 +327,8 @@ export default function Settings() {
 }
 
 /** Whether a source is currently rate-limited, and how much of the held
- * portfolio it covers — undefined while `/api/prices/providers` is still
- * loading, or for a provider that endpoint doesn't (yet) list. */
-function ProviderAvailabilityInfo({ availability }: { availability: ProviderAvailability | undefined }) {
+ * portfolio it covers — null for SEC EDGAR, which serves no prices. */
+function ProviderAvailabilityInfo({ availability }: { availability: ProviderAvailability | null }) {
   const { t } = useI18n()
   if (!availability) return null
 

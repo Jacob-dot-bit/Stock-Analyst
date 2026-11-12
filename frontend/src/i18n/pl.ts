@@ -691,6 +691,8 @@ export const pl: Catalogue = {
   'provider.description.eodhd': 'EODHD — 150+ giełdy światowe, 20 req/dzień',
   'provider.description.eoddata': 'Eoddata — akcje/crypto/forex, bez klucza',
   'provider.description.finviz': 'Finviz — akcje USA poprzez web scraping (niestabilny)',
+  'provider.description.marketstack': 'Marketstack — światowy, 100 req/miesiąc (ostatnia deska ratunku)',
+  'provider.description.sec_user_agent': 'SEC EDGAR — dane fundamentalne spółek z USA dla wskaźników Wartość/Wzrost/Jakość; bezpłatnie, bez rejestracji, wystarczy identyfikator kontaktowy',
 
   // --- Watchlist ------------------------------------------------------------
   'watchlist.title': 'Obserwowane',

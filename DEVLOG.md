@@ -9680,3 +9680,26 @@ read time:
   `data/budget_rules.txt`, ignored by git: this repository is public and
   those names say where I live. One `category: KEYWORD, KEYWORD` line each,
   checked before the generic rules, re-read when the file changes.
+
+## Step 3u.95 — One provider listing for the Settings page (2026-11-13)
+
+The Settings page called two routes for the same list of providers —
+`/api/settings/providers` (key status, signup link) and
+`/api/prices/providers` (cooldown, quota, holdings covered) — and glued them
+back together by name. The first also sent a description written in English
+in `routers/settings.py`, while the three catalogues already held a
+`provider.description.<name>` for each provider that nothing displayed: the
+page showed English whatever the language.
+
+- `prices/availability.py::provider_availability` is the former
+  `/api/prices/providers` body; `/api/settings/providers` now returns it
+  under each provider's `availability` (null for SEC EDGAR, which serves no
+  prices). `/api/prices/providers` is gone.
+- No description from the API any more; the page shows
+  `provider.description.<name>`. Marketstack and SEC EDGAR had no entry yet
+  and get one in each language.
+- The settings tests run on an in-memory database: the listing now reads
+  held positions.
+
+Verification: backend suite green; `tsc -b` clean.
+
