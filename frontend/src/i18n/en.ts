@@ -171,6 +171,8 @@ export const en: Catalogue = {
   'import.detected.amundi_operations': 'Recognised: Amundi operations journal (.xlsb).',
   'import.amundiOperationsNotApplied':
     "Gain not recomputed for: {funds}. Either the fund has no position yet (import the Synthèse), or the journal does not cover its whole history (its units don't match the units held): export a longer period.",
+  'import.amundiPositionsUpdatedFromOperations':
+    "Brought up to date with the journal's newer operations (units, and value at the last known net asset value): {funds}. The date in brackets is the one the position was at before.",
   'import.fileNotRecognised':
     'File not recognised. Accepted: XTB report, Mintos quarterly statement (PDF), Mintos My investments (.xlsx), Mintos account statement (.xlsx, .csv), Amundi annual statement (PDF), Amundi Synthèse or Amundi operations journal (.xlsb).',
   'import.noTableRecognised':

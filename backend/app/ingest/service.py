@@ -1400,6 +1400,42 @@ def _amundi_cost_from_operations(db: Session, broker_symbol: str, quantity_held:
     return round(cost, 2), first
 
 
+def _catch_up_amundi_position(db: Session, position: Position, broker_symbol: str) -> bool:
+    """Bring a position from an older Synthese/PDF up to the journal's last
+    operation, when the journal can be trusted for it.
+
+    Trusted means: the journal's units *up to the position's own date*
+    equal the units the position holds. Everything that position knew is
+    then in the journal, so the operations after it are simply newer —
+    their units are added and the fund is revalued at the last net asset
+    value the journal shows. Without that match nothing is changed: the
+    journal may be missing older payments. Returns True when updated."""
+    if position.value_as_of is None:
+        return False
+    rows = db.execute(
+        select(Transaction.quantity, Transaction.price, Transaction.executed_at, Transaction.raw).where(
+            Transaction.type == TxType.AMUNDI_OPERATION
+        )
+    ).all()
+    ops = sorted(
+        (executed_at.date(), quantity or 0.0, price)
+        for quantity, price, executed_at, raw in rows
+        if (raw or {}).get("broker_symbol") == broker_symbol
+    )
+    units_then = sum(units for day, units, _ in ops if day <= position.value_as_of)
+    newer = [op for op in ops if op[0] > position.value_as_of]
+    priced = [op for op in newer if op[2]]
+    if not priced or abs(units_then - position.quantity) > _AMUNDI_UNITS_TOLERANCE:
+        return False
+    last_day, _, last_nav = priced[-1]
+    quantity = round(sum(units for _, units, _ in ops), 4)
+    position.quantity = quantity
+    position.market_price = last_nav
+    position.broker_market_value = round(quantity * last_nav, 2)
+    position.value_as_of = last_day
+    return True
+
+
 def _operation_external_id(op: Any, occurrence: int) -> str:
     """Stable across re-imports and overlapping exports: the operation's own
     fields, plus its rank among identical rows of the same file (two
@@ -1486,8 +1522,13 @@ def import_amundi_operations_file(
         .where(Position.account.in_(AMUNDI_ACCOUNTS.values()), Position.source == Source.IMPORT)
     ).all()
     applied: set[str] = set()
+    caught_up: list[str] = []
     for position, symbol in positions:
         from_operations = _amundi_cost_from_operations(db, symbol, position.quantity)
+        previous_as_of = position.value_as_of
+        if from_operations is None and _catch_up_amundi_position(db, position, symbol):
+            caught_up.append(f"{position.instrument.name or symbol} ({previous_as_of.isoformat()})")
+            from_operations = _amundi_cost_from_operations(db, symbol, position.quantity)
         if from_operations is None or position.broker_market_value is None:
             continue
         cost, since = from_operations
@@ -1501,6 +1542,12 @@ def import_amundi_operations_file(
         ).as_dict()
         applied.add(symbol)
     batch.positions_found = len(applied)
+
+    if caught_up:
+        batch.warnings = [
+            *batch.warnings,
+            Message(MessageCode.AMUNDI_POSITIONS_UPDATED_FROM_OPERATIONS, {"funds": ", ".join(caught_up)}).as_dict(),
+        ]
 
     not_applied = sorted(
         name for symbol, (name, units) in net_units.items()

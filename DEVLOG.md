@@ -9533,3 +9533,26 @@ journal: 46 operations, every fund's units consistent, a fully arbitraged-out
 fund nets to zero units.
 
 Verification: backend suite 1140 passed; `tsc -b` and `npm run lint` clean.
+
+## Step 3u.89 — The Amundi journal brings an older position up to date (2026-11-12)
+
+First real run of 3u.88: two funds got their exact gain, the
+company-shareholding fund did not. Its journal was complete (first payment
+2025-10-31, 294.0198 units on 2026-10-31), but the position on file came
+from an older Synthèse, before the last payments, so the units differed and
+the guard refused. I could not find where the portal offers the Synthèse
+export again.
+
+The journal can settle it on its own. If its units *up to the position's own
+date* equal the units that position holds, everything the position knew is in
+the journal and the later operations are simply newer. The position then
+takes the journal's total units, is valued at the last net asset value the
+journal shows, and gets the exact gain as before. The report lists every fund
+updated this way with the date it was at. Units that don't match at that date
+still change nothing.
+
+Checked with the real journal against a simulated position as of 2026-09-08
+(258.8774 units, the journal's count on that date): brought to 294.0198
+units at the 2026-10-31 value.
+
+Verification: backend suite 1142 passed; `tsc -b` clean.

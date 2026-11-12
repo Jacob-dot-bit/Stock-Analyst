@@ -171,6 +171,8 @@ export const pl: Catalogue = {
   'import.detected.amundi_operations': 'Rozpoznano: dziennik operacji Amundi (.xlsb).',
   'import.amundiOperationsNotApplied':
     'Nie przeliczono zysku dla: {funds}. Albo fundusz nie ma jeszcze pozycji (zaimportuj Synthèse), albo dziennik nie obejmuje całej jego historii (jednostki nie zgadzają się z posiadanymi): wyeksportuj dłuższy okres.',
+  'import.amundiPositionsUpdatedFromOperations':
+    'Zaktualizowano o nowsze operacje z dziennika (jednostki i wartość według ostatniej znanej wartości jednostki): {funds}. Data w nawiasie to data pozycji przed aktualizacją.',
   'import.fileNotRecognised':
     'Nie rozpoznano pliku. Obsługiwane: raport XTB, kwartalny wyciąg Mintos (PDF), Mintos My investments (.xlsx), wyciąg z konta Mintos (.xlsx, .csv), roczny wyciąg Amundi (PDF), Synthèse Amundi lub dziennik operacji Amundi (.xlsb).',
   'import.noTableRecognised':
