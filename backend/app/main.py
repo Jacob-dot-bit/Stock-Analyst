@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.db import init_db
 from app.routers import (
     backup,
+    budget,
     corporate_actions,
     discovery,
     dividends,
@@ -123,6 +124,7 @@ app.include_router(discovery.router)
 app.include_router(prediction.router)
 app.include_router(factors.router)
 app.include_router(dividends.router)
+app.include_router(budget.router)
 app.include_router(backup.router)
 app.include_router(corporate_actions.router)
 app.include_router(tax.router)

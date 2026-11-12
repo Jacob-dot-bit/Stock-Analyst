@@ -68,6 +68,9 @@ class MessageCode:
     #: An account whose balance on file is more recent than this export's:
     #: kept as it is. {accounts} lists each with the date on file.
     BANK_BALANCE_KEPT = "import.bankBalanceKept"  # {accounts}
+    #: Every line of the export kept for the budget view; {inserted} of the
+    #: {count} were not already on file from an earlier export.
+    BANK_OPERATIONS_KEPT = "import.bankOperationsKept"  # {count, inserted}
 
     # --- Single upload slot (`ingest/detect.py`) -----------------------------
     #: Which export was recognised, as ``import.detected.<FileKind value>`` —

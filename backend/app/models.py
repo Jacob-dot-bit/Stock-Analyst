@@ -245,6 +245,39 @@ class Transaction(Base):
     raw: Mapped[dict | None] = mapped_column(JSON)
 
 
+class BankOperation(Base):
+    """One line of a bank account export: card payment, bill, salary,
+    transfer. Read by the budget view (`app/budget/`) only.
+
+    Kept out of `transactions` on purpose: the ledger is about the portfolio
+    and every view built on it (dividends, cash flows, tax prep) would have
+    to learn to skip the bakery. The broker transfers are in both: here as
+    one more line of the account, in the ledger as `BROKER_TRANSFER`.
+
+    The category is not stored: it is worked out from the label each time
+    it is read, so a better rule applies to the past without a re-import.
+    See DEVLOG "Step 3u.92".
+    """
+
+    __tablename__ = "bank_operations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    #: Same key as the ledger's `bank-...` ids: date, account, label, amount
+    #: and rank among identical rows. An overlapping export inserts nothing twice.
+    external_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    #: `BankAccount.label`, e.g. "Monabanq Pratiq".
+    account: Mapped[str] = mapped_column(String(40), index=True)
+    executed_on: Mapped[date] = mapped_column(Date, index=True)
+    value_date: Mapped[date | None] = mapped_column(Date)
+    label: Mapped[str] = mapped_column(Text)
+    #: Signed: negative = money out of the account.
+    amount: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(8), default="EUR")
+    broker: Mapped[str | None] = mapped_column(String(20))
+    own_transfer: Mapped[bool] = mapped_column(Boolean, default=False)
+    import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
+
+
 class Position(Base):
     """An open holding. Comes from a broker export or from manual entry."""
 

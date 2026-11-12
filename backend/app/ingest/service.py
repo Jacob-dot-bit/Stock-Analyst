@@ -29,7 +29,7 @@ from app.ingest.amundi_operations_import import (
     parse_amundi_operations_export,
 )
 from app.ingest.amundi_synthese_import import parse_amundi_synthese_export
-from app.ingest.bank_import import BrokerTransfer, ParsedBankExport, parse_bank_export
+from app.ingest.bank_import import BankLine, BrokerTransfer, ParsedBankExport, parse_bank_export
 from app.ingest.mintos_import import (
     MINTOS_CORE_ACCOUNT,
     MINTOS_CORE_BROKER_SYMBOL,
@@ -50,6 +50,7 @@ from app.ingest.xtb_import import ParsedExport, parse_xtb_export
 from app.messages import Message, MessageCode, PerformanceNote
 from app.models import (
     AmundiFundSnapshot,
+    BankOperation,
     ImportBatch,
     Instrument,
     Lot,
@@ -1581,7 +1582,7 @@ def import_amundi_operations_file(
 BANK_ACCOUNT_REASON = "bank_account"
 
 
-def _bank_transfer_external_id(transfer: BrokerTransfer, occurrence: int) -> str:
+def _bank_transfer_external_id(transfer: BrokerTransfer | BankLine, occurrence: int) -> str:
     """Same idea as `_operation_external_id`: the row's own fields, plus
     its rank among identical rows (two 50 € card top-ups on XTB the same
     day stay two), so an overlapping later export inserts nothing twice."""
@@ -1612,7 +1613,8 @@ def import_bank_file(
     """Parse then persist a bank's "Vos comptes" export
     (`ingest/bank_import.py`): one CASH position per account, valued at the
     balance on the export date, and the transfers to and from my brokers
-    as `BROKER_TRANSFER` transactions. Spending is not stored. A balance
+    as `BROKER_TRANSFER` transactions. Every line of every account also
+    goes to `bank_operations`, for the budget view (Step 3u.92). A balance
     already on file from a more recent export is kept. See DEVLOG
     "Step 3u.91".
     """
@@ -1705,8 +1707,16 @@ def import_bank_file(
             },
         )
     batch.transactions_inserted = inserted
+    budget_inserted = _insert_bank_operations(db, parsed.operations, batch)
 
     extra: list[dict] = []
+    if parsed.operations:
+        extra.append(
+            Message(
+                MessageCode.BANK_OPERATIONS_KEPT,
+                {"count": len(parsed.operations), "inserted": budget_inserted},
+            ).as_dict()
+        )
     if parsed.transfers:
         extra.append(Message(MessageCode.BANK_BROKER_TRANSFERS, {"totals": _bank_transfer_totals(parsed.transfers)}).as_dict())
     if kept:
@@ -1715,6 +1725,49 @@ def import_bank_file(
         batch.warnings = [*batch.warnings, *extra]
 
     return _finish_import(db, batch, commit)
+
+
+def _insert_bank_operations(db: Session, lines: list[BankLine], batch: ImportBatch) -> int:
+    """Every line of the export into `bank_operations`, skipping the ones
+    an earlier, overlapping export already brought. Returns how many are new."""
+    occurrences: dict[tuple, int] = {}
+    keyed: dict[str, BankLine] = {}
+    for line in lines:
+        identity = (line.executed_on, line.account.symbol, line.label, line.amount)
+        occurrence = occurrences.get(identity, 0)
+        occurrences[identity] = occurrence + 1
+        keyed[_bank_transfer_external_id(line, occurrence)] = line
+    if not keyed:
+        return 0
+    known: set[str] = set()
+    ids = list(keyed)
+    for start in range(0, len(ids), 500):
+        known.update(
+            db.execute(
+                select(BankOperation.external_id).where(BankOperation.external_id.in_(ids[start : start + 500]))
+            ).scalars()
+        )
+    inserted = 0
+    for external_id, line in keyed.items():
+        if external_id in known:
+            continue
+        db.add(
+            BankOperation(
+                external_id=external_id,
+                account=line.account.label,
+                executed_on=line.executed_on,
+                value_date=line.value_date,
+                label=line.label,
+                amount=line.amount,
+                currency=line.account.currency,
+                broker=line.broker,
+                own_transfer=line.own_transfer,
+                import_batch_id=batch.id,
+            )
+        )
+        inserted += 1
+    db.flush()
+    return inserted
 
 
 def _finish_import(db: Session, batch: ImportBatch, commit: bool) -> ImportBatch | dict[str, Any]:

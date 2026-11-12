@@ -9623,3 +9623,36 @@ voluntary payments total of the operations journal (3u.90), from a
 completely different file, which is the check I trust most here.
 
 Verification: backend suite 1157 passed; `tsc -b` clean.
+
+## Step 3u.92 — Budget: every line of my bank account, by category (2026-11-13)
+
+Step 3u.91 read the whole Monabanq export but kept only the balances and the
+transfers to the brokers. Hermes, reading Stock Analyst, could therefore see
+what I invest and nothing of what I spend. Now every line is kept.
+
+- `bank_operations`, a table of its own: date, account, label, signed
+  amount, broker when it is one, and whether it is a transfer between my
+  own accounts. Not in `transactions`: the ledger is the portfolio's, and
+  every view built on it would have to learn to skip the bakery. Broker
+  transfers are in both, as before. Same dedup key as the ledger rows, so
+  an overlapping export adds nothing twice.
+- Transfers between my accounts are recognised at import (the label names
+  me, read from the account label, or a savings book) and at read time (a
+  debit and a credit of the same amount on two of my accounts, at most
+  three days apart). They are neither spending nor income.
+- `app/budget/categories.py` turns the label into a counterparty (no card
+  number, mandate or reference) and a category, from plain keyword rules.
+  The category is never stored: a new rule applies to the past on the next
+  read. A credit matching a spending rule is a refund and lowers that
+  category. A payer crediting at least 500 in three different months is
+  the salary whatever its label says.
+- `/api/budget/summary`: month by month income, spending, left over and
+  invested, per-category totals, averages over full months, recurring
+  payments (same counterparty, amount within 20 %, three of the last four
+  full months), biggest spending over 90 days, and what no rule knows yet
+  ("to sort"). `/api/budget/operations`: the lines themselves, cleaned.
+  Every period counts back from the last operation on file, not from today.
+- A Budget page in the main menu shows all of it.
+
+The real export is not committed. The tests build one in its shape with
+made-up names and amounts.

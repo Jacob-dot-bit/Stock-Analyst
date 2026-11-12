@@ -7,10 +7,11 @@ What I take from it:
   savings book alike are cash I hold, so they belong in the portfolio
   total and the allocation;
 * the **transfers to and from my brokers** (XTB, Mintos, Amundi), seen
-  from the bank side: what actually left my bank account to be invested.
-
-Everyday spending is read but not kept: it says nothing about the
-portfolio and it would fill the database with my card payments.
+  from the bank side: what actually left my bank account to be invested;
+* **every operation** of every account (card payments, bills, salary,
+  transfers), for the budget view (`app/budget/`). They go to their own
+  table, never into the transaction ledger: a card payment at the bakery
+  is not a portfolio event. See DEVLOG "Step 3u.92".
 
 Structure observed on a real 2026-11-12 Monabanq export (two accounts,
 three years of operations):
@@ -111,10 +112,31 @@ class BrokerTransfer:
 
 
 @dataclass
+class BankLine:
+    """One operation of an account sheet, whatever it is."""
+
+    executed_on: date
+    value_date: date | None
+    account: BankAccount
+    label: str
+    #: Signed: negative = money out of the account.
+    amount: float
+    #: The broker this line went to or came from, when it is one.
+    broker: str | None = None
+    #: A transfer between two of my own accounts (its label names me, or a
+    #: savings book). Never spending nor income.
+    own_transfer: bool = False
+
+
+@dataclass
 class ParsedBankExport:
     as_of: date | None = None
     accounts: list[BankAccount] = field(default_factory=list)
     transfers: list[BrokerTransfer] = field(default_factory=list)
+    operations: list[BankLine] = field(default_factory=list)
+    #: The account holder's name as written in the account labels, upper
+    #: case. Used to recognise transfers between my own accounts; never stored.
+    holders: set[str] = field(default_factory=set)
     operations_read: int = 0
     warnings: list[Message] = field(default_factory=list)
     sections: list[SectionSummary] = field(default_factory=list)
@@ -134,6 +156,30 @@ def broker_of(label: str) -> str | None:
         if pattern.search(upper):
             return broker
     return None
+
+
+def _holder(label: str) -> str | None:
+    """``PRATIQ M JEAN EXEMPLE`` → ``JEAN EXEMPLE``."""
+    padded = f" {label.strip().upper()} "
+    cuts = [(padded.find(title), title) for title in _HOLDER_TITLES if padded.find(title) > 0]
+    if not cuts:
+        return None
+    position, title = min(cuts)
+    name = padded[position + len(title) :].strip()
+    return name or None
+
+
+#: Savings books: a transfer naming one is money moving between my accounts.
+_OWN_ACCOUNT_RE = re.compile(r"\bLIVRET\b|\bLDDS?\b|\bLEP\b|\bCEL\b|\bPEL\b")
+
+
+def is_own_transfer(label: str, holders: set[str]) -> bool:
+    upper = label.upper()
+    if not re.match(r"\s*(VIR|VIREMENT)\b", upper):
+        return False
+    if _OWN_ACCOUNT_RE.search(upper):
+        return True
+    return any(holder and holder in upper for holder in holders)
 
 
 def _product(label: str) -> str:
@@ -187,6 +233,9 @@ def _read_accounts(rows: list[tuple], result: ParsedBankExport) -> None:
         if len(rib) < 3 or balance is None:
             continue
         bank_code, branch, number = rib[0], rib[1], rib[2]
+        holder = _holder(str(row[0]))
+        if holder:
+            result.holders.add(holder)
         result.accounts.append(
             BankAccount(
                 bank=BANK_NAMES.get(bank_code, f"Banque {bank_code}"),
@@ -219,18 +268,30 @@ def _read_operations(rows: list[tuple], account: BankAccount, result: ParsedBank
         if account.first_operation is None or executed_on < account.first_operation:
             account.first_operation = executed_on
         label = str(row[col["Libellé"]] or "").strip()
-        broker = broker_of(label)
-        if broker is None:
-            continue
         debit = _number(row[col["Débit"]]) if "Débit" in col else None
         credit = _number(row[col["Crédit"]]) if "Crédit" in col else None
-        amount = (credit or 0.0) - abs(debit or 0.0)
+        amount = round((credit or 0.0) - abs(debit or 0.0), 2)
         if not amount:
+            continue
+        value_date = _parse_date(row[col["Valeur"]]) if "Valeur" in col else None
+        broker = broker_of(label)
+        result.operations.append(
+            BankLine(
+                executed_on=executed_on,
+                value_date=value_date,
+                account=account,
+                label=label,
+                amount=amount,
+                broker=broker,
+                own_transfer=broker is None and is_own_transfer(label, result.holders),
+            )
+        )
+        if broker is None:
             continue
         result.transfers.append(
             BrokerTransfer(
                 executed_on=executed_on,
-                value_date=_parse_date(row[col["Valeur"]]) if "Valeur" in col else None,
+                value_date=value_date,
                 account=account,
                 broker=broker,
                 label=label,
@@ -289,4 +350,5 @@ def parse_bank_export(content: bytes, filename: str) -> ParsedBankExport:
     if not result.accounts and not result.warnings:
         result.warnings.append(Message(MessageCode.NOTHING_IMPORTABLE))
     result.transfers.sort(key=lambda t: t.executed_on)
+    result.operations.sort(key=lambda o: o.executed_on)
     return result

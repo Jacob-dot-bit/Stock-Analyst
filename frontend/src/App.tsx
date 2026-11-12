@@ -7,7 +7,8 @@ import { ThemeToggle } from './components/ThemeToggle'
 import { useI18n } from './i18n'
 
 // Each page is its own chunk, fetched the first time it is opened, so the
-// first screen doesn't wait for the code of the nine others.
+// first screen doesn't wait for the code of the ten others.
+const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })))
 const Dividends = lazy(() => import('./pages/Dividends').then((m) => ({ default: m.Dividends })))
 const Journal = lazy(() => import('./pages/Journal').then((m) => ({ default: m.Journal })))
 const Portfolio = lazy(() => import('./pages/Portfolio').then((m) => ({ default: m.Portfolio })))
@@ -26,6 +27,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/week': 'nav.weekly',
   '/transactions': 'nav.transactions',
   '/dividends': 'dividends.title',
+  '/budget': 'nav.budget',
   '/watchlist': 'nav.watchlist',
   '/gems': 'nav.gems',
   '/tax-prep': 'nav.taxPrep',
@@ -37,7 +39,7 @@ const PAGE_TITLES: Record<string, string> = {
 export default function App() {
   const { t } = useI18n()
   const location = useLocation()
-  // Phones get a collapsed menu behind one button instead of nine wrapped
+  // Phones get a collapsed menu behind one button instead of ten wrapped
   // links eating the top of every page. Closed again on every navigation.
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -74,6 +76,7 @@ export default function App() {
           <NavLink to="/portfolio">{t('nav.portfolio')}</NavLink>
           <NavLink to="/week">{t('nav.weekly')}</NavLink>
           <NavLink to="/transactions">{t('nav.transactions')}</NavLink>
+          <NavLink to="/budget">{t('nav.budget')}</NavLink>
           <NavLink to="/watchlist">{t('nav.watchlist')}</NavLink>
           <NavLink to="/gems">{t('nav.gems')}</NavLink>
           <NavLink to="/tax-prep">{t('nav.taxPrep')}</NavLink>
@@ -96,6 +99,7 @@ export default function App() {
             <Route path="/week" element={<Weekly />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/dividends" element={<Dividends />} />
+            <Route path="/budget" element={<Budget />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/gems" element={<Screener />} />
