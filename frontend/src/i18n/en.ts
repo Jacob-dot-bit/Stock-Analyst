@@ -83,6 +83,8 @@ export const en: Catalogue = {
     'Approximate gain: a proportional share of "{account}"\'s gain, based on known deposits/employer match/profit-sharing since {since} — any year never imported is not counted, which can overstate this figure.',
   'performance.amundiRealGainSinceSnapshot':
     "This fund's real gain since {since}: computed from the last statement that disclosed its gain, since the quantity held hasn't changed since then.",
+  'performance.amundiGainFromOperations':
+    "This fund's real gain: current value minus everything paid into it since {since}, from the Amundi operations journal.",
 
   // --- Declared valuation freshness (DEVLOG "Decision 3u.50") --------------
   'valuation.declaredFresh':
@@ -93,7 +95,7 @@ export const en: Catalogue = {
   // --- Import panel --------------------------------------------------------
   'import.auto.title': 'Import a file',
   'import.auto.instructions':
-    "Drop any export, the broker and file type are recognised automatically. XTB: xStation → Account history → Export, period “All”, Excel format. Mintos: the quarterly PDF statement, My investments → Export (.xlsx) for today's value, or the account statement (.xlsx, .csv) for interest and fees. Amundi ESR: the annual PDF statement or the Synthèse export (.xlsb).",
+    "Drop any export, the broker and file type are recognised automatically. XTB: xStation → Account history → Export, period “All”, Excel format. Mintos: the quarterly PDF statement, My investments → Export (.xlsx) for today's value, or the account statement (.xlsx, .csv) for interest and fees. Amundi ESR: the annual PDF statement, the Synthèse export (.xlsb) for today's value, or the “Mes opérations” journal (.xlsb) for each fund's real gain.",
   'import.auto.multiAccount':
     'A file already imported never creates duplicates. For the same value (Mintos loans, Amundi funds), the most recent export always wins. An XTB export covers one account only: import each one separately.',
   'import.auto.dropzone': 'Drop the file here, or pick it manually (.xlsx, .csv, .pdf, .xlsb)',
@@ -166,8 +168,11 @@ export const en: Catalogue = {
   'import.detected.mintos_account_statement': 'Recognised: Mintos account statement (interest, fees and tax).',
   'import.detected.amundi_statement': 'Recognised: Amundi ESR annual statement (PDF).',
   'import.detected.amundi_synthese': 'Recognised: Amundi Synthèse export (.xlsb).',
+  'import.detected.amundi_operations': 'Recognised: Amundi operations journal (.xlsb).',
+  'import.amundiOperationsNotApplied':
+    "Gain not recomputed for: {funds}. Either the fund has no position yet (import the Synthèse), or the journal does not cover its whole history (its units don't match the units held): export a longer period.",
   'import.fileNotRecognised':
-    'File not recognised. Accepted: XTB report, Mintos quarterly statement (PDF), Mintos My investments (.xlsx), Mintos account statement (.xlsx, .csv), Amundi annual statement (PDF), Amundi Synthèse (.xlsb).',
+    'File not recognised. Accepted: XTB report, Mintos quarterly statement (PDF), Mintos My investments (.xlsx), Mintos account statement (.xlsx, .csv), Amundi annual statement (PDF), Amundi Synthèse or Amundi operations journal (.xlsb).',
   'import.noTableRecognised':
     'No table recognised in this file. Check that it is a report exported from Account history.',
   'import.nothingImportable': 'No usable position or operation was found.',

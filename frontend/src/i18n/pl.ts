@@ -85,6 +85,8 @@ export const pl: Catalogue = {
     'Zysk przybliżony: proporcjonalny udział w zysku konta „{account}", oparty na znanych wpłatach/dopłatach pracodawcy/udziale w zyskach od {since} — lata, których nie zaimportowano, nie są uwzględnione, co może zawyżać ten wynik.',
   'performance.amundiRealGainSinceSnapshot':
     'Rzeczywisty zysk tego funduszu od {since}: obliczony na podstawie ostatniego wyciągu, który ujawnił jego zysk — liczba posiadanych jednostek nie zmieniła się od tego czasu.',
+  'performance.amundiGainFromOperations':
+    'Rzeczywisty zysk tego funduszu: bieżąca wartość minus wszystko, co do niego wpłacono od {since}, według dziennika operacji Amundi.',
 
   // --- Aktualność zadeklarowanych wycen (DEVLOG "Decision 3u.50") ----------
   'valuation.declaredFresh':
@@ -95,7 +97,7 @@ export const pl: Catalogue = {
   // --- Import panel --------------------------------------------------------
   'import.auto.title': 'Zaimportuj plik',
   'import.auto.instructions':
-    'Wrzuć dowolny eksport, broker i typ pliku zostaną rozpoznane automatycznie. XTB: xStation → Account history → Export, okres „All”, format Excel. Mintos: kwartalny wyciąg PDF, My investments → Export (.xlsx) dla dzisiejszej wartości lub wyciąg z konta (.xlsx, .csv) dla odsetek i opłat. Amundi ESR: roczny wyciąg PDF lub eksport Synthèse (.xlsb).',
+    'Wrzuć dowolny eksport, broker i typ pliku zostaną rozpoznane automatycznie. XTB: xStation → Account history → Export, okres „All”, format Excel. Mintos: kwartalny wyciąg PDF, My investments → Export (.xlsx) dla dzisiejszej wartości lub wyciąg z konta (.xlsx, .csv) dla odsetek i opłat. Amundi ESR: roczny wyciąg PDF, eksport Synthèse (.xlsb) dla dzisiejszej wartości lub dziennik „Mes opérations” (.xlsb) dla rzeczywistego zysku każdego funduszu.',
   'import.auto.multiAccount':
     'Ponowny import tego samego pliku nie tworzy duplikatów. Dla tej samej wartości (pożyczki Mintos, fundusze Amundi) zawsze wygrywa najnowszy eksport. Eksport XTB obejmuje tylko jedno konto: importuj każde osobno.',
   'import.auto.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx, .csv, .pdf, .xlsb)',
@@ -165,9 +167,12 @@ export const pl: Catalogue = {
   'import.detected.mintos_investments': 'Rozpoznano: eksport Mintos My investments (wartość portfela pożyczek).',
   'import.detected.mintos_account_statement': 'Rozpoznano: wyciąg z konta Mintos (odsetki, opłaty i podatek).',
   'import.detected.amundi_statement': 'Rozpoznano: roczny wyciąg Amundi ESR (PDF).',
-  'import.detected.amundi_synthese': 'Rozpoznano: eksport Synthèse Amundi (.xlsb).',
+  'import.detected.amundi_synthese': 'Rozpoznano: eksport Synthèse Amundi lub dziennik operacji Amundi (.xlsb).',
+  'import.detected.amundi_operations': 'Rozpoznano: dziennik operacji Amundi (.xlsb).',
+  'import.amundiOperationsNotApplied':
+    'Nie przeliczono zysku dla: {funds}. Albo fundusz nie ma jeszcze pozycji (zaimportuj Synthèse), albo dziennik nie obejmuje całej jego historii (jednostki nie zgadzają się z posiadanymi): wyeksportuj dłuższy okres.',
   'import.fileNotRecognised':
-    'Nie rozpoznano pliku. Obsługiwane: raport XTB, kwartalny wyciąg Mintos (PDF), Mintos My investments (.xlsx), wyciąg z konta Mintos (.xlsx, .csv), roczny wyciąg Amundi (PDF), Synthèse Amundi (.xlsb).',
+    'Nie rozpoznano pliku. Obsługiwane: raport XTB, kwartalny wyciąg Mintos (PDF), Mintos My investments (.xlsx), wyciąg z konta Mintos (.xlsx, .csv), roczny wyciąg Amundi (PDF), Synthèse Amundi lub dziennik operacji Amundi (.xlsb).',
   'import.noTableRecognised':
     'Nie rozpoznano żadnej tabeli w tym pliku. Sprawdź, czy to raport wyeksportowany z Account history.',
   'import.nothingImportable': 'Nie znaleziono żadnej użytecznej pozycji ani operacji.',

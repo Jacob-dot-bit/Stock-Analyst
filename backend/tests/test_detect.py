@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import zipfile
+from unittest.mock import patch
 
 import openpyxl
 import pytest
@@ -91,8 +92,28 @@ class TestDetectFile:
         content = ("﻿" + ",".join(_ACCOUNT_STATEMENT_HEADER) + "\n2026-11-12 10:00:00,t,d,0.05,1,EUR,Bonus\n").encode()
         assert detect_file(content) == FileKind.MINTOS_ACCOUNT_STATEMENT
 
-    def test_amundi_synthese(self):
-        assert detect_file(_fake_xlsb()) == FileKind.AMUNDI_SYNTHESE
+    @pytest.mark.parametrize(
+        ("sheets", "expected"),
+        [
+            (["Donnees", "Mes avoirs par échéance"], FileKind.AMUNDI_SYNTHESE),
+            (["Donnees", "Page1", "OpeJournal"], FileKind.AMUNDI_OPERATIONS),
+            (["Feuil1"], None),
+        ],
+    )
+    def test_xlsb_is_told_apart_by_its_sheets(self, sheets, expected):
+        # No library writes .xlsb: the workbook's sheet list is stubbed.
+        class _Workbook:
+            def __init__(self, *_):
+                self.sheets = sheets
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+        with patch("app.ingest.detect.open_xlsb", _Workbook):
+            assert detect_file(_fake_xlsb()) is expected
 
     def test_mintos_pdf(self):
         assert detect_file(_pdf("Mintos Periodic statement of Financial instruments")) == FileKind.MINTOS_STATEMENT

@@ -22,6 +22,11 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.ingest.amundi_import import AMUNDI_ACCOUNTS, ParsedAmundiExport, parse_amundi_statement
+from app.ingest.amundi_operations_import import (
+    ParsedAmundiOperations,
+    counts_toward_cost,
+    parse_amundi_operations_export,
+)
 from app.ingest.amundi_synthese_import import parse_amundi_synthese_export
 from app.ingest.mintos_import import (
     MINTOS_CORE_ACCOUNT,
@@ -1025,6 +1030,12 @@ def _slugify(text: str) -> str:
     return _SLUG_RE.sub("-", text.upper()).strip("-")
 
 
+def _amundi_symbol(account: str, fund_name: str) -> str:
+    """``Amundi PEG`` + ``ARCELOR 6 MONETAIRE`` -> ``AMUNDI-PEG-ARCELOR-6-MONETAIRE``,
+    shared by every Amundi source so their rows land on the same instrument."""
+    return f"AMUNDI-{account.split()[-1]}-{_slugify(fund_name)}"[:40]
+
+
 #: Aggregate-contribution keys counted as real money that went *into* the
 #: fund (deposits + employer match) — see `amundi_import.py`'s
 #: `_classify_aggregate_label`. `abondement_brut` is deliberately excluded
@@ -1167,9 +1178,7 @@ def _persist_amundi_export(
         funds_by_account.setdefault(fund.account, []).append(fund)
 
     for account, funds in funds_by_account.items():
-        fund_symbols: dict[str, str] = {
-            fund.name: f"AMUNDI-{account.split()[-1]}-{_slugify(fund.name)}"[:40] for fund in funds
-        }
+        fund_symbols: dict[str, str] = {fund.name: _amundi_symbol(account, fund.name) for fund in funds}
 
         # Freshness is judged against this account's own snapshot history,
         # captured *before* this import's rows are written below — not
@@ -1272,7 +1281,16 @@ def _persist_amundi_export(
                 or parsed.as_of
             )
 
-            if fund.estimated_gain_loss is not None:
+            from_operations = _amundi_cost_from_operations(db, broker_symbol, fund.quantity)
+            if from_operations is not None:
+                # Exact cost from the operations journal — preferred over
+                # every estimate below, and over the PDF's own figure, which
+                # is only as fresh as the statement. See DEVLOG "Step 3u.88".
+                cost, since = from_operations
+                gain = round(fund.gross_value - cost, 2)
+                gain_pct = round(gain / cost * 100, 2) if cost else None
+                note = Message(PerformanceNote.AMUNDI_GAIN_FROM_OPERATIONS, {"since": since.isoformat()}).as_dict()
+            elif fund.estimated_gain_loss is not None:
                 # Derived from Amundi's own two published figures, not
                 # invented — see DEVLOG "Decision 3u.39". Amundi discloses
                 # only one P&L figure ("brute"/gross); stored in both
@@ -1345,6 +1363,154 @@ def _persist_amundi_export(
                 raw={"as_of": parsed.as_of.isoformat(), "key": key},
             )
     batch.transactions_inserted = inserted
+
+    return _finish_import(db, batch, commit)
+
+
+#: Units in the journal vs units held: both come from Amundi with four
+#: decimals, so a complete journal matches to rounding. A missing payment
+#: moves the count by whole units or more.
+_AMUNDI_UNITS_TOLERANCE = 0.005
+
+
+def _amundi_cost_from_operations(db: Session, broker_symbol: str, quantity_held: float) -> tuple[float, date] | None:
+    """(cost, first operation date) for one fund from the imported
+    operations journal, or None when there is no journal for it or its
+    units don't add up to `quantity_held` — then the journal doesn't cover
+    the fund's whole history and its sum would understate the cost."""
+    rows = db.execute(
+        select(Transaction.quantity, Transaction.amount, Transaction.executed_at, Transaction.raw).where(
+            Transaction.type == TxType.AMUNDI_OPERATION
+        )
+    ).all()
+    units = 0.0
+    cost = 0.0
+    first: date | None = None
+    for quantity, amount, executed_at, raw in rows:
+        raw = raw or {}
+        if raw.get("broker_symbol") != broker_symbol:
+            continue
+        units += quantity or 0.0
+        if counts_toward_cost(raw.get("op_type", ""), raw.get("op_subtype")):
+            cost += amount or 0.0
+        when = executed_at.date()
+        first = when if first is None or when < first else first
+    if first is None or abs(units - quantity_held) > _AMUNDI_UNITS_TOLERANCE:
+        return None
+    return round(cost, 2), first
+
+
+def _operation_external_id(op: Any, occurrence: int) -> str:
+    """Stable across re-imports and overlapping exports: the operation's own
+    fields, plus its rank among identical rows of the same file (two
+    identical payments on the same day stay two)."""
+    key = "|".join(
+        str(part)
+        for part in (op.executed_on.isoformat(), op.account, op.fund, op.label, op.origin, op.op_type,
+                     op.op_subtype, f"{op.units:.6f}", f"{op.amount:.2f}", occurrence)
+    )
+    return "amundi-op-" + hashlib.sha256(key.encode()).hexdigest()[:40]
+
+
+def import_amundi_operations_file(
+    db: Session, content: bytes, filename: str, *, commit: bool = True
+) -> ImportBatch | dict[str, Any]:
+    """Parse then persist Amundi ESR's operations journal
+    (``ExportOperations-...xlsb``): every operation becomes an
+    `AMUNDI_OP` transaction, deduplicated on its own fields, then each
+    current Amundi position whose units the journal fully accounts for gets
+    its exact gain (value − cost). A later Synthese or PDF import reuses the
+    same cost (`_persist_amundi_export`). See DEVLOG "Step 3u.88".
+    """
+    parsed: ParsedAmundiOperations = parse_amundi_operations_export(content, filename)
+
+    batch = ImportBatch(
+        filename=filename,
+        file_hash=hashlib.sha256(content).hexdigest(),
+        warnings=[m.as_dict() for m in parsed.warnings],
+        sections=[sec.as_dict() for sec in parsed.sections],
+        accounts=sorted({op.account for op in parsed.operations}),
+        positions_found=0,
+        transactions_found=len(parsed.operations),
+    )
+    db.add(batch)
+    db.flush()
+
+    if parsed.is_empty:
+        return _finish_import(db, batch, commit)
+
+    seen: set[tuple[str, str, str]] = set()
+    occurrences: dict[tuple, int] = {}
+    inserted = 0
+    for op in parsed.operations:
+        identity = (op.executed_on, op.account, op.fund, op.label, op.origin, op.op_type, op.op_subtype, op.units, op.amount)
+        occurrence = occurrences.get(identity, 0)
+        occurrences[identity] = occurrence + 1
+        inserted += _insert_transaction(
+            db,
+            external_id=_operation_external_id(op, occurrence),
+            tx_type=TxType.AMUNDI_OPERATION,
+            instrument=None,
+            batch=batch,
+            seen=seen,
+            executed_at=datetime.combine(op.executed_on, datetime.min.time()),
+            account=op.account,
+            quantity=op.units,
+            price=op.nav,
+            amount=op.amount,
+            currency="EUR",
+            comment=f"{op.label} — {op.fund}",
+            raw={
+                "broker_symbol": _amundi_symbol(op.account, op.fund),
+                "fund": op.fund,
+                "dispositif": op.dispositif,
+                "origin": op.origin,
+                "op_type": op.op_type,
+                "op_subtype": op.op_subtype,
+            },
+        )
+    batch.transactions_inserted = inserted
+    db.flush()
+
+    # Apply to the positions already on file. A fund the journal has fully
+    # left (arbitraged out to zero units) is expected to have no position.
+    net_units: dict[str, tuple[str, float]] = {}
+    for op in parsed.operations:
+        symbol = _amundi_symbol(op.account, op.fund)
+        name, units = net_units.get(symbol, (op.fund, 0.0))
+        net_units[symbol] = (name, units + op.units)
+
+    positions = db.execute(
+        select(Position, Instrument.broker_symbol)
+        .join(Instrument, Position.instrument_id == Instrument.id)
+        .where(Position.account.in_(AMUNDI_ACCOUNTS.values()), Position.source == Source.IMPORT)
+    ).all()
+    applied: set[str] = set()
+    for position, symbol in positions:
+        from_operations = _amundi_cost_from_operations(db, symbol, position.quantity)
+        if from_operations is None or position.broker_market_value is None:
+            continue
+        cost, since = from_operations
+        gain = round(position.broker_market_value - cost, 2)
+        position.broker_gross_pl = gain
+        position.broker_net_pl = gain
+        position.broker_net_pl_pct = round(gain / cost * 100, 2) if cost else None
+        position.avg_price = cost / position.quantity if position.quantity else position.avg_price
+        position.performance_note = Message(
+            PerformanceNote.AMUNDI_GAIN_FROM_OPERATIONS, {"since": since.isoformat()}
+        ).as_dict()
+        applied.add(symbol)
+    batch.positions_found = len(applied)
+
+    not_applied = sorted(
+        name for symbol, (name, units) in net_units.items()
+        if symbol not in applied and abs(units) > _AMUNDI_UNITS_TOLERANCE
+    )
+    if not_applied:
+        batch.warnings = [
+            *batch.warnings,
+            Message(MessageCode.AMUNDI_OPERATIONS_NOT_APPLIED, {"funds": ", ".join(not_applied)}).as_dict(),
+        ]
 
     return _finish_import(db, batch, commit)
 

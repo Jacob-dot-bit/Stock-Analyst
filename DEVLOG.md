@@ -9497,3 +9497,39 @@ were not re-checked here; the hints are "amundi", "épargne salariale",
 "perco" and "relevé annuel de situation".
 
 Verification: backend suite 1123 passed; `tsc -b` and `npm run lint` clean.
+
+## Step 3u.88 — Amundi operations journal: an exact gain per fund (2026-11-12)
+
+The first file I dropped in the new single slot was Amundi's operations
+journal (`ExportOperations-DD_MM_YYYY-DD_MM_YYYY.xlsb`, "Mes opérations" on
+the portal). Being an .xlsb, the detector took it for a "Synthèse" export,
+whose parser then stopped on the filename. It is a different file: every
+operation over the chosen period, one row per fund (payment, employer
+match, profit-sharing, arbitrage, reallocation, capitalised dividend, fee).
+
+That is exactly what the Amundi gain was missing. The Synthèse gives no gain
+at all and the annual PDF one figure a year, hence the three-level fallback
+of 3u.47/3u.48. Summing what went into each fund gives its real cost:
+
+- `SOUS` (payments, match, profit-sharing) and `ARB` (money moved between
+  funds) count; an arbitrage moves cost from one fund to the other at that
+  day's value, so the source's gain until then is realised and drops out.
+- `RACH` (redemptions) count, except the invalid-address fee (`NPAI`):
+  that is a loss, so it stays out of the cost and shows in the gain.
+- `OST` (capitalised dividends, readjustments) never count: they are what
+  holding the fund produced.
+
+Each row becomes an `AMUNDI_OP` transaction, deduplicated on its own fields
+(plus its rank among identical rows), so overlapping exports are safe. The
+cost is applied to a fund only when the journal's units add up to the units
+held (±0.005): a payment before the exported period would otherwise make the
+cost too low and the gain too high. Funds that fail the check keep the
+previous estimate and are named in the import report. A later Synthèse or
+PDF import reuses the journal's cost before any estimate.
+
+The `Donnees` sheet holds the holder's name and postal address; it is never
+read and no copy of the file is committed. Checked by hand on the real
+journal: 46 operations, every fund's units consistent, a fully arbitraged-out
+fund nets to zero units.
+
+Verification: backend suite 1140 passed; `tsc -b` and `npm run lint` clean.

@@ -1,11 +1,13 @@
 """Recognise which broker export a file is from its content, so a single
 upload slot can take any of them.
 
-Six files are supported, and each one has an unambiguous signature:
+Seven files are supported, and each one has an unambiguous signature:
 
 - Mintos quarterly "Periodic statement" — a PDF mentioning Mintos;
 - Amundi ESR annual statement — a PDF mentioning Amundi;
-- Amundi "Synthese" — an .xlsb (a zip holding ``xl/workbook.bin``);
+- Amundi "Synthese" — an .xlsb (a zip holding ``xl/workbook.bin``) with a
+  ``Mes avoirs par échéance`` sheet;
+- Amundi operations journal — an .xlsb with an ``OpeJournal`` sheet;
 - Mintos "My investments" — a sheet whose header has ``Montant investi``;
 - Mintos account statement — a sheet or csv whose header has
   ``Mouvement`` and ``Type de paiement``;
@@ -26,6 +28,10 @@ from enum import Enum
 
 import openpyxl
 import pdfplumber
+from pyxlsb import open_workbook as open_xlsb
+
+from app.ingest.amundi_operations_import import SHEET_NAME as _AMUNDI_OPERATIONS_SHEET
+from app.ingest.amundi_synthese_import import _SHEET_NAME as _AMUNDI_SYNTHESE_SHEET
 
 
 class FileKind(str, Enum):
@@ -35,6 +41,7 @@ class FileKind(str, Enum):
     MINTOS_ACCOUNT_STATEMENT = "mintos_account_statement"
     AMUNDI_STATEMENT = "amundi_statement"
     AMUNDI_SYNTHESE = "amundi_synthese"
+    AMUNDI_OPERATIONS = "amundi_operations"
 
     @property
     def broker(self) -> str:
@@ -68,7 +75,13 @@ def _zip_kind(content: bytes) -> FileKind | None:
     with zipfile.ZipFile(io.BytesIO(content)) as archive:
         names = set(archive.namelist())
     if "xl/workbook.bin" in names:
-        return FileKind.AMUNDI_SYNTHESE
+        with open_xlsb(io.BytesIO(content)) as workbook:
+            sheets = set(workbook.sheets)
+        if _AMUNDI_OPERATIONS_SHEET in sheets:
+            return FileKind.AMUNDI_OPERATIONS
+        if _AMUNDI_SYNTHESE_SHEET in sheets:
+            return FileKind.AMUNDI_SYNTHESE
+        return None
     if "xl/workbook.xml" not in names:
         return None
     workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
@@ -86,7 +99,7 @@ def _text_kind(content: bytes) -> FileKind | None:
 
 
 def detect_file(content: bytes) -> FileKind | None:
-    """None when the file is none of the six — the caller says so rather
+    """None when the file is none of the seven — the caller says so rather
     than guessing."""
     try:
         if content.startswith(b"%PDF"):
