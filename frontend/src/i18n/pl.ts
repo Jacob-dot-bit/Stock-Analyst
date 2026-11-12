@@ -93,6 +93,12 @@ export const pl: Catalogue = {
     'Wartość zadeklarowana przez {provider} na dzień {date} — najnowszy zaimportowany wyciąg, ale starszy niż oczekiwane okno aktualności dla tego typu źródła. Nadal liczy się do sumy; może po prostu nie odzwierciedlać już aktualnego portfela. Zaimportuj nowszy wyciąg, aby ją odświeżyć.',
 
   // --- Import panel --------------------------------------------------------
+  'import.auto.title': 'Zaimportuj plik',
+  'import.auto.instructions':
+    'Wrzuć dowolny eksport, broker i typ pliku zostaną rozpoznane automatycznie. XTB: xStation → Account history → Export, okres „All”, format Excel. Mintos: kwartalny wyciąg PDF, My investments → Export (.xlsx) dla dzisiejszej wartości lub wyciąg z konta (.xlsx, .csv) dla odsetek i opłat. Amundi ESR: roczny wyciąg PDF lub eksport Synthèse (.xlsb).',
+  'import.auto.multiAccount':
+    'Ponowny import tego samego pliku nie tworzy duplikatów. Dla tej samej wartości (pożyczki Mintos, fundusze Amundi) zawsze wygrywa najnowszy eksport. Eksport XTB obejmuje tylko jedno konto: importuj każde osobno.',
+  'import.auto.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx, .csv, .pdf, .xlsb)',
   'import.xtb.title': 'Zaimportuj wyciąg XTB',
   'import.xtb.instructions':
     'W xStation: Account history → Export → okres „All”, format Excel. XTB wyłączyło swoje API 14 marca 2025 roku, więc eksport pliku to jedyny pewny sposób pobrania pozycji. Aplikacja nie prosi o żadne dane logowania ani ich nie przechowuje.',
@@ -153,7 +159,15 @@ export const pl: Catalogue = {
     'Nieobsługiwany typ pliku „{extension}”. Wyeksportuj z xStation w formacie Excel (.xlsx) lub CSV.',
   'import.fileUnreadable': 'Nie można odczytać pliku: {error}',
   'import.mintosAccountStatementNotInvestments':
-    '„{filename}” to wyciąg z konta Mintos (wszystkie operacje), a nie eksport My investments: nie zawiera wartości portfela. Zaimportuj go w „Zyski Mintos (wyciąg z konta)”, a dla wartości wyeksportuj My investments → Export.',
+    '„{filename}” to wyciąg z konta Mintos (wszystkie operacje), a nie eksport My investments: nie zawiera wartości portfela. Wrzuć go w „Zaimportuj plik”, tam zostanie rozpoznany.',
+  'import.detected.xtb': 'Rozpoznano: raport XTB (xStation).',
+  'import.detected.mintos_statement': 'Rozpoznano: kwartalny wyciąg Mintos (PDF).',
+  'import.detected.mintos_investments': 'Rozpoznano: eksport Mintos My investments (wartość portfela pożyczek).',
+  'import.detected.mintos_account_statement': 'Rozpoznano: wyciąg z konta Mintos (odsetki, opłaty i podatek).',
+  'import.detected.amundi_statement': 'Rozpoznano: roczny wyciąg Amundi ESR (PDF).',
+  'import.detected.amundi_synthese': 'Rozpoznano: eksport Synthèse Amundi (.xlsb).',
+  'import.fileNotRecognised':
+    'Nie rozpoznano pliku. Obsługiwane: raport XTB, kwartalny wyciąg Mintos (PDF), Mintos My investments (.xlsx), wyciąg z konta Mintos (.xlsx, .csv), roczny wyciąg Amundi (PDF), Synthèse Amundi (.xlsb).',
   'import.noTableRecognised':
     'Nie rozpoznano żadnej tabeli w tym pliku. Sprawdź, czy to raport wyeksportowany z Account history.',
   'import.nothingImportable': 'Nie znaleziono żadnej użytecznej pozycji ani operacji.',

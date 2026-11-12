@@ -91,6 +91,12 @@ export const en: Catalogue = {
     'Value declared by {provider} as of {date} — the latest imported statement, but older than the expected window for this kind of source. It still counts toward the total; it may simply no longer reflect the current portfolio. Re-import a more recent statement to refresh it.',
 
   // --- Import panel --------------------------------------------------------
+  'import.auto.title': 'Import a file',
+  'import.auto.instructions':
+    "Drop any export, the broker and file type are recognised automatically. XTB: xStation → Account history → Export, period “All”, Excel format. Mintos: the quarterly PDF statement, My investments → Export (.xlsx) for today's value, or the account statement (.xlsx, .csv) for interest and fees. Amundi ESR: the annual PDF statement or the Synthèse export (.xlsb).",
+  'import.auto.multiAccount':
+    'A file already imported never creates duplicates. For the same value (Mintos loans, Amundi funds), the most recent export always wins. An XTB export covers one account only: import each one separately.',
+  'import.auto.dropzone': 'Drop the file here, or pick it manually (.xlsx, .csv, .pdf, .xlsb)',
   'import.xtb.title': 'Import an XTB statement',
   'import.xtb.instructions':
     'In xStation: Account history → Export → period "All", Excel format. XTB shut down its API on 14 March 2025, so exporting a file is the only reliable way to retrieve your positions. No credentials are asked for or stored.',
@@ -153,7 +159,15 @@ export const en: Catalogue = {
     'Unsupported "{extension}" file type. Export from xStation as Excel (.xlsx) or CSV.',
   'import.fileUnreadable': 'Unreadable file: {error}',
   'import.mintosAccountStatementNotInvestments':
-    '"{filename}" is the Mintos account statement (every transaction), not the My investments export: it does not hold the portfolio value. Import it under "Mintos gains (account statement)", and for the value export My investments → Export.',
+    '“{filename}” is the Mintos account statement (every transaction), not the My investments export: it does not hold the portfolio value. Drop it in “Import a file”, where it is recognised.',
+  'import.detected.xtb': 'Recognised: XTB report (xStation).',
+  'import.detected.mintos_statement': 'Recognised: Mintos quarterly statement (PDF).',
+  'import.detected.mintos_investments': 'Recognised: Mintos My investments export (loan portfolio value).',
+  'import.detected.mintos_account_statement': 'Recognised: Mintos account statement (interest, fees and tax).',
+  'import.detected.amundi_statement': 'Recognised: Amundi ESR annual statement (PDF).',
+  'import.detected.amundi_synthese': 'Recognised: Amundi Synthèse export (.xlsb).',
+  'import.fileNotRecognised':
+    'File not recognised. Accepted: XTB report, Mintos quarterly statement (PDF), Mintos My investments (.xlsx), Mintos account statement (.xlsx, .csv), Amundi annual statement (PDF), Amundi Synthèse (.xlsb).',
   'import.noTableRecognised':
     'No table recognised in this file. Check that it is a report exported from Account history.',
   'import.nothingImportable': 'No usable position or operation was found.',

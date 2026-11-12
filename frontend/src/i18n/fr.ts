@@ -85,6 +85,12 @@ export const fr: Catalogue = {
     "Valeur déclarée par {provider} au {date} — le dernier relevé importé, mais plus ancien que le délai attendu pour ce type de source. Elle reste comptée dans le total ; elle peut simplement ne plus refléter le portefeuille actuel. Réimportez un relevé plus récent pour l'actualiser.",
 
   // --- Import panel --------------------------------------------------------
+  'import.auto.title': 'Importer un fichier',
+  'import.auto.instructions':
+    "Déposez n'importe quel export, le courtier et le type de fichier sont reconnus tout seuls. XTB : xStation → Account history → Export, période « All », format Excel. Mintos : le relevé trimestriel PDF, My investments → Export (.xlsx) pour la valeur du jour, ou le relevé de compte (.xlsx, .csv) pour les intérêts et frais. Amundi ESR : le relevé annuel PDF ou l'export Synthèse (.xlsb).",
+  'import.auto.multiAccount':
+    "Un fichier déjà importé ne crée pas de doublons. Pour une même valeur (prêts Mintos, fonds Amundi), l'export le plus récent l'emporte toujours. Un export XTB ne couvre qu'un compte : importez chacun séparément.",
+  'import.auto.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx, .csv, .pdf, .xlsb)',
   'import.xtb.title': 'Importer un relevé XTB',
   'import.xtb.instructions':
     "Dans xStation : Account history → Export → période « All », format Excel. XTB a fermé son API le 14 mars 2025 : l'export de fichier est le seul moyen fiable de récupérer vos positions. Aucun identifiant n'est demandé ni stocké.",
@@ -146,7 +152,15 @@ export const fr: Catalogue = {
     "Type de fichier « {extension} » non pris en charge. Exportez depuis xStation au format Excel (.xlsx) ou CSV.",
   'import.fileUnreadable': 'Fichier illisible : {error}',
   'import.mintosAccountStatementNotInvestments':
-    "« {filename} » est le relevé de compte Mintos (toutes les opérations), pas l'export My investments : il ne contient pas la valeur du portefeuille. Importez-le dans « Gains Mintos (relevé de compte) », et pour la valeur exportez My investments → Export.",
+    "« {filename} » est le relevé de compte Mintos (toutes les opérations), pas l'export My investments : il ne contient pas la valeur du portefeuille. Déposez-le dans « Importer un fichier », il y sera reconnu.",
+  'import.detected.xtb': 'Fichier reconnu : relevé XTB (xStation).',
+  'import.detected.mintos_statement': 'Fichier reconnu : relevé trimestriel Mintos (PDF).',
+  'import.detected.mintos_investments': 'Fichier reconnu : export Mintos My investments (valeur du portefeuille de prêts).',
+  'import.detected.mintos_account_statement': 'Fichier reconnu : relevé de compte Mintos (intérêts, frais et impôts).',
+  'import.detected.amundi_statement': 'Fichier reconnu : relevé annuel Amundi ESR (PDF).',
+  'import.detected.amundi_synthese': 'Fichier reconnu : export Synthèse Amundi (.xlsb).',
+  'import.fileNotRecognised':
+    'Fichier non reconnu. Formats acceptés : relevé XTB, relevé trimestriel Mintos (PDF), Mintos My investments (.xlsx), relevé de compte Mintos (.xlsx, .csv), relevé annuel Amundi (PDF), Synthèse Amundi (.xlsb).',
   'import.noTableRecognised':
     "Aucune table reconnue dans ce fichier. Vérifiez qu'il s'agit bien d'un rapport exporté depuis Account history.",
   'import.nothingImportable': "Aucune position ni opération exploitable n'a été trouvée.",
