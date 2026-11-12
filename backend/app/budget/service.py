@@ -286,13 +286,24 @@ def _recurring(lines: list[Line], as_of: date) -> list[dict]:
 
 
 def budget_operations(
-    db: Session, days: int = 90, category: str | None = None, account: str | None = None
+    db: Session,
+    days: int = 90,
+    category: str | None = None,
+    account: str | None = None,
+    month: date | None = None,
 ) -> dict:
+    """The lines of the last `days` days, or of one calendar `month` (any
+    day of it) when given: the zoom after the monthly summary showed
+    something worth a look."""
     as_of = last_operation_date(db)
     if as_of is None:
         return {"as_of": None, "since": None, "operations": []}
-    since = as_of - timedelta(days=days - 1)
-    lines = _load(db, since, as_of)
+    if month is not None:
+        since = month.replace(day=1)
+        until = since.replace(day=calendar.monthrange(since.year, since.month)[1])
+    else:
+        since, until = as_of - timedelta(days=days - 1), as_of
+    lines = _load(db, since, until)
     if category:
         lines = [line for line in lines if line.category == category]
     if account:

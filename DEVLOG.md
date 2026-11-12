@@ -9656,3 +9656,8 @@ what I invest and nothing of what I spend. Now every line is kept.
 
 The real export is not committed. The tests build one in its shape with
 made-up names and amounts.
+
+Follow-up, same day: `/api/budget/operations?month=YYYY-MM` returns one
+calendar month instead of the last N days. Hermes reads the whole history
+as the monthly summary, then zooms on a month (and a category) when
+something stands out, rather than pulling three years of lines at once.

@@ -236,5 +236,20 @@ class TestApi:
         ]
         assert "CARTE" not in str(client.get("/api/budget/operations?days=200").json())
 
+    def test_one_month(self, client, session):
+        _import(session)
+
+        ops = client.get("/api/budget/operations?month=2026-08").json()
+
+        assert ops["since"] == "2026-08-01"
+        assert {o["date"][:7] for o in ops["operations"]} == {"2026-08"}
+        assert len(ops["operations"]) == 6
+        groceries = client.get("/api/budget/operations?month=2026-07&category=groceries").json()
+        assert [o["amount"] for o in groceries["operations"]] == [-62.1]
+
+    @pytest.mark.parametrize("month", ["2026-13", "2026-8", "août", "2026-08-01"])
+    def test_bad_month_refused(self, client, month):
+        assert client.get(f"/api/budget/operations?month={month}").status_code == 422
+
     def test_unknown_category_refused(self, client):
         assert client.get("/api/budget/operations?category=nope").status_code == 422
