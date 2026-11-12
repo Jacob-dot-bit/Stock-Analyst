@@ -5,6 +5,9 @@ the single upload slot. See `app/budget/service.py` and DEVLOG "Step 3u.92".
 
 from __future__ import annotations
 
+import re
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -27,12 +30,19 @@ def get_budget_operations(
     days: int = Query(90, ge=1, le=1100),
     category: str | None = None,
     account: str | None = None,
+    month: str | None = Query(None, description="YYYY-MM: that calendar month instead of the last `days`"),
     db: Session = Depends(get_db),
 ) -> BudgetOperationsOut:
     if category is not None and category not in CATEGORIES:
         raise HTTPException(status_code=422, detail=f"unknown category: {category}")
+    first_day = None
+    if month is not None:
+        match = re.fullmatch(r"(\d{4})-(\d{2})", month)
+        if not match or not 1 <= int(match.group(2)) <= 12:
+            raise HTTPException(status_code=422, detail="month must be YYYY-MM")
+        first_day = date(int(match.group(1)), int(match.group(2)), 1)
     return BudgetOperationsOut.model_validate(
-        budget_operations(db, days=days, category=category, account=account)
+        budget_operations(db, days=days, category=category, account=account, month=first_day)
     )
 
 
