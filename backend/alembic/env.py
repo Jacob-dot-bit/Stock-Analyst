@@ -6,6 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from app import models  # noqa: F401  (registers every table on Base.metadata)
+from app.auth import models as auth_models  # noqa: F401  (and the login tables)
 from app.config import get_settings
 from app.db import Base
 
@@ -16,7 +17,10 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False: init_db() runs these migrations inside the
+    # running backend, and the default would silence every logger created
+    # before it, the login check's own among them (app/auth/dependency.py).
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

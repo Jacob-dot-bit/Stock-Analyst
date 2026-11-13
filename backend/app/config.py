@@ -128,6 +128,24 @@ class Settings(BaseSettings):
     # --- CORS: the Vite dev server origin ---
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # --- Login (app/auth/) ---
+    # False: every API call is checked, but a refusal is only logged
+    # ("auth (journal seul)"), so callers that don't identify themselves yet can
+    # be found before anything breaks. True: refused with 401/403.
+    auth_required: bool = False
+    # The session cookie only travels over HTTPS (browsers also accept it on
+    # http://localhost). Turn off only for a plain-HTTP setup on a trusted machine.
+    auth_cookie_secure: bool = True
+    # A session ends after this many days without a visit, and in any case
+    # after auth_session_max_days.
+    auth_session_idle_days: int = 7
+    auth_session_max_days: int = 30
+    # After auth_max_failures wrong logins in a row, logins are refused for
+    # auth_lockout_minutes. Each failure also waits auth_failure_delay_s.
+    auth_max_failures: int = 5
+    auth_lockout_minutes: int = 15
+    auth_failure_delay_s: float = 1.0
+
     @field_validator(
         "twelvedata_api_key",
         "fmp_api_key",
