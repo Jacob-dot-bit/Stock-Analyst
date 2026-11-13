@@ -613,9 +613,20 @@ export interface DividendDetailRow {
   reconciliation_status: DividendReconciliationStatus
 }
 
-/** Whether a price source is currently usable — not its API-key configuration
- * (see the separate `ProviderStatus` shape in Settings.tsx), but whether it is
- * presently rate-limited and how much of the held portfolio it can price. */
+/** One provider card on the Settings page (`GET /api/settings/providers`):
+ * key status, signup link, and what it can serve right now. */
+export interface ProviderStatus {
+  name: string
+  enabled: boolean
+  signup_url?: string | null
+  has_api_key: boolean
+  /** null for SEC EDGAR, which serves fundamentals, not prices. */
+  availability: ProviderAvailability | null
+}
+
+/** Whether a price source is currently usable — not its API-key configuration,
+ * but whether it is presently rate-limited and how much of the held portfolio
+ * it can price. */
 export interface ProviderAvailability {
   name: string
   enabled: boolean

@@ -11,17 +11,14 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.corporate_actions.service import load_actions_by_instrument, price_factor_from
 from app.db import get_db
-from app.models import AppMetadata, Instrument, MappingStatus, Position, PriceBar, ProviderUsage
+from app.models import AppMetadata, Instrument, MappingStatus, Position, PriceBar
 from app.prices.history_service import get_or_create_benchmark_instrument
-from app.prices.provider_usage import QUOTA_LIMITS, period_key_for
 from app.prices.service import get_refresh_progress, refresh_many
 from app.providers.registry import get_provider_chain
-from app.providers.base import InstrumentRef
 from app.routers.screener import _screener_instruments
 from app.routers.watchlist import _watchlist_instruments
 from app.schemas import (
     PriceHistoryOut,
-    ProviderStatusOut,
     RefreshReportOut,
     RefreshStatusOut,
     SparklineOut,
@@ -130,60 +127,6 @@ def refresh_status() -> RefreshStatusOut:
         finished_at=progress.finished_at,
         report=RefreshReportOut(**progress.report.as_dict()) if progress.report else None,
     )
-
-
-@router.get("/providers", response_model=list[ProviderStatusOut])
-def list_providers(db: Session = Depends(get_db)) -> list[ProviderStatusOut]:
-    """Which price sources are configured, and how much of the portfolio each can serve.
-
-    Redundancy is only real if you can see it. This answers "what happens if one of
-    them stops" without having to break one to find out.
-    """
-    chain = get_provider_chain()
-    instruments = list(
-        db.execute(
-            select(Instrument).join(Position, Position.instrument_id == Instrument.id).distinct()
-        ).scalars()
-    )
-    refs = [
-        InstrumentRef(
-            provider_symbol=i.provider_symbol,
-            isin=i.isin,
-            broker_symbol=i.broker_symbol,
-            name=i.name,
-            category=i.category,
-        )
-        for i in instruments
-        if not i.not_priceable_reason
-    ]
-
-    out = []
-    for provider in chain.providers:
-        quota_limit = quota_period = quota_used = None
-        limit = QUOTA_LIMITS.get(provider.name)
-        if limit is not None:
-            quota_limit, quota_period = limit
-            row = db.execute(
-                select(ProviderUsage).where(
-                    ProviderUsage.provider == provider.name,
-                    ProviderUsage.period_key == period_key_for(quota_period),
-                )
-            ).scalar_one_or_none()
-            quota_used = row.count if row is not None else 0
-
-        out.append(
-            ProviderStatusOut(
-                name=provider.name,
-                enabled=provider.is_enabled(),
-                cooling_down=chain.cooldown.is_active(provider.name),
-                serves_holdings=sum(1 for ref in refs if provider.can_serve(ref)),
-                total_holdings=len(refs),
-                quota_limit=quota_limit,
-                quota_period=quota_period,
-                quota_used=quota_used,
-            )
-        )
-    return out
 
 
 @router.get("/sparklines", response_model=list[SparklineOut])

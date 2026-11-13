@@ -6,10 +6,13 @@ import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.config import PROJECT_ROOT, get_settings
+from app.db import get_db
+from app.prices.availability import provider_availability
 from app.providers.alpha_vantage import AlphaVantageProvider
 from app.providers.barchart import BarchartProvider
 from app.providers.base import InstrumentRef, ProviderError, ProviderUnavailable, RateLimited, SymbolNotFound
@@ -22,6 +25,7 @@ from app.providers.polygon import PolygonProvider
 from app.providers.registry import get_alpha_vantage_provider, get_edgar_provider, get_provider_chain
 from app.providers.tiingo import TiingoProvider
 from app.providers.twelvedata import TwelveDataProvider
+from app.schemas import ProviderStatusOut
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -68,9 +72,12 @@ _TEST_REF = InstrumentRef(provider_symbol="AAPL", broker_symbol="AAPL.US", name=
 
 
 class ProviderStatus(BaseModel):
+    """One provider card on the Settings page. No description here: the
+    client words it (`provider.description.<name>`), like every other text
+    (see TestLanguageNeutrality)."""
+
     name: str
     enabled: bool
-    description: str | None = None
     #: Where to get a free API key. None for providers that need no key at all.
     signup_url: str | None = None
     #: Whether this provider has a key field to configure at all. False for
@@ -78,6 +85,9 @@ class ProviderStatus(BaseModel):
     #: accept an ``api_key``, so showing an input for them would edit nothing.
     #: The frontend uses this to decide whether to render the field.
     has_api_key: bool = False
+    #: Cooldown, quota used and portfolio coverage (`prices/availability.py`).
+    #: None for SEC EDGAR, which serves fundamentals, not prices.
+    availability: ProviderStatusOut | None = None
 
 
 class ApiKeysStatus(BaseModel):
@@ -94,28 +104,11 @@ class ApiKeysStatus(BaseModel):
 
 
 @router.get("/providers", response_model=list[ProviderStatus])
-async def get_provider_status() -> list[ProviderStatus]:
-    """Get status of all available price providers."""
+def get_provider_status(db: Session = Depends(get_db)) -> list[ProviderStatus]:
+    """Every price provider with its key status and what it can serve right
+    now — one call for the whole Settings card (DEVLOG "Step 3u.95")."""
     chain = get_provider_chain()
-
-    descriptions = {
-        "yahoo": "Yahoo Finance (worldwide, no key needed)",
-        "polygon": "Polygon.io (US + crypto, 5 req/min free)",
-        "alpha_vantage": "Alpha Vantage (worldwide, 5 req/min free)",
-        "boursorama": "Boursorama (Euronext Paris, no key needed)",
-        "frankfurt": "Boerse Frankfurt (European ISIN, no key needed)",
-        "twelvedata": "Twelve Data (US fallback, 800 req/day free)",
-        "fmp": "Financial Modeling Prep (Euronext, 250 req/day free)",
-        "tiingo": "Tiingo (worldwide, 500 req/day free)",
-        "barchart": "Barchart (worldwide, 400 req/day free)",
-        "intrinio": "Intrinio (US + Canada, 500 req/day free)",
-        "eodhd": "EODHD (150+ bourses, 20 req/day free)",
-        "marketstack": "Marketstack (worldwide, 100 req/month free — last resort)",
-        "eoddata": "Eoddata (stocks/crypto/forex, no key needed)",
-        "finviz": "Finviz (US stocks via scraping, fragile)",
-        "sec_user_agent": "SEC EDGAR (US company fundamentals for the Value/Growth/Quality "
-        "scores — free, no signup, just a contact identifier)",
-    }
+    availability = {a.name: a for a in provider_availability(db)}
 
     # Where to sign up for a free key. Every key here is one of the fields
     # `UpdateApiKeysRequest` actually accepts — kept in that one-to-one
@@ -154,9 +147,9 @@ async def get_provider_status() -> list[ProviderStatus]:
             ProviderStatus(
                 name=provider.name,
                 enabled=provider.is_enabled(),
-                description=descriptions.get(provider.name),
                 signup_url=signup_urls.get(provider.name),
                 has_api_key=provider.name in signup_urls,
+                availability=availability.get(provider.name),
             )
         )
 
@@ -170,7 +163,6 @@ async def get_provider_status() -> list[ProviderStatus]:
         ProviderStatus(
             name="sec_user_agent",
             enabled=get_edgar_provider().is_enabled(),
-            description=descriptions["sec_user_agent"],
             signup_url=signup_urls["sec_user_agent"],
             has_api_key=True,
         )

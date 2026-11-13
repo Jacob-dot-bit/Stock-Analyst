@@ -49,7 +49,7 @@ import type {
   PositionSignal,
   PredictionBackfillReport,
   PredictionBackfillStatus,
-  ProviderAvailability,
+  ProviderStatus,
   QuoteStatus,
   RefreshReport,
   RefreshStatus,
@@ -138,8 +138,6 @@ export const api = {
   getRefreshStatus: () => request<RefreshStatus>('/api/prices/refresh/status'),
 
   getSparklines: () => request<Sparkline[]>('/api/prices/sparklines'),
-
-  getProviderAvailability: () => request<ProviderAvailability[]>('/api/prices/providers'),
 
   getBreakdown: (by: BreakdownDimension) =>
     request<BreakdownItem[]>(`/api/portfolio/breakdown?by=${by}`),
@@ -357,16 +355,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  getProviderStatus: () =>
-    request<
-      Array<{
-        name: string
-        enabled: boolean
-        description?: string
-        signup_url?: string | null
-        has_api_key: boolean
-      }>
-    >('/api/settings/providers'),
+  getProviderStatus: () => request<ProviderStatus[]>('/api/settings/providers'),
 
   getApiKeysStatus: () =>
     request<Record<string, boolean>>('/api/settings/api-keys'),

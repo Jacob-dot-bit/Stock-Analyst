@@ -12,15 +12,34 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.db import Base, get_db
 from app.main import app
 from app.providers.base import ProviderUnavailable
 
 
 @pytest.fixture
 def client():
+    # The provider listing reads held positions for its coverage figures: an
+    # in-memory database, never the developer's real one.
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+    def override_get_db():
+        session = TestingSession()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
+    app.dependency_overrides.pop(get_db, None)
 
 
 class TestProviderList:
@@ -40,8 +59,20 @@ class TestProviderList:
         # `isolate_credentials` (conftest.py, autouse) always clears
         # SEC_USER_AGENT, so this must report disabled in every test run.
         assert entry["enabled"] is False
-        assert entry["description"]
         assert entry["signup_url"]
+        # Fundamentals, not prices: no price availability to show.
+        assert entry["availability"] is None
+
+    def test_price_providers_carry_their_availability(self, client):
+        """One call gives the Settings card everything: key status and what the
+        source can serve right now (formerly `/api/prices/providers`)."""
+        body = client.get("/api/settings/providers").json()
+
+        yahoo = next(p for p in body if p["name"] == "yahoo")
+        assert yahoo["availability"]["name"] == "yahoo"
+        assert yahoo["availability"]["total_holdings"] == 0
+        # No prose from the API: the client words the description.
+        assert all("description" not in p for p in body)
 
 class TestVerifySecUserAgent:
     def test_no_key_configured_or_supplied_reports_nothing_to_test(self, client):

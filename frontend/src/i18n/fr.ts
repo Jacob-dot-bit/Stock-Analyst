@@ -646,6 +646,8 @@ export const fr: Catalogue = {
   'provider.description.eodhd': 'EODHD — 150+ bourses mondiales, 20 req/jour',
   'provider.description.eoddata': 'Eoddata — actions/crypto/forex, pas de clé requise',
   'provider.description.finviz': 'Finviz — actions US via web scraping (fragile)',
+  'provider.description.marketstack': 'Marketstack — mondial, 100 req/mois (dernier recours)',
+  'provider.description.sec_user_agent': 'SEC EDGAR — fondamentaux des sociétés US pour les scores Valeur/Croissance/Qualité ; gratuit, sans inscription, juste un identifiant de contact',
 
   // --- Watchlist ------------------------------------------------------------
   'watchlist.title': 'Watchlist',

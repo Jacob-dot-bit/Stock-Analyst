@@ -95,7 +95,6 @@ frontend/src/
 ### `/api/prices` (`routers/prices.py`)
 - `POST /refresh?force=&symbols=` — bring held (+ benchmark + watchlist) instruments' daily history up to date; budgeted, thread-pooled.
 - `GET  /refresh/status` — live progress (`RefreshProgress` — see pattern below).
-- `GET  /providers` — which price sources are configured and what each can serve.
 - `GET  /sparklines?days=` — compact close series per held instrument, one call.
 - `GET  /{id}/history?days=` — cache-only chart data, never triggers a fetch.
 
@@ -197,7 +196,7 @@ frontend/src/
 - `DELETE /{id}` — undo an import (only the most recent one, across all sources).
 
 ### `/api/settings` (`routers/settings.py`)
-- `GET  /providers` — provider status.
+- `GET  /providers` — every provider card: enabled, signup link, whether it takes a key, and its `availability` (cooldown, quota used, holdings it can serve — `prices/availability.py`; formerly `/api/prices/providers`). No description: the client words it (`provider.description.<name>`).
 - `GET  /api-keys` — which keys are configured (values never revealed).
 - `POST /verify-key` — test a key against the real provider without saving it.
 - `PUT  /api-keys` — write keys to `.env`.
