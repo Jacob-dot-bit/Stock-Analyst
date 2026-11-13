@@ -13,7 +13,7 @@ backend/app/
                  totals of held positions, shared by every router;
                  review.py: allocation vs targets, policy gaps, attention
                  list and position signals (portfolio routes + weekly)
-  ingest/        XTB file parsing + get_or_create_instrument
+  ingest/        export parsing (one module per format, shared file readers in readers.py) + get_or_create_instrument
   prices/        Daily-bar history, live quotes, FX, provider-quota tracking
   fundamentals/  SEC EDGAR + ESEF fetch/cache
   scoring/       Composite score computation (config, metrics, service)

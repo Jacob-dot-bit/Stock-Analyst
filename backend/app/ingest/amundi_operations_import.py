@@ -23,13 +23,11 @@ with employer match is two rows (origin ``VV`` then ``ABD``). See DEVLOG
 
 from __future__ import annotations
 
-import io
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
-from pyxlsb import open_workbook
-
 from app.ingest.amundi_synthese_import import _account_for_dispositif
+from app.ingest.readers import xlsb_sheet
 from app.messages import Message, MessageCode, SectionKind, SectionSummary
 
 SHEET_NAME = "OpeJournal"
@@ -130,13 +128,11 @@ def _read_rows(rows: list[list], result: ParsedAmundiOperations) -> None:
 
 def parse_amundi_operations_export(content: bytes, filename: str) -> ParsedAmundiOperations:
     try:
-        with open_workbook(io.BytesIO(content)) as wb:
-            if SHEET_NAME not in wb.sheets:
-                return ParsedAmundiOperations(warnings=[Message(MessageCode.NO_TABLE_RECOGNISED)])
-            with wb.get_sheet(SHEET_NAME) as sheet:
-                rows = [[cell.v for cell in row] for row in sheet.rows()]
+        rows = xlsb_sheet(content, SHEET_NAME)
     except Exception as exc:  # noqa: BLE001 - surfaced as a warning, not a crash
         return ParsedAmundiOperations(warnings=[Message(MessageCode.FILE_UNREADABLE, {"error": str(exc)})])
+    if rows is None:
+        return ParsedAmundiOperations(warnings=[Message(MessageCode.NO_TABLE_RECOGNISED)])
     return parse_operations_rows(rows)
 
 

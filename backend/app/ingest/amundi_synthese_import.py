@@ -33,13 +33,11 @@ DEVLOG "Decision 3u.44".
 
 from __future__ import annotations
 
-import io
 import re
 from datetime import datetime
 
-from pyxlsb import open_workbook
-
 from app.ingest.amundi_import import AMUNDI_ACCOUNTS, ParsedAmundiExport, ParsedFund
+from app.ingest.readers import xlsb_sheet
 from app.messages import Message, MessageCode, SectionKind, SectionSummary
 
 _SHEET_NAME = "Mes avoirs par échéance"
@@ -83,17 +81,12 @@ def parse_amundi_synthese_export(content: bytes, filename: str) -> ParsedAmundiE
     result.as_of = as_of_dt.date()
 
     try:
-        with open_workbook(io.BytesIO(content)) as wb:
-            if _SHEET_NAME not in wb.sheets:
-                result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
-                return result
-            with wb.get_sheet(_SHEET_NAME) as sheet:
-                rows = [[cell.v for cell in row] for row in sheet.rows()]
+        rows = xlsb_sheet(content, _SHEET_NAME)
     except Exception as exc:  # noqa: BLE001 - surfaced as a warning, not a crash
         result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": str(exc)}))
         return result
 
-    if not rows or not rows[0]:
+    if rows is None or not rows or not rows[0]:
         result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
         return result
 
