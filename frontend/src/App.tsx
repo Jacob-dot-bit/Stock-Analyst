@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useAuth } from './auth/AuthGate'
 import { AlertsBell } from './components/AlertsBell'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { SkeletonPage } from './components/Skeleton'
@@ -38,6 +39,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function App() {
   const { t } = useI18n()
+  const { me, logout } = useAuth()
   const location = useLocation()
   // Phones get a collapsed menu behind one button instead of ten wrapped
   // links eating the top of every page. Closed again on every navigation.
@@ -88,6 +90,26 @@ export default function App() {
         <div className="topbar-controls">
           <LanguageSwitcher />
           <ThemeToggle />
+          {me?.via === 'session' && (
+            <button
+              type="button"
+              className="theme-toggle logout-button"
+              onClick={() => void logout()}
+              aria-label={t('auth.signOut')}
+              title={me.username ? `${t('auth.signOut')} (${me.username})` : t('auth.signOut')}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path
+                  d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M16 17l5-5-5-5M21 12H9"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
         </div>
       </header>
 

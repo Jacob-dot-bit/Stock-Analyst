@@ -184,6 +184,18 @@ export interface ImportPreview {
   accounts: string[]
 }
 
+export interface AuthStatus {
+  required: boolean
+  configured: boolean
+}
+
+export interface AuthMe {
+  username: string | null
+  /** "session" for the browser, "token:<name>" for a service token. */
+  via: string
+  totp_enabled: boolean
+}
+
 export interface Health {
   status: string
   base_currency: string
