@@ -851,7 +851,7 @@ def import_mintos_transactions_file(
         sections=[],
         accounts=[] if parsed.is_empty else [MINTOS_CORE_ACCOUNT],
         positions_found=0,
-        transactions_found=0 if parsed.is_empty else 2,
+        transactions_found=0 if parsed.is_empty else 2 * max(1, len(parsed.by_year)),
     )
 
     inserted = 0
@@ -871,7 +871,6 @@ def import_mintos_transactions_file(
             p2p_instrument.not_priceable_reason = "p2p_aggregate"
 
         period_key = f"{parsed.period_start.isoformat()}-{parsed.period_end.isoformat()}"
-        period_end_dt = datetime.combine(parsed.period_end, datetime.min.time())
         period_start_dt = datetime.combine(parsed.period_start, datetime.min.time())
 
         # Everything already on record for this account from *before* this
@@ -887,34 +886,63 @@ def import_mintos_transactions_file(
             )
         ).scalar() or 0.0
 
-        inserted += _insert_transaction(
-            db,
-            external_id=f"mintos-p2p-csv-{period_key}-interest",
-            tx_type=TxType.P2P_INTEREST,
-            instrument=p2p_instrument,
-            batch=batch,
-            seen=seen,
-            executed_at=period_end_dt,
-            account=MINTOS_CORE_ACCOUNT,
-            amount=parsed.income_total,
-            comment=f"Intérêts/bonus perçus, {parsed.period_start.isoformat()} – {parsed.period_end.isoformat()} "
-            f"(export complet des transactions, {parsed.transaction_count} lignes)",
-            raw={"period_start": parsed.period_start.isoformat(), "period_end": parsed.period_end.isoformat(), "source": "transactions_export"},
-        )
-        inserted += _insert_transaction(
-            db,
-            external_id=f"mintos-p2p-csv-{period_key}-fee",
-            tx_type=TxType.P2P_FEE,
-            instrument=p2p_instrument,
-            batch=batch,
-            seen=seen,
-            executed_at=period_end_dt,
-            account=MINTOS_CORE_ACCOUNT,
-            amount=parsed.cost_total,
-            comment=f"Frais/taxes, {parsed.period_start.isoformat()} – {parsed.period_end.isoformat()} "
-            f"(export complet des transactions)",
-            raw={"period_start": parsed.period_start.isoformat(), "period_end": parsed.period_end.isoformat(), "source": "transactions_export"},
-        )
+        # One interest row and one fee row per calendar year, dated at the
+        # year's end (or the file's last day): the tax summary sums by year,
+        # and a file spanning two years must not put both on the last one.
+        # Rows an earlier statement wrote for a period this file covers are
+        # replaced, so a longer export taken later does not count twice.
+        # See DEVLOG "Step 3u.112".
+        # (start, end, income, cost) per calendar year; a parse result with
+        # no per-year split keeps one slice for the whole file.
+        slices = [
+            (max(parsed.period_start, date(year, 1, 1)), min(parsed.period_end, date(year, 12, 31)), income, cost)
+            for year, (income, cost) in parsed.by_year.items()
+        ] or [(parsed.period_start, parsed.period_end, parsed.income_total, parsed.cost_total)]
+        kept_ids = {
+            f"mintos-p2p-csv-{start.isoformat()}-{end.isoformat()}-{kind}"
+            for start, end, _, _ in slices
+            for kind in ("interest", "fee")
+        }
+        for earlier in db.execute(
+            select(Transaction).where(
+                Transaction.account == MINTOS_CORE_ACCOUNT,
+                Transaction.type.in_([TxType.P2P_INTEREST, TxType.P2P_FEE]),
+            )
+        ).scalars():
+            raw = earlier.raw or {}
+            if earlier.external_id in kept_ids:
+                continue  # the same file again: kept as it is
+            if raw.get("source") != "transactions_export" or not raw.get("period_start") or not raw.get("period_end"):
+                continue
+            if (
+                datetime.fromisoformat(raw["period_start"]).date() >= parsed.period_start
+                and datetime.fromisoformat(raw["period_end"]).date() <= parsed.period_end
+            ):
+                db.delete(earlier)
+        db.flush()
+
+        for year_start, year_end, income, cost in slices:
+            year_key = f"{year_start.isoformat()}-{year_end.isoformat()}"
+            raw = {"period_start": year_start.isoformat(), "period_end": year_end.isoformat(), "source": "transactions_export"}
+            for tx_type, amount, label in (
+                (TxType.P2P_INTEREST, income, "Intérêts/bonus perçus"),
+                (TxType.P2P_FEE, cost, "Frais/taxes"),
+            ):
+                if not amount:
+                    continue
+                inserted += _insert_transaction(
+                    db,
+                    external_id=f"mintos-p2p-csv-{year_key}-{'interest' if tx_type == TxType.P2P_INTEREST else 'fee'}",
+                    tx_type=tx_type,
+                    instrument=p2p_instrument,
+                    batch=batch,
+                    seen=seen,
+                    executed_at=datetime.combine(year_end, datetime.min.time()),
+                    account=MINTOS_CORE_ACCOUNT,
+                    amount=amount,
+                    comment=f"{label}, {year_start.isoformat()} – {year_end.isoformat()} (export complet des transactions)",
+                    raw=raw,
+                )
         db.flush()
 
         total_net_gain = round(pre_period_net + parsed.net_gain, 2)
