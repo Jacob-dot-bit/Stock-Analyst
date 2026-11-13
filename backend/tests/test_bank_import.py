@@ -105,7 +105,7 @@ class TestBrokerOf:
             ("VIR SEPA 12345678 - INVESTO", "Mintos"),
             ("PRLV SEPA AMUNDI ESR PREL VERST VOL O-000000001", "Amundi"),
             ("VIR LIVRET A", None),
-            ("PRLV SEPA LSA COURTAGE LSA COUR 123 PRELEVEMENT LSA-COURTAGE", None),
+            ("PRLV SEPA ASSUREUR EXEMPLE 123 PRELEVEMENT ASSUREUR-EXEMPLE", None),
             ("PAIEMENT CB 0101 PARIS SUPERMARCHE CARTE 0000", None),
         ],
     )
