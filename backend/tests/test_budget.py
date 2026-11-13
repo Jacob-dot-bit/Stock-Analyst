@@ -139,6 +139,23 @@ class TestCategorize:
         assert categorize("VIR AMUNDI VIRT PARTICIPATION", 150, broker="Amundi").category == "salary"
         assert categorize("VIR LIVRET A", -100, own_transfer=True).kind == "internal"
 
+    def test_savings_move_is_internal_even_unflagged(self, tmp_path, monkeypatch):
+        """The savings book may be missing from the export, or the bank may not
+        call the move a VIR: it is still my money, ahead of any local rule."""
+        from app.budget import categories
+
+        rules = tmp_path / "budget_rules.txt"
+        rules.write_text("bank_fees: COMPTE EXEMPLE\n")
+        monkeypatch.setattr(categories, "LOCAL_RULES_PATH", rules)
+        monkeypatch.setattr(categories, "_local_cache", None)
+        assert categorize("VIR COMPTE EXEMPLE VERS LIVRET A", -150).kind == "internal"
+        assert categorize("VERSEMENT LIVRET A", -150).kind == "internal"
+        assert categorize("RETRAIT LIVRET A VERS COMPTE EXEMPLE", 300).kind == "internal"
+        assert categorize("VIR DEPUIS LDDS", 80).kind == "internal"
+        # The interest a book pays is income, a card payment is spending.
+        assert categorize("REMUNERATION LIVRET A", 12.5).category == "interest"
+        assert categorize("PAIEMENT CB 0101 VILLE LE LIVRET CAFE CARTE 1234", -8).kind == "spending"
+
 
 class TestLocalRules:
     def test_parsed_and_checked_first(self, tmp_path, monkeypatch):

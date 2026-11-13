@@ -144,6 +144,20 @@ _REFUND_RE = re.compile(
 #: A VIR / VIREMENT nobody recognised: money sent to someone, or received.
 _TRANSFER_RE = re.compile(r"^\s*(?:VIR|VIREMENT)\b")
 
+#: Money moving to or from one of my savings books, whatever the bank calls
+#: the movement (VIR, VIREMENT, VERSEMENT, RETRAIT...). Checked at read time
+#: too, so a line the import missed (the book itself not in the export, an
+#: unusual prefix) is still not spending; the interest it pays is excluded.
+_SAVINGS_RE = re.compile(r"\b(?:LIVRET|LDDS?|LEP|CEL|PEL)\b")
+_NOT_SAVINGS_MOVE_RE = re.compile(
+    r"^\s*(?:PAIEMENT|CARTE|CB|ACHAT|AVOIR|PRLV|PRELEVEMENT)\b|\bINTERETS?\b|\bREMUNERATION\b"
+)
+
+
+def is_savings_move(upper: str) -> bool:
+    return bool(_SAVINGS_RE.search(upper)) and not _NOT_SAVINGS_MOVE_RE.search(upper)
+
+
 #: The operation-kind prefixes, then the noise that follows a counterparty.
 _PREFIX_RE = re.compile(
     r"^\s*(?:PAIEMENT\s+(?:CB|PSC|CARTE|PAR\s+CARTE)|PAIEMENT|CARTE|CB|ACHAT\s+CB|PRLV\s+SEPA|PRLV|PRELEVEMENT(?:\s+SEPA)?"
@@ -195,7 +209,7 @@ def categorize(
 ) -> Categorized:
     upper = " ".join(label.upper().replace(".", " . ").split()).replace(" . ", ".")
     name = merchant(label)
-    if own_transfer:
+    if own_transfer or (broker is None and is_savings_move(upper)):
         return Categorized("internal", INTERNAL, name)
     if broker is None:
         # Lines imported before a broker pattern learnt a new form (a
