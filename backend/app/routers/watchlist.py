@@ -16,11 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Instrument, WatchlistItem
+from app.models import WatchlistItem
 from app.portfolio.valuation import resolve_current_price
 from app.prices.sparklines import sparklines
 from app.prices.service import price_status as _price_status
-from app.routers.scoring import scores_for
 from app.schemas import (
     InstrumentOut,
     ScoreOut,
@@ -31,9 +30,10 @@ from app.schemas import (
     WatchlistSignalOut,
 )
 from app.scoring.config import get_scoring_config
+from app.scoring.results import scores_for
 from app.scoring.service import compute_scores, score_band
 from app.symbols.duplicates import check_for_duplicate
-from app.tracking import instrument_to_follow, not_held
+from app.tracking import instrument_to_follow, not_held, watched_instruments
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
@@ -67,18 +67,6 @@ def target_flag(distance: float | None, band: str) -> str | None:
 def _unheld_items(db: Session) -> list[WatchlistItem]:
     """Watchlist rows whose instrument is not currently held."""
     return list(db.execute(select(WatchlistItem).where(not_held(WatchlistItem.instrument_id))).scalars())
-
-
-def _watchlist_instruments(db: Session) -> list[Instrument]:
-    """Watched instruments, excluding anything currently held — see module
-    docstring. Same anti-join used by every endpoint below."""
-    query = (
-        select(Instrument)
-        .join(WatchlistItem, WatchlistItem.instrument_id == Instrument.id)
-        .where(not_held(Instrument.id))
-        .distinct()
-    )
-    return list(db.execute(query).scalars())
 
 
 def _watchlist_item_out(db: Session, item: WatchlistItem) -> WatchlistItemOut:
@@ -166,7 +154,7 @@ def delete_watchlist_item(item_id: int, db: Session = Depends(get_db)) -> Respon
 
 @router.get("/scores", response_model=list[ScoreOut])
 def get_watchlist_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
-    return scores_for(db, _watchlist_instruments(db))
+    return scores_for(db, watched_instruments(db))
 
 
 @router.get("/signals", response_model=list[WatchlistSignalOut])

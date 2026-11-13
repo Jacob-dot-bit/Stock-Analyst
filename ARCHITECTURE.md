@@ -814,7 +814,7 @@ stock dividends, and ticker changes are out of scope for now.
 endpoints — `POST /api/prices/refresh` and `POST /api/scoring/fundamentals/refresh`
 — build their working set the same way: start from the "core" query (held
 instruments, or a targeted retry), then extend it with each of the benchmark
-instrument, `_watchlist_instruments(db)`, and `_screener_instruments(db)` in
+instrument, `tracking.watched_instruments(db)`, and `tracking.gem_instruments(db)` in
 turn, skipping anything whose id is already in the set. Adding a fourth
 "instruments that need this batch operation too" source later means adding
 one more `instruments.extend(x for x in ... if x.id not in seen)` line, not
