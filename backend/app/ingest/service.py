@@ -252,17 +252,16 @@ def import_export_file(
     """
     parsed: ParsedExport = parse_xtb_export(content, filename)
 
-    batch = ImportBatch(
+    batch = _new_batch(
+        db,
+        content,
         filename=filename,
-        file_hash=hashlib.sha256(content).hexdigest(),
         warnings=[message.as_dict() for message in parsed.warnings],
         sections=[section.as_dict() for section in parsed.sections],
         accounts=list(parsed.accounts),
         positions_found=len(parsed.open_positions),
         transactions_found=len(parsed.closed_positions) + len(parsed.cash_operations),
     )
-    db.add(batch)
-    db.flush()
 
     overrides = _load_overrides(db)
     inserted = 0
@@ -434,24 +433,7 @@ def import_export_file(
             ).as_dict()
         ]
 
-    if not commit:
-        # Same fields a committed ImportBatch would expose — captured now because
-        # rollback() expires every ORM instance in the session, batch included.
-        summary = {
-            "filename": batch.filename,
-            "positions_found": batch.positions_found,
-            "transactions_found": batch.transactions_found,
-            "transactions_inserted": batch.transactions_inserted,
-            "warnings": list(batch.warnings),
-            "sections": list(batch.sections),
-            "accounts": list(batch.accounts),
-        }
-        db.rollback()
-        return summary
-
-    db.commit()
-    db.refresh(batch)
-    return batch
+    return _finish_import(db, batch, commit)
 
 
 # --- Mintos ------------------------------------------------------------------
@@ -647,9 +629,10 @@ def import_mintos_file(
     """
     parsed: ParsedMintosExport = parse_mintos_statement(content, filename)
 
-    batch = ImportBatch(
+    batch = _new_batch(
+        db,
+        content,
         filename=filename,
-        file_hash=hashlib.sha256(content).hexdigest(),
         warnings=[m.as_dict() for m in parsed.warnings],
         sections=[s.as_dict() for s in parsed.sections],
         accounts=[
@@ -663,8 +646,6 @@ def import_mintos_file(
         positions_found=0,
         transactions_found=len(parsed.etf_transactions) + (1 if parsed.p2p_period else 0),
     )
-    db.add(batch)
-    db.flush()
 
     overrides = _load_overrides(db)
     inserted = 0
@@ -760,22 +741,7 @@ def import_mintos_file(
     batch.positions_found = positions_found
     batch.transactions_inserted = inserted
 
-    if not commit:
-        summary = {
-            "filename": batch.filename,
-            "positions_found": batch.positions_found,
-            "transactions_found": batch.transactions_found,
-            "transactions_inserted": batch.transactions_inserted,
-            "warnings": list(batch.warnings),
-            "sections": list(batch.sections),
-            "accounts": list(batch.accounts),
-        }
-        db.rollback()
-        return summary
-
-    db.commit()
-    db.refresh(batch)
-    return batch
+    return _finish_import(db, batch, commit)
 
 
 def import_mintos_investments_file(
@@ -798,17 +764,16 @@ def import_mintos_investments_file(
     """
     parsed: ParsedMintosInvestmentsSnapshot = parse_mintos_investments_export(content, filename)
 
-    batch = ImportBatch(
+    batch = _new_batch(
+        db,
+        content,
         filename=filename,
-        file_hash=hashlib.sha256(content).hexdigest(),
         warnings=[m.as_dict() for m in parsed.warnings],
         sections=[],
         accounts=[] if parsed.is_empty else [MINTOS_CORE_ACCOUNT],
         positions_found=0,
         transactions_found=0 if parsed.is_empty else 1,
     )
-    db.add(batch)
-    db.flush()
 
     inserted = 0
     if not parsed.is_empty:
@@ -847,22 +812,7 @@ def import_mintos_investments_file(
 
     batch.transactions_inserted = inserted
 
-    if not commit:
-        summary = {
-            "filename": batch.filename,
-            "positions_found": batch.positions_found,
-            "transactions_found": batch.transactions_found,
-            "transactions_inserted": batch.transactions_inserted,
-            "warnings": list(batch.warnings),
-            "sections": list(batch.sections),
-            "accounts": list(batch.accounts),
-        }
-        db.rollback()
-        return summary
-
-    db.commit()
-    db.refresh(batch)
-    return batch
+    return _finish_import(db, batch, commit)
 
 
 def import_mintos_transactions_file(
@@ -891,17 +841,16 @@ def import_mintos_transactions_file(
     """
     parsed: ParsedMintosTransactionsExport = parse_mintos_transactions_export(content, filename)
 
-    batch = ImportBatch(
+    batch = _new_batch(
+        db,
+        content,
         filename=filename,
-        file_hash=hashlib.sha256(content).hexdigest(),
         warnings=[m.as_dict() for m in parsed.warnings],
         sections=[],
         accounts=[] if parsed.is_empty else [MINTOS_CORE_ACCOUNT],
         positions_found=0,
         transactions_found=0 if parsed.is_empty else 2,
     )
-    db.add(batch)
-    db.flush()
 
     inserted = 0
     if not parsed.is_empty:
@@ -1006,22 +955,7 @@ def import_mintos_transactions_file(
 
     batch.transactions_inserted = inserted
 
-    if not commit:
-        summary = {
-            "filename": batch.filename,
-            "positions_found": batch.positions_found,
-            "transactions_found": batch.transactions_found,
-            "transactions_inserted": batch.transactions_inserted,
-            "warnings": list(batch.warnings),
-            "sections": list(batch.sections),
-            "accounts": list(batch.accounts),
-        }
-        db.rollback()
-        return summary
-
-    db.commit()
-    db.refresh(batch)
-    return batch
+    return _finish_import(db, batch, commit)
 
 
 # --- Amundi ESR ----------------------------------------------------------------
@@ -1157,17 +1091,16 @@ def _persist_amundi_export(
     files from either source safe in any order. See DEVLOG "Decision
     3u.39" (original) and "Decision 3u.44" (Synthese export added).
     """
-    batch = ImportBatch(
+    batch = _new_batch(
+        db,
+        content,
         filename=filename,
-        file_hash=hashlib.sha256(content).hexdigest(),
         warnings=[m.as_dict() for m in parsed.warnings],
         sections=[s.as_dict() for s in parsed.sections],
         accounts=sorted({f.account for f in parsed.funds}),
         positions_found=len(parsed.funds),
         transactions_found=sum(len(totals) for totals in parsed.aggregate_totals.values()),
     )
-    db.add(batch)
-    db.flush()
 
     if parsed.is_fiscal_document or parsed.as_of is None or not parsed.funds:
         return _finish_import(db, batch, commit)
@@ -1475,17 +1408,16 @@ def import_amundi_operations_file(
     """
     parsed: ParsedAmundiOperations = parse_amundi_operations_export(content, filename)
 
-    batch = ImportBatch(
+    batch = _new_batch(
+        db,
+        content,
         filename=filename,
-        file_hash=hashlib.sha256(content).hexdigest(),
         warnings=[m.as_dict() for m in parsed.warnings],
         sections=[sec.as_dict() for sec in parsed.sections],
         accounts=sorted({op.account for op in parsed.operations}),
         positions_found=0,
         transactions_found=len(parsed.operations),
     )
-    db.add(batch)
-    db.flush()
 
     if parsed.is_empty:
         return _finish_import(db, batch, commit)
@@ -1620,17 +1552,16 @@ def import_bank_file(
     """
     parsed: ParsedBankExport = parse_bank_export(content, filename)
 
-    batch = ImportBatch(
+    batch = _new_batch(
+        db,
+        content,
         filename=filename,
-        file_hash=hashlib.sha256(content).hexdigest(),
         warnings=[m.as_dict() for m in parsed.warnings],
         sections=[sec.as_dict() for sec in parsed.sections],
         accounts=sorted(account.label for account in parsed.accounts),
         positions_found=0,
         transactions_found=len(parsed.transfers),
     )
-    db.add(batch)
-    db.flush()
 
     if parsed.is_empty:
         return _finish_import(db, batch, commit)
@@ -1770,7 +1701,20 @@ def _insert_bank_operations(db: Session, lines: list[BankLine], batch: ImportBat
     return inserted
 
 
+def _new_batch(db: Session, content: bytes, **fields: Any) -> ImportBatch:
+    """The `ImportBatch` row every importer starts with, keyed by the file's
+    hash, flushed so its id is there for the rows it will own."""
+    batch = ImportBatch(file_hash=hashlib.sha256(content).hexdigest(), **fields)
+    db.add(batch)
+    db.flush()
+    return batch
+
+
 def _finish_import(db: Session, batch: ImportBatch, commit: bool) -> ImportBatch | dict[str, Any]:
+    """Commit and return the batch, or for a preview (``commit=False``) roll
+    back and return the same figures as a plain dict: rollback() expires every
+    ORM instance in the session, the batch included, so they are read first.
+    See DEVLOG "Decision 3h.1"."""
     if not commit:
         summary = {
             "filename": batch.filename,
