@@ -43,10 +43,6 @@ router = APIRouter(prefix="/api/weekly-summary", tags=["weekly-summary"])
 #: Journal entries due within this many days (or already overdue) appear.
 WINDOW_DAYS = 7
 
-#: A high-score watchlist item this close above its target entry price (in
-#: percent) is surfaced alongside the ones already at/below target.
-NEAR_TARGET_PCT = 5.0
-
 #: `GET /attention` kinds that describe data quality rather than a gap.
 _DATA_RELIABILITY_KINDS = {"price_error", "price_stale", "unresolved_instruments"}
 
@@ -115,22 +111,16 @@ def _build_summary(db: Session) -> WeeklySummaryOut:
     }
     watchlist_flags = []
     for s in get_watchlist_signals(db):
+        if s.target_flag is None or s.distance_to_target_pct is None:
+            continue
         distance = s.distance_to_target_pct
-        if distance is None:
-            continue
-        if distance <= 0:
-            kind = "target_reached"
-        elif distance <= NEAR_TARGET_PCT and s.score_band == "high":
-            kind = "near_target_high_score"
-        else:
-            continue
         item = watch_items[s.instrument_id]
         watchlist_flags.append(
             WeeklyWatchlistFlagOut(
                 instrument_id=s.instrument_id,
                 symbol=item.instrument.broker_symbol,
                 name=item.instrument.name,
-                kind=kind,
+                kind=s.target_flag,
                 composite_score=s.composite_score,
                 score_band=s.score_band,
                 distance_to_target_pct=round(distance, 2),

@@ -9815,28 +9815,25 @@ No API change.
 Verification: `tsc -b` and oxlint clean; tab checked in the browser at
 desktop and phone width, no console errors.
 
-## Step 3u.101 — Allocation targets are policy limits (2026-11-13)
+## Step 3u.100 — The nav bell and the weekly summary read one rule (2026-11-13)
 
-An asset-class target range ("ETF between 20 and 30 %") and a policy limit
-with `dimension="category"` were the same rule in two tables, each with its
-own form, and both could be set for the same category with different
-numbers.
+"Target reached" was decided in two places: the nav bell filtered
+`GET /api/watchlist` in the browser (`distance_to_target_pct <= 0`), while
+the weekly summary classified `GET /api/watchlist/signals` on the server
+with its own `NEAR_TARGET_PCT`. Same answer today, but nothing kept them
+together.
 
-- Migration `c4d8e2a7f190` copies every `allocation_targets` row into
-  `personal_policy_limits` and drops the old table. Where a category limit
-  already existed, its own bounds are kept and only a missing bound is
-  filled from the target. The downgrade recreates the table from the
-  category limits.
-- `/allocation` (GET/PUT/DELETE) keeps its shape and now reads and writes
-  those limits (`_category_limits`). Attention, position signals, onboarding
-  and the weekly summary follow, since they all go through it.
-- A limit may set one bound only; `_allocation_row` ignores the missing one,
-  and the allocation table shows "≤ 60 %" / "≥ 20 %".
-- The weekly summary drops category rows from `policy_gaps`: they are
-  already in `allocation_gaps`, with the amount to reach the minimum.
+- `routers/watchlist.py` now holds the rule: `distance_to_target(price,
+  target)` (was written twice) and `target_flag(distance, band)` →
+  `"target_reached"` | `"near_target_high_score"` | `None`.
+  `NEAR_TARGET_PCT` moves there from `weekly.py`.
+- `WatchlistSignalOut` gains `target_flag`. The weekly summary keeps the
+  flagged rows; the bell polls `/signals` and counts `target_reached`.
+- The unheld-items query, repeated in two routes, is `_unheld_items(db)`
+  (on top of `tracking.not_held`).
 
-The Hermes gate shows and writes category ranges once, under `targets`
-(Hermes PR on the same day), so replacing its `limits` never wipes them.
+Attention (portfolio summary) and Data health (detail) were already split
+that way and stay as they are.
 
-Verification: backend suite green, with tests on the migration and on
-targets seen from the policy side; `tsc -b` clean.
+Verification: backend suite green, new tests on `target_flag`; `tsc -b`
+clean.
