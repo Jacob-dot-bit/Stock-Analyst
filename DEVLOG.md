@@ -10136,3 +10136,34 @@ nothing. It now sets each year it has a notice for against its own.
 Verification: tests on made-up data (each check, the summary with a
 notice, the split by year, replacement, overlap with quarterly rows);
 full suite; frontend build.
+
+## Step 3u.113 — Mintos annual tax report (2026-11-13)
+
+The quarterly statements give the interest of loan-backed notes only, and
+the account statement only the dates one export covers. For a year before
+the oldest account statement, the tax summary showed about a third of
+what Mintos actually paid: no bond interest, no bonuses, no discount on
+bonds. Mintos's annual tax report (Statements → Tax report) has the whole
+year in every category, and is what a return is filled from.
+
+- `ingest/mintos_tax_report_import.py`: reads the report's sentences
+  ("has received the below interest", "…capital gains", "…other income",
+  "…the below expenses"), not its headings, which pdfplumber returns
+  doubled. Interest before the Latvian withholding, the withholding,
+  other income by kind, gains or losses on notes sold, fees. Nothing
+  about the investor is kept.
+- `mintos_tax_reports` table (migration `c4e8a1f7d2b9`), one row per
+  year; a newer report for the same year replaces it. Detected before the
+  quarterly statement, since both name Mintos. Undo removes it.
+- Tax summary: for a year with a report, the "Mintos Core P2P" envelope
+  takes its interest (interest plus other income) and its costs
+  (withholding plus fees), with a note stating where they come from; the
+  envelope is added when nothing else brought it. Gains or losses on
+  notes sold join the year's net and the 10-year loss carry-forward
+  (`CapitalGainsYear.platform`); an ETF row would be left out, since ETF
+  sales are already priced in the "Mintos ETF" account. The income check
+  against the notice uses the report's figure.
+
+Verification: tests on made-up data (every section, replacement, an
+unreadable file, a preview, the summary for the report's year and for
+another one, the carry-forward); full suite; frontend build.

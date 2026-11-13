@@ -114,6 +114,7 @@ function CapitalGainsCard({ gains, sales }: { gains: TaxCapitalGainsYear; sales:
         <Fact label={t('taxPrep.gains.gains')} value={gains.gains} />
         <Fact label={t('taxPrep.gains.losses')} value={gains.losses} negative />
         {gains.derivatives !== 0 && <Fact label={t('taxPrep.gains.derivatives')} value={gains.derivatives} negative />}
+        {gains.platform !== 0 && <Fact label={t('taxPrep.gains.platform')} value={gains.platform} negative />}
         <Fact label={t('taxPrep.gains.net')} value={gains.net} negative />
         {carriedIn && (
           <div>
