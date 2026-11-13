@@ -32,7 +32,9 @@ CSRF_HEADER = "X-Requested-With"
 CSRF_VALUE = "stock-analyst"
 
 #: Reachable without being logged in.
-PUBLIC_ROUTES = frozenset({("POST", "/api/auth/login"), ("POST", "/api/auth/logout")})
+PUBLIC_ROUTES = frozenset(
+    {("POST", "/api/auth/login"), ("POST", "/api/auth/logout"), ("GET", "/api/auth/status")}
+)
 
 UNAUTHENTICATED = "auth.required"
 FORBIDDEN_SCOPE = "auth.readOnlyToken"

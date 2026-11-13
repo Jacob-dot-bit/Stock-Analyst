@@ -246,7 +246,7 @@ a {
 
 .alerts-bell:hover { filter: brightness(0.95); }
 
-/* Language + theme, pushed to the far right of the bar. */
+/* Language + theme (+ sign out), pushed to the far right of the bar. */
 .topbar-controls {
   margin-left: auto;
   display: flex;
@@ -1793,3 +1793,36 @@ tr.budget-muted td {
     display: none;
   }
 }
+
+/* Login page: one centred card, no navigation. */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) 16px;
+  position: relative;
+}
+
+.login-controls {
+  position: absolute;
+  top: var(--space-4);
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.login-card h1 { margin: 0; font-size: 1.4rem; }
+.login-card p { margin: 0; }
+.login-card .notice { margin-bottom: 0; }
+.login-card .field input { width: 100%; }
+.login-hint { font-size: var(--fs-sm); }

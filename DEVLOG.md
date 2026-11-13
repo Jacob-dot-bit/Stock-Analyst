@@ -9979,3 +9979,32 @@ A restored backup brings back the account and tokens as they were then.
 Verification: backend suite green, with `tests/test_auth.py` (RFC 6238
 vectors, lockout, expiry, replay, scopes, CSRF header, loopback still
 enforced). Command line tried on a scratch database.
+
+## Step 3u.108 — Login page in the frontend (2026-11-13)
+
+The backend from 3u.107 can now be used from the browser.
+
+- `src/auth/AuthGate.tsx` decides what to draw: logged in, the app; not
+  logged in, the login page as soon as an account exists or the backend
+  requires one; neither (a fresh install), the app as before. It asks
+  `GET /api/auth/me`, then the new public `GET /api/auth/status`
+  (`{required, configured}`, nothing else).
+- `src/pages/Login.tsx`: name and password first; the 6-digit code field
+  appears only when the backend answers `auth.totpRequired`, so an account
+  without the code never sees it. Lockout shows the minutes left from
+  `Retry-After`. The fields carry `username`, `current-password` and
+  `one-time-code`, so password managers and phones fill them.
+- `request()` in `api/client.ts` adds `X-Requested-With: stock-analyst` to
+  every call, and a 401 `auth.required` anywhere brings the login page back
+  (session idle for 7 days, logged out from another tab, password changed)
+  instead of an error on the open page. Errors are now `ApiError` (an
+  `Error` with the status), so the pages that print `message` are unchanged.
+- Sign-out button next to the theme toggle, shown only for a browser session.
+- `python -m app.auth enable-totp` draws the QR code in the terminal when
+  `qrencode` is installed; the link goes through stdin, not argv.
+
+Verification: `tsc -b`, `vite build`, backend auth tests; the login flow
+driven in Chromium against a real backend with `AUTH_REQUIRED=true`
+(wrong password, code asked, wrong code, right code, cookie flags, a raw
+write without the header refused, session lost mid-visit, sign-out, phone
+width), plus a fresh install with no account opening straight on the app.

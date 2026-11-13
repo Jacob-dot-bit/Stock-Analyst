@@ -1,6 +1,8 @@
 import type {
   AllocationRow,
   AttentionItem,
+  AuthMe,
+  AuthStatus,
   BackfillFigisResult,
   BackfillIsinsResult,
   BacktestReport,
@@ -68,9 +70,33 @@ import type {
   WeeklySummary,
 } from './types'
 
+/** Sent with every call. The backend refuses a write made with the session
+ * cookie without it: a page on another site can't add a custom header without
+ * a CORS preflight, which the API refuses (backend app/auth/dependency.py). */
+const CSRF_HEADER = 'X-Requested-With'
+const CSRF_VALUE = 'stock-analyst'
+
+/** Fired when the backend says the session is missing or over, so the app
+ * can show the login page instead of an error on whatever page was open. */
+export const SESSION_LOST_EVENT = 'stock-analyst:session-lost'
+
+/** Error carrying the backend's code (e.g. "auth.locked") and HTTP status. */
+export class ApiError extends Error {
+  readonly status: number
+  readonly retryAfter: number | null
+
+  constructor(message: string, status: number, retryAfter: number | null = null) {
+    super(message)
+    this.status = status
+    this.retryAfter = retryAfter
+  }
+}
+
 /** Surface the backend's error message rather than an opaque "500". */
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init)
+  const headers = new Headers(init?.headers)
+  headers.set(CSRF_HEADER, CSRF_VALUE)
+  const response = await fetch(url, { ...init, headers })
 
   if (!response.ok) {
     let detail = `${response.status} ${response.statusText}`
@@ -80,7 +106,12 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     } catch {
       // Non-JSON response: keep the HTTP status.
     }
-    throw new Error(detail)
+    // The login form handles its own 401s (wrong password, code needed).
+    if (response.status === 401 && detail === 'auth.required' && !url.startsWith('/api/auth/')) {
+      window.dispatchEvent(new Event(SESSION_LOST_EVENT))
+    }
+    const retryAfter = Number(response.headers.get('retry-after'))
+    throw new ApiError(detail, response.status, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null)
   }
 
   if (response.status === 204) return undefined as T
@@ -89,6 +120,16 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => request<Health>('/api/health'),
+
+  authStatus: () => request<AuthStatus>('/api/auth/status'),
+  authMe: () => request<AuthMe>('/api/auth/me'),
+  login: (username: string, password: string, code?: string) =>
+    request<void>('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, code: code || null }),
+    }),
+  logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
 
   getPortfolio: () => request<Portfolio>('/api/portfolio'),
 

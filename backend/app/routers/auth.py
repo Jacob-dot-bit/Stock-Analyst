@@ -22,6 +22,11 @@ class LoginRequest(BaseModel):
     code: str | None = Field(default=None, max_length=16)
 
 
+class Status(BaseModel):
+    required: bool
+    configured: bool
+
+
 class Me(BaseModel):
     username: str | None
     via: str
@@ -82,3 +87,12 @@ def me(request: Request, db: Session = Depends(get_db)) -> Me:
         via=via,
         totp_enabled=bool(account and account.totp_enabled),
     )
+
+
+@router.get("/status", response_model=Status)
+def status(db: Session = Depends(get_db)) -> Status:
+    """Whether the login page should be shown, readable before logging in.
+
+    Says nothing about the account beyond whether one exists.
+    """
+    return Status(required=get_settings().auth_required, configured=service.get_account(db) is not None)
