@@ -9703,6 +9703,20 @@ fourteen per-broker routes (`/xtb`, `/mintos`, `/mintos-investments`,
 
 Verification: backend suite green; `tsc -b` clean.
 
+## Step 3u.94 — Every importer starts and ends the same way (2026-11-13)
+
+`_finish_import` (commit, or roll back and return the figures for a
+preview) was written for the Amundi and bank importers, but the four older
+ones — XTB, the Mintos PDF, Mintos "Investments" and the Mintos account
+statement — still carried their own copy of the same block. The opening
+`ImportBatch(..., file_hash=sha256(content))` + add + flush was written out
+seven times.
+
+- `_new_batch(db, content, **fields)` creates, adds and flushes the batch.
+- All importers end with `return _finish_import(db, batch, commit)`.
+
+No behaviour change: same rows, same preview figures, same hash.
+
 ## Step 3u.96 — Sparklines and scores written once (2026-11-13)
 
 The same sparkline query — closes of the last 90 days, adjusted for splits
