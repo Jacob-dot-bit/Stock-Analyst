@@ -39,6 +39,43 @@ from app.symbols.mapping import looks_like_equity
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
+#: A high-score item this close above its target entry price (in percent) is
+#: flagged alongside the ones already at/below target.
+NEAR_TARGET_PCT = 5.0
+
+
+def distance_to_target(price: float | None, target: float | None) -> float | None:
+    """Percent above (+) or below (-) the target entry price; None when
+    either side is missing, never guessed."""
+    if price is None or not target:
+        return None
+    return (price - target) / target * 100
+
+
+def target_flag(distance: float | None, band: str) -> str | None:
+    """The one definition of "worth a look" for a watched item, read by the
+    weekly summary and the nav bell alike: "target_reached" (at or below
+    target, any score) or "near_target_high_score" (within `NEAR_TARGET_PCT`
+    above, with a high score). None otherwise."""
+    if distance is None:
+        return None
+    if distance <= 0:
+        return "target_reached"
+    if distance <= NEAR_TARGET_PCT and band == "high":
+        return "near_target_high_score"
+    return None
+
+
+def _unheld_items(db: Session) -> list[WatchlistItem]:
+    """Watchlist rows whose instrument is not currently held."""
+    return list(
+        db.execute(
+            select(WatchlistItem).where(
+                ~select(Position.id).where(Position.instrument_id == WatchlistItem.instrument_id).exists()
+            )
+        ).scalars()
+    )
+
 
 def _watchlist_instruments(db: Session) -> list[Instrument]:
     """Watched instruments, excluding anything currently held — see module
@@ -58,9 +95,7 @@ def _watchlist_item_out(db: Session, item: WatchlistItem) -> WatchlistItemOut:
     instrument_out.price_status = _price_status(instrument)
 
     price, source = _resolve_current_price(db, instrument, {})
-    distance = None
-    if price is not None and item.target_entry_price:
-        distance = (price - item.target_entry_price) / item.target_entry_price * 100
+    distance = distance_to_target(price, item.target_entry_price)
 
     return WatchlistItemOut(
         id=item.id,
@@ -143,13 +178,7 @@ def add_watchlist_item(payload: WatchlistItemIn, db: Session = Depends(get_db)) 
 def list_watchlist(db: Session = Depends(get_db)) -> list[WatchlistItemOut]:
     """Cache-only — never triggers a fetch, same convention as
     `GET /api/prices/{id}/history`."""
-    items = list(
-        db.execute(
-            select(WatchlistItem).where(
-                ~select(Position.id).where(Position.instrument_id == WatchlistItem.instrument_id).exists()
-            )
-        ).scalars()
-    )
+    items = _unheld_items(db)
     return [_watchlist_item_out(db, item) for item in items]
 
 
@@ -195,13 +224,7 @@ def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignal
     (see its docstring). Only ever "reinforce" | "hold" | "not_applicable":
     nothing here is held, so "reduce" never applies.
     """
-    items = list(
-        db.execute(
-            select(WatchlistItem).where(
-                ~select(Position.id).where(Position.instrument_id == WatchlistItem.instrument_id).exists()
-            )
-        ).scalars()
-    )
+    items = _unheld_items(db)
     instruments = [item.instrument for item in items]
     config = get_scoring_config()
     scores = {s.instrument_id: s for s in compute_scores(db, instruments, config)}
@@ -210,9 +233,7 @@ def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignal
     for item in items:
         instrument = item.instrument
         price, _source = _resolve_current_price(db, instrument, {})
-        distance = None
-        if price is not None and item.target_entry_price:
-            distance = (price - item.target_entry_price) / item.target_entry_price * 100
+        distance = distance_to_target(price, item.target_entry_price)
 
         score_result = scores.get(instrument.id)
         composite = score_result.composite if score_result else None
@@ -232,6 +253,7 @@ def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignal
                 composite_score=composite,
                 score_band=band,
                 distance_to_target_pct=distance,
+                target_flag=target_flag(distance, band),
             )
         )
     return out

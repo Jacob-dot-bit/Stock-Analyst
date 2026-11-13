@@ -9753,3 +9753,25 @@ routes likewise repeated the `compute_scores` + `score_to_out` lines.
 Same routes, same responses.
 
 Verification: backend suite green.
+
+## Step 3u.100 — The nav bell and the weekly summary read one rule (2026-11-13)
+
+"Target reached" was decided in two places: the nav bell filtered
+`GET /api/watchlist` in the browser (`distance_to_target_pct <= 0`), while
+the weekly summary classified `GET /api/watchlist/signals` on the server
+with its own `NEAR_TARGET_PCT`. Same answer today, but nothing kept them
+together.
+
+- `routers/watchlist.py` now holds the rule: `distance_to_target(price,
+  target)` (was written twice) and `target_flag(distance, band)` →
+  `"target_reached"` | `"near_target_high_score"` | `None`.
+  `NEAR_TARGET_PCT` moves there from `weekly.py`.
+- `WatchlistSignalOut` gains `target_flag`. The weekly summary keeps the
+  flagged rows; the bell polls `/signals` and counts `target_reached`.
+- The unheld-items query, repeated in three routes, is `_unheld_items(db)`.
+
+Attention (portfolio summary) and Data health (detail) were already split
+that way and stay as they are.
+
+Verification: backend suite green, new tests on `target_flag`; `tsc -b`
+clean.
