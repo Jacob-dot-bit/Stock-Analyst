@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { api } from '../api/client'
-import type { SymbolSearchResult } from '../api/types'
 import { useI18n } from '../i18n'
+import { SymbolInput } from './SymbolInput'
 
 interface Props {
   onCreated: () => void
 }
-
-//: Same debounce as AddToWatchlistForm — avoids firing a request (and
-//: spending FMP's quota) on every character typed.
-const SEARCH_DEBOUNCE_MS = 350
 
 export function AddJournalEntryForm({ onCreated }: Props) {
   const { t } = useI18n()
@@ -19,33 +15,6 @@ export function AddJournalEntryForm({ onCreated }: Props) {
   const [reviewDate, setReviewDate] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<SymbolSearchResult[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    const query = symbol.trim()
-    if (query.length < 2 || query.includes('.')) {
-      setSuggestions([])
-      return
-    }
-    debounceRef.current = setTimeout(() => {
-      api
-        .searchSymbols(query)
-        .then(setSuggestions)
-        .catch(() => setSuggestions([]))
-    }, SEARCH_DEBOUNCE_MS)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [symbol])
-
-  function pickSuggestion(result: SymbolSearchResult) {
-    setSymbol(`${result.symbol}.US`)
-    setShowSuggestions(false)
-    setSuggestions([])
-  }
 
   const valid = thesis.trim().length > 0
 
@@ -89,29 +58,12 @@ export function AddJournalEntryForm({ onCreated }: Props) {
       <h2>{t('journal.form.title')}</h2>
 
       <div className="form-row">
-        <div className="field" style={{ position: 'relative' }}>
-          <label htmlFor="journal-symbol">{t('journal.form.symbol')}</label>
-          <input
-            id="journal-symbol"
-            value={symbol}
-            placeholder="AAPL.US"
-            autoComplete="off"
-            onChange={(e) => setSymbol(e.target.value)}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-          />
-          {showSuggestions && suggestions.length > 0 && (
-            <ul className="symbol-suggestions">
-              {suggestions.map((s) => (
-                <li key={s.symbol}>
-                  <button type="button" onClick={() => pickSuggestion(s)}>
-                    <strong>{s.symbol}</strong> <span className="muted">{s.name}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <SymbolInput
+          id="journal-symbol"
+          label={t('journal.form.symbol')}
+          value={symbol}
+          onChange={setSymbol}
+        />
         <div className="field">
           <label htmlFor="journal-review-date">{t('journal.form.reviewDate')}</label>
           <input id="journal-review-date" type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} />
