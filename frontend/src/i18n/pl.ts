@@ -1024,12 +1024,11 @@ export const pl: Catalogue = {
   'taxPrep.otherFlows': 'Inne przepływy (informacyjne)',
   'taxPrep.pmpGains': 'Zyski (średnia ważona cena)',
   'taxPrep.pmpLosses': 'Straty (średnia ważona cena)',
-  'taxPrep.unmatchedSalesLine':
-    '{count} sprzedaż(y) na kwotę {amount} bez możliwego do obliczenia zysku: zakupu nie ma w zaimportowanych wyciągach. Kwota jest w zestawieniu podatkowym brokera (IFU).',
-  'taxPrep.unmatchedReason.no_purchase': 'zakup sprzed wyciągów: {count}',
-  'taxPrep.unmatchedReason.incomplete_history': 'niepełna historia zakupów: {count}',
-  'taxPrep.unmatchedReason.no_units': 'nieznana liczba jednostek: {count}',
-  'taxPrep.unmatchedReason.no_instrument': 'niezidentyfikowany papier: {count}',
+  'taxPrep.unmatchedSalesLine': '{count} sprzedaż(y) na kwotę {amount} bez możliwego do obliczenia zysku. Powód:',
+  'taxPrep.unmatchedReason.no_purchase': 'zakup sprzed najstarszego zaimportowanego wyciągu ({count})',
+  'taxPrep.unmatchedReason.incomplete_history': 'sprzedano więcej jednostek niż zaimportowano zakupów lub zakup bez liczby jednostek ({count})',
+  'taxPrep.unmatchedReason.no_units': 'nieznana liczba sprzedanych jednostek ({count})',
+  'taxPrep.unmatchedReason.no_instrument': 'niezidentyfikowany papier ({count})',
   'taxPrep.gains.title': 'Zyski z papierów wartościowych {year} (zwykły rachunek maklerski)',
   'taxPrep.gains.hint':
     'Obliczone według średniej ważonej ceny nabycia, z opłatami, na wszystkich rachunkach maklerskich z tym samym papierem. PEA, oszczędności pracownicze i P2P nie są liczone.',
@@ -1040,8 +1039,7 @@ export const pl: Catalogue = {
   'taxPrep.gains.used': 'Straty odliczone',
   'taxPrep.gains.taxable': 'Zysk netto po odliczeniu strat',
   'taxPrep.gains.carriedOut': 'Straty do przeniesienia',
-  'taxPrep.gains.unmatched':
-    '{count} sprzedaż(y) z tego roku nie ma w tej sumie: ich zakupu nie ma w zaimportowanych wyciągach. Zaimportuj starszy wyciąg lub sprawdź IFU.',
+  'taxPrep.gains.unmatched': '{count} sprzedaż(y) z tego roku nie ma w tej sumie (powód w szczegółach poniżej). Zaimportuj starszy wyciąg brokera lub sprawdź jego IFU.',
   'taxPrep.gains.sales': 'Szczegóły {count} sprzedaży',
   'taxPrep.gains.col.date': 'Data',
   'taxPrep.gains.col.account': 'Rachunek',

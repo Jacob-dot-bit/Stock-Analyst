@@ -83,7 +83,8 @@ function EnvelopeCard({ envelope }: { envelope: TaxEnvelopeSummary }) {
         </>
       )}
 
-      {envelope.notes.map((note, i) => (
+      {/* The unmatched-sales note says what the warning above already says. */}
+      {envelope.notes.filter((note) => note.code !== 'taxPrep.unmatchedSales').map((note, i) => (
         <p key={i} className="notice info" style={{ marginTop: '0.6rem' }}>
           {t(note.code, note.params)}
         </p>
