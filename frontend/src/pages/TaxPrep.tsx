@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { errorMessage, useApiResource } from '../hooks/useApiResource'
-import type { TaxEnvelopeSummary, TaxNotice, TaxYearSummary } from '../api/types'
+import type { TaxCapitalGainsYear, TaxEnvelopeSummary, TaxNotice, TaxSaleGain, TaxYearSummary } from '../api/types'
 import { signClass } from '../format'
 import { useI18n } from '../i18n'
 
@@ -51,6 +51,8 @@ function EnvelopeCard({ envelope }: { envelope: TaxEnvelopeSummary }) {
         <Fact label={t('taxPrep.interest')} value={envelope.interest} />
         <Fact label={t('taxPrep.realizedGains')} value={envelope.realized_gains} />
         <Fact label={t('taxPrep.realizedLosses')} value={envelope.realized_losses} negative />
+        <Fact label={t('taxPrep.pmpGains')} value={envelope.pmp_gains} />
+        <Fact label={t('taxPrep.pmpLosses')} value={envelope.pmp_losses} negative />
         <Fact label={t('taxPrep.fees')} value={envelope.fees} negative />
         <Fact label={t('taxPrep.deposits')} value={envelope.deposits} />
         <Fact label={t('taxPrep.withdrawals')} value={envelope.withdrawals} negative />
@@ -61,7 +63,10 @@ function EnvelopeCard({ envelope }: { envelope: TaxEnvelopeSummary }) {
           {t('taxPrep.unmatchedSalesLine', {
             count: envelope.unmatched_sales_count,
             amount: formatNumber(envelope.unmatched_sales_amount ?? 0),
-          })}
+          })}{' '}
+          {Object.entries(envelope.unmatched_reasons)
+            .map(([reason, count]) => t(`taxPrep.unmatchedReason.${reason}`, { count }))
+            .join(' · ')}
         </p>
       )}
 
@@ -83,6 +88,88 @@ function EnvelopeCard({ envelope }: { envelope: TaxEnvelopeSummary }) {
           {t(note.code, note.params)}
         </p>
       ))}
+    </div>
+  )
+}
+
+function lossMap(map: Record<string, number>, formatNumber: (v: number) => string): string {
+  return Object.entries(map)
+    .map(([origin, amount]) => `${formatNumber(amount)} (${origin})`)
+    .join(' · ')
+}
+
+/** Gains on CTO sales by the weighted average price, over every ordinary
+ * account, with losses carried in from up to ten earlier years (Step
+ * 3u.110). Sales whose purchase is not on file are listed, never guessed. */
+function CapitalGainsCard({ gains, sales }: { gains: TaxCapitalGainsYear; sales: TaxSaleGain[] }) {
+  const { t, formatNumber, formatDate } = useI18n()
+  const carriedIn = lossMap(gains.losses_carried_in, formatNumber)
+  const carriedOut = lossMap(gains.losses_carried_out, formatNumber)
+  return (
+    <div className="card">
+      <h2 className="compact">{t('taxPrep.gains.title', { year: gains.year })}</h2>
+      <p className="budget-hint">{t('taxPrep.gains.hint')}</p>
+      <dl className="position-detail-facts" style={{ marginTop: '0.8rem' }}>
+        <Fact label={t('taxPrep.gains.gains')} value={gains.gains} />
+        <Fact label={t('taxPrep.gains.losses')} value={gains.losses} negative />
+        <Fact label={t('taxPrep.gains.net')} value={gains.net} negative />
+        {carriedIn && (
+          <div>
+            <dt>{t('taxPrep.gains.carriedIn')}</dt>
+            <dd>{carriedIn}</dd>
+          </div>
+        )}
+        {gains.losses_used > 0 && <Fact label={t('taxPrep.gains.used')} value={gains.losses_used} />}
+        <Fact label={t('taxPrep.gains.taxable')} value={gains.taxable_net} />
+        {carriedOut && (
+          <div>
+            <dt>{t('taxPrep.gains.carriedOut')}</dt>
+            <dd>{carriedOut}</dd>
+          </div>
+        )}
+      </dl>
+      {gains.unmatched_sales > 0 && (
+        <p className="notice warning" style={{ marginTop: '0.8rem' }}>
+          {t('taxPrep.gains.unmatched', { count: gains.unmatched_sales })}
+        </p>
+      )}
+      {sales.length > 0 && (
+        <details style={{ marginTop: '0.8rem' }}>
+          <summary>{t('taxPrep.gains.sales', { count: sales.length })}</summary>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('taxPrep.gains.col.date')}</th>
+                  <th>{t('taxPrep.gains.col.account')}</th>
+                  <th>{t('taxPrep.gains.col.symbol')}</th>
+                  <th className="num">{t('taxPrep.gains.col.units')}</th>
+                  <th className="num">{t('taxPrep.gains.col.proceeds')}</th>
+                  <th className="num">{t('taxPrep.gains.col.cost')}</th>
+                  <th className="num">{t('taxPrep.gains.col.gain')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.map((sale) => (
+                  <tr key={sale.transaction_id}>
+                    <td>{formatDate(sale.executed_at)}</td>
+                    <td>{sale.account}</td>
+                    <td>{sale.symbol ?? '—'}</td>
+                    <td className="num">{sale.units === null ? '—' : formatNumber(sale.units, 4)}</td>
+                    <td className="num">{formatNumber(sale.proceeds)}</td>
+                    <td className="num">{sale.cost === null ? '—' : formatNumber(sale.cost)}</td>
+                    <td className={`num ${sale.gain === null ? 'muted' : signClass(sale.gain)}`}>
+                      {sale.gain === null
+                        ? t(`taxPrep.unmatchedReason.${sale.unmatched_reason}`, { count: 1 })
+                        : formatNumber(sale.gain)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
     </div>
   )
 }
@@ -214,6 +301,8 @@ export function TaxPrep() {
       {!notice && year !== null && years && years.length > 0 && (
         <p className="budget-hint">{t('taxPrep.notice.none', { year })}</p>
       )}
+
+      {summary?.capital_gains && <CapitalGainsCard gains={summary.capital_gains} sales={summary.sales} />}
 
       {summary && summary.envelopes.length === 0 && <div className="empty">{t('taxPrep.emptyYear')}</div>}
 

@@ -10038,3 +10038,42 @@ Verification: tests on a made-up notice built as a small PDF (parsing,
 signs, columns, sections, nothing from the address block kept, detection,
 import, replacement, preview, undo); full suite; checked once on a real
 notice outside the repository.
+
+## Step 3u.110 — Gains on sales by the weighted average price (2026-11-13)
+
+The tax prep listed sales on ordinary accounts with "gain not computed:
+lot reconciliation (FIFO) unavailable". FIFO was never the right rule for
+a French CTO anyway: the gain is set against the weighted average
+acquisition price ("PMP") of all units held, across every ordinary
+account holding the security. Every statement imported holds the
+purchases, so the app can work it out.
+
+- `tax/gains.py`: every BUY/SELL of a CTO account in date order, one
+  running holding per security (keyed by ISIN when the instrument has one,
+  so the same fund at two brokers is one holding). A purchase adds its
+  units and the cash paid, fees included; a sale takes out `units ×
+  average` and keeps the rest at the same average. Units come from the
+  stored quantity (Mintos) or from the XTB comment ("OPEN BUY 2 @ …",
+  "CLOSE BUY 2/5 @ …").
+- Never guessed: a sale with no purchase on file before it, a sale or an
+  earlier purchase with no unit count, or a sale with no security is left
+  unmatched with its reason ("no_purchase", "incomplete_history",
+  "no_units", "no_instrument"). Selling more than is on file breaks the
+  holding: its average is unknown from there, so its later sales stay
+  unmatched too.
+- `capital_gains_by_year`: net per calendar year, losses carried forward
+  ten years, oldest used first (art. 150-0 D, 11 CGI).
+- Tax summary: each envelope gets `pmp_gains`/`pmp_losses`, and its
+  unmatched sales are only those neither the average price nor a broker
+  `CLOSED_TRADE` covers, with reasons. Sales inside PEA, employee savings
+  or P2P are no longer flagged: they are not taxed as they happen. The
+  year gets a `capital_gains` block and the list of its CTO sales; the CSV
+  gets the two new columns.
+- Tax prep page: a "Gains on securities" card (net, carried losses, net
+  after carry, what remains to carry) with every sale folded away, and the
+  unmatched lines name their reason instead of FIFO.
+
+Verification: tests on made-up trades (average over two purchases, units
+from XTB comments, one ISIN at two brokers, PEA left out, every unmatched
+reason, carry-forward and its ten-year expiry, envelope figures, year
+block, endpoint); full suite; frontend build.

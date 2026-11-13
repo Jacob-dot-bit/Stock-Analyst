@@ -1006,14 +1006,40 @@ export const en: Catalogue = {
   'taxPrep.deposits': 'Deposits',
   'taxPrep.withdrawals': 'Withdrawals',
   'taxPrep.otherFlows': 'Other flows (informational)',
+  'taxPrep.pmpGains': 'Gains (weighted average price)',
+  'taxPrep.pmpLosses': 'Losses (weighted average price)',
   'taxPrep.unmatchedSalesLine':
-    '{count} sale(s) detected for {amount} — gain/loss not computed: lot (FIFO) reconciliation unavailable.',
+    '{count} sale(s) for {amount} with no computable gain: the purchase is not in the imported statements. The broker\'s tax summary (IFU) has it.',
+  'taxPrep.unmatchedReason.no_purchase': 'bought before the statements: {count}',
+  'taxPrep.unmatchedReason.incomplete_history': 'purchase history incomplete: {count}',
+  'taxPrep.unmatchedReason.no_units': 'unit count unknown: {count}',
+  'taxPrep.unmatchedReason.no_instrument': 'security not identified: {count}',
+  'taxPrep.gains.title': 'Gains on securities {year} (ordinary brokerage account)',
+  'taxPrep.gains.hint':
+    'Worked out by the weighted average acquisition price, fees included, over every brokerage account holding the same security. PEA, employee savings and P2P are not counted.',
+  'taxPrep.gains.gains': 'Gains',
+  'taxPrep.gains.losses': 'Losses',
+  'taxPrep.gains.net': 'Net for the year',
+  'taxPrep.gains.carriedIn': 'Losses carried in (year of origin)',
+  'taxPrep.gains.used': 'Losses set off',
+  'taxPrep.gains.taxable': 'Net gain after carried losses',
+  'taxPrep.gains.carriedOut': 'Losses still to carry forward',
+  'taxPrep.gains.unmatched':
+    '{count} sale(s) of the year are not in this total: their purchase is not in the imported statements. Import an older statement or check the IFU.',
+  'taxPrep.gains.sales': 'The {count} sale(s) in detail',
+  'taxPrep.gains.col.date': 'Date',
+  'taxPrep.gains.col.account': 'Account',
+  'taxPrep.gains.col.symbol': 'Security',
+  'taxPrep.gains.col.units': 'Units',
+  'taxPrep.gains.col.proceeds': 'Proceeds',
+  'taxPrep.gains.col.cost': 'Cost basis',
+  'taxPrep.gains.col.gain': 'Gain',
 
   'taxPrep.noWithdrawalDetected':
     'No withdrawal was imported for this year. Gains stay inside the wrapper and are not taxable while they remain there.',
   'taxPrep.withdrawalDetected':
     'A withdrawal of {amount} was detected. The applicable tax rules (plan age, exit conditions) are not computed automatically by this tool — check them yourself or with a tax advisor.',
-  'taxPrep.unmatchedSales': '{count} sale(s) with no computed gain (lot reconciliation unavailable).',
+  'taxPrep.unmatchedSales': '{count} sale(s) with no computable gain (purchase not in the imported statements, see the IFU).',
   'taxPrep.notApplicable': 'No tax-relevant operation detected in this wrapper for this year.',
 
   // --- Portfolio risk (DEVLOG "Decision 3u.67") -------------------------------
