@@ -9885,3 +9885,63 @@ code: they do more than read once.
 
 Verification: `tsc -b` and oxlint clean; the converted pages load in the
 browser on demo data with no console errors.
+
+## Step 3u.103 — Portfolio valuation outside the router (2026-11-13)
+
+`routers/portfolio.py` held the valuation every other view needs, so the
+weekly summary, the scoring and the watchlist all imported a router.
+
+- `portfolio/valuation.py`: current price resolution (declared values
+  included), per-position figures, totals per account and overall, the
+  once-per-request figures snapshot and the weight buckets. Same code,
+  now public names (`compute_figures`, `compute_totals`, …).
+- The routes call these functions; nothing else changes in their answers.
+
+Verification: backend suite green, including the test that a request
+values the portfolio only once.
+
+## Step 3u.104 — Tracking lists, scores and watchlist signals as modules (2026-11-13)
+
+- `tracking.py` gains `watched_instruments` and `gem_instruments`, then
+  the watchlist signals: `distance_to_target`, `target_flag`,
+  `unheld_watchlist_items` and `watchlist_signals`. The nav bell, the
+  `/watchlist/signals` route and the weekly summary read them there.
+- `scoring/results.py`: `scores_for` and `score_to_out`, which the scoring
+  router used to import lazily from other routers.
+
+After this step no router imports another router.
+
+Verification: backend suite green; the signal tests now patch
+`app.tracking.compute_scores`.
+
+## Step 3u.105 — Portfolio review outside the router (2026-11-13)
+
+`portfolio/review.py` holds allocation against category limits, policy
+gaps, the attention list and position signals. The `/allocation`,
+`/policy/gaps`, `/attention` and `/position-signals` routes only return
+what these functions compute, and the weekly summary calls them directly
+instead of going through route handlers. `routers/portfolio.py` goes from
+about 1 760 to 1 090 lines.
+
+Verification: backend suite green.
+
+## Step 3u.106 — Import parsers share their file and cell readers (2026-11-13)
+
+Seven parsers opened their files their own way, and three read numbers
+and dates their own way.
+
+- `ingest/readers.py`: `.xlsx` (all sheets, or the first one, optionally
+  cut; full mode for XTB's wrong declared dimension), `.xlsb` (Amundi),
+  delimited text (BOM tolerated, optional delimiter sniffing) and header
+  cleanup. Used by XTB, the bank export, both Mintos files, both Amundi
+  workbooks and file detection.
+- `ingest/cells.py`: `parse_number` and `parse_datetime` (moved from
+  `xtb_import.py`) and a new `cell_date`. The bank export and the Mintos
+  account statement use them instead of their own variants; the bank keeps
+  only the search for the date inside its summary title. Amounts written
+  with a narrow no-break space now parse.
+
+Numbers pulled out of free PDF text (Amundi, Mintos) stay in their parsers.
+No dedup id format changes.
+
+Verification: backend suite green, with tests for both modules.
