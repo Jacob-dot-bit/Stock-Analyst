@@ -35,6 +35,7 @@ import pdfplumber
 from app.ingest.amundi_operations_import import SHEET_NAME as _AMUNDI_OPERATIONS_SHEET
 from app.ingest.amundi_synthese_import import _SHEET_NAME as _AMUNDI_SYNTHESE_SHEET
 from app.ingest.bank_import import looks_like_bank_export
+from app.ingest.mintos_tax_report_import import looks_like_mintos_tax_report
 from app.ingest.tax_notice_import import looks_like_tax_notice
 from app.ingest.readers import header_cells, xlsb_sheet_names, xlsx_first_sheet
 
@@ -49,6 +50,7 @@ class FileKind(str, Enum):
     AMUNDI_OPERATIONS = "amundi_operations"
     BANK_STATEMENT = "bank_statement"
     TAX_NOTICE = "tax_notice"
+    MINTOS_TAX_REPORT = "mintos_tax_report"
 
     @property
     def broker(self) -> str:
@@ -74,6 +76,9 @@ def _pdf_kind(content: bytes) -> FileKind | None:
     # First: a notice mentions savings plans, never a broker by name.
     if looks_like_tax_notice(text):
         return FileKind.TAX_NOTICE
+    # Before the quarterly statement: both name Mintos.
+    if looks_like_mintos_tax_report(text):
+        return FileKind.MINTOS_TAX_REPORT
     if "mintos" in text:
         return FileKind.MINTOS_STATEMENT
     if any(hint in text for hint in _AMUNDI_PDF_HINTS):

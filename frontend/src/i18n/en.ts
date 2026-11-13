@@ -156,9 +156,13 @@ export const en: Catalogue = {
   'import.detected.amundi_operations': 'Recognised: Amundi operations journal (.xlsb).',
   'import.detected.bank_statement': 'Recognised: bank accounts export (Monabanq, Crédit Mutuel, CIC).',
   'import.detected.tax_notice': 'File recognised: income tax notice (PDF).',
+  'import.detected.mintos_tax_report': 'Recognised: Mintos annual tax report (PDF).',
   'import.taxNoticeKept': 'Tax notice for {year} income kept ({lines} amount lines). Name and address are not kept.',
   'import.taxNoticeReplaced': 'Tax notice for {year} income replaced by this one ({lines} amount lines).',
   'import.taxNoticeUnreadable': 'This looks like a tax notice, but no year or amount could be read from it.',
+  'import.mintosTaxReportKept': 'Mintos tax report for {year} kept: {income} of investment income, {costs} of withholding tax and fees. Nothing about the investor is kept.',
+  'import.mintosTaxReportReplaced': 'Mintos tax report for {year} replaced by this one: {income} of investment income, {costs} of withholding tax and fees.',
+  'import.mintosTaxReportUnreadable': 'This looks like a Mintos tax report, but no reporting year could be read from it.',
   'import.bankBrokerTransfers':
     'Transfers between the bank and the brokers (sent, back = net, in €): {totals}. Profit-sharing Amundi paid into the account is not counted.',
   'import.bankBalanceKept':
@@ -1028,6 +1032,7 @@ export const en: Catalogue = {
   'taxPrep.gains.hint':
     'Worked out by the weighted average acquisition price, fees included, over every brokerage account holding the same security. PEA, employee savings and P2P are not counted.',
   'taxPrep.gains.derivatives': 'Of which CFDs (closed positions)',
+  'taxPrep.gains.platform': 'Of which notes sold on Mintos (tax report)',
   'taxPrep.gains.gains': 'Gains',
   'taxPrep.gains.losses': 'Losses',
   'taxPrep.gains.net': 'Net for the year',
@@ -1051,6 +1056,7 @@ export const en: Catalogue = {
     'A withdrawal of {amount} was detected. The applicable tax rules (plan age, exit conditions) are not computed automatically by this tool — check them yourself or with a tax advisor.',
   'taxPrep.unmatchedSales': '{count} sale(s) with no computable gain (purchase not in the imported statements, see the IFU).',
   'taxPrep.notApplicable': 'No tax-relevant operation detected in this wrapper for this year.',
+  'taxPrep.mintosTaxReportUsed': 'Interest and fees from the Mintos annual tax report: {interest} of interest, {other} of other income (bonuses, discount on bonds…), {withholding} withheld in Latvia.',
 
   // --- Portfolio risk (DEVLOG "Decision 3u.67") -------------------------------
   'risk.title': 'Portfolio risk',

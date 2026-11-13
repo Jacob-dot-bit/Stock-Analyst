@@ -16,11 +16,12 @@ from app.ingest.service import (
     import_mintos_file,
     import_mintos_investments_file,
     import_mintos_transactions_file,
+    import_mintos_tax_report_file,
     import_tax_notice_file,
 )
 from app.ingest.detect import FileKind, detect_file
 from app.messages import MessageCode
-from app.models import ImportBatch, Lot, Position, TaxNotice, Transaction
+from app.models import ImportBatch, Lot, MintosTaxReport, Position, TaxNotice, Transaction
 from app.schemas import ImportBatchOut, ImportPreviewOut, MessageOut
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
@@ -51,6 +52,7 @@ _IMPORTERS = {
     FileKind.AMUNDI_OPERATIONS: (import_amundi_operations_file, "ExportOperations.xlsb"),
     FileKind.BANK_STATEMENT: (import_bank_file, "comptes.xlsx"),
     FileKind.TAX_NOTICE: (import_tax_notice_file, "avis-impot.pdf"),
+    FileKind.MINTOS_TAX_REPORT: (import_mintos_tax_report_file, "mintos-tax-report.pdf"),
 }
 
 
@@ -140,6 +142,7 @@ def undo_import(import_id: int, db: Session = Depends(get_db)) -> Response:
     db.execute(delete(Lot).where(Lot.import_batch_id == import_id))
     db.execute(delete(Transaction).where(Transaction.import_batch_id == import_id))
     db.execute(delete(TaxNotice).where(TaxNotice.import_batch_id == import_id))
+    db.execute(delete(MintosTaxReport).where(MintosTaxReport.import_batch_id == import_id))
     db.delete(batch)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
