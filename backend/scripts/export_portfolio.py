@@ -13,6 +13,17 @@ not from inside a container.
 Output path: override with the `PORTFOLIO_EXPORT_PATH` environment variable
 (default `~/portfolio_export.json`).
 
+Login (DEVLOG 3u.107): calls carry a read-only service token, read from
+`~/.config/stock-analyst/export-token` (override: `PORTFOLIO_EXPORT_TOKEN_FILE`).
+Create it once on the host, the token alone on stdout goes straight to the file:
+
+    install -d -m 700 ~/.config/stock-analyst
+    (umask 077; .venv/bin/python -m app.auth add-token export --scope read \
+        > ~/.config/stock-analyst/export-token)
+
+Without the file the calls go out unauthenticated, which only works while
+`AUTH_REQUIRED=false`.
+
 Usage: python3 scripts/export_portfolio.py
 """
 import json
@@ -27,15 +38,38 @@ from urllib.parse import urlencode
 BASE_URL = "http://127.0.0.1:8000"
 OUT_PATH = Path(os.environ.get("PORTFOLIO_EXPORT_PATH", Path.home() / "portfolio_export.json"))
 BREAKDOWN_DIMENSIONS = ("category", "currency", "country", "sector")
+TOKEN_FILE = Path(
+    os.environ.get("PORTFOLIO_EXPORT_TOKEN_FILE", Path.home() / ".config" / "stock-analyst" / "export-token")
+)
+
+
+def _token() -> str | None:
+    try:
+        return TOKEN_FILE.read_text(encoding="ascii").strip() or None
+    except OSError:
+        return None
+
+
+_TOKEN = _token()
 
 
 def _get(path: str, params: dict | None = None):
     url = f"{BASE_URL}{path}"
     if params:
         url += "?" + urlencode(params)
+    headers = {"Accept": "application/json"}
+    if _TOKEN:
+        headers["Authorization"] = f"Bearer {_TOKEN}"
     try:
-        with urllib.request.urlopen(url, timeout=15) as resp:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=15) as resp:
             return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            why = "token refused" if _TOKEN else f"no token in {TOKEN_FILE}"
+            print(f"export_portfolio: FAILED {path}: HTTP 401, {why}", file=sys.stderr)
+        else:
+            print(f"export_portfolio: FAILED {path}: HTTP {e.code}", file=sys.stderr)
+        return None
     except urllib.error.URLError as e:
         print(f"export_portfolio: FAILED {path}: {e}", file=sys.stderr)
         return None

@@ -335,3 +335,47 @@ class TestCliQr:
         assert cli._print_qr("otpauth://totp/x?secret=ABC") is True
         assert seen.read_text() == "otpauth://totp/x?secret=ABC"
         assert "secret" not in (tmp_path / "seen.args").read_text()
+
+
+class TestDockerBridge:
+    """The sandbox reaches two routes over the docker bridge; with the login
+    required it needs a token there too, and the token opens nothing else."""
+
+    @pytest.fixture
+    def bridge_call(self, db_factory):
+        def override_get_db():
+            session = db_factory()
+            try:
+                yield session
+            finally:
+                session.close()
+
+        def call(method, path, token=None):
+            async def go():
+                transport = httpx.ASGITransport(app=app, client=("172.17.0.5", 40000))
+                headers = {"Authorization": f"Bearer {token}"} if token else {}
+                async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
+                    return await c.request(method, path, headers=headers)
+
+            app.dependency_overrides[get_db] = override_get_db
+            try:
+                return asyncio.run(go())
+            finally:
+                app.dependency_overrides.clear()
+
+        return call
+
+    @pytest.fixture
+    def sandbox_token(self, db_factory, account):
+        with db_factory() as db:
+            return service.add_service_token(db, "sandbox", "write")
+
+    def test_without_token_refused(self, bridge_call, account, auth_on):
+        assert bridge_call("GET", "/api/settings/api-keys").status_code == 401
+        assert bridge_call("POST", "/api/prices/refresh").status_code == 401
+
+    def test_with_token_passes(self, bridge_call, sandbox_token, auth_on):
+        assert bridge_call("GET", "/api/settings/api-keys", sandbox_token).status_code == 200
+
+    def test_token_opens_no_other_route(self, bridge_call, sandbox_token, auth_on):
+        assert bridge_call("GET", "/api/portfolio", sandbox_token).status_code == 403
