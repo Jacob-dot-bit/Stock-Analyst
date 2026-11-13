@@ -152,7 +152,7 @@ class TestWatchlistSignals:
 
     def test_reinforce_when_price_at_or_below_target_and_high_score(self, client, monkeypatch):
         instrument = self._watch("AAA.FR", price=90.0, target_entry_price=100.0)
-        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: 80.0}))
+        monkeypatch.setattr("app.tracking.compute_scores", fake_scores({instrument.id: 80.0}))
 
         row = client.get("/api/watchlist/signals").json()[0]
 
@@ -160,7 +160,7 @@ class TestWatchlistSignals:
 
     def test_hold_when_price_above_target(self, client, monkeypatch):
         instrument = self._watch("AAA.FR", price=110.0, target_entry_price=100.0)
-        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: 80.0}))
+        monkeypatch.setattr("app.tracking.compute_scores", fake_scores({instrument.id: 80.0}))
 
         row = client.get("/api/watchlist/signals").json()[0]
 
@@ -168,7 +168,7 @@ class TestWatchlistSignals:
 
     def test_not_applicable_without_a_target_price(self, client, monkeypatch):
         instrument = self._watch("AAA.FR", price=90.0, target_entry_price=None)
-        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: 80.0}))
+        monkeypatch.setattr("app.tracking.compute_scores", fake_scores({instrument.id: 80.0}))
 
         row = client.get("/api/watchlist/signals").json()[0]
 
@@ -176,7 +176,7 @@ class TestWatchlistSignals:
 
     def test_not_applicable_without_a_score(self, client, monkeypatch):
         instrument = self._watch("AAA.FR", price=90.0, target_entry_price=100.0)
-        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: None}))
+        monkeypatch.setattr("app.tracking.compute_scores", fake_scores({instrument.id: None}))
 
         row = client.get("/api/watchlist/signals").json()[0]
 
@@ -186,7 +186,7 @@ class TestWatchlistSignals:
         """Nothing here is held — a low score at or below target must never
         read as "reduce", since there is nothing to reduce."""
         instrument = self._watch("AAA.FR", price=80.0, target_entry_price=100.0)
-        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: 10.0}))
+        monkeypatch.setattr("app.tracking.compute_scores", fake_scores({instrument.id: 10.0}))
 
         row = client.get("/api/watchlist/signals").json()[0]
 
@@ -210,7 +210,7 @@ class TestWatchlistTargetFlag:
     )
     def test_flag(self, client, monkeypatch, price, composite, expected):
         instrument = self._watch("AAA.FR", price=price, target_entry_price=100.0)
-        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: composite}))
+        monkeypatch.setattr("app.tracking.compute_scores", fake_scores({instrument.id: composite}))
 
         row = client.get("/api/watchlist/signals").json()[0]
 
@@ -218,7 +218,7 @@ class TestWatchlistTargetFlag:
 
     def test_no_flag_without_a_target_price(self, client, monkeypatch):
         instrument = self._watch("AAA.FR", price=90.0, target_entry_price=None)
-        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: 80.0}))
+        monkeypatch.setattr("app.tracking.compute_scores", fake_scores({instrument.id: 80.0}))
 
         row = client.get("/api/watchlist/signals").json()[0]
 
