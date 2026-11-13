@@ -9680,3 +9680,20 @@ read time:
   `data/budget_rules.txt`, ignored by git: this repository is public and
   those names say where I live. One `category: KEYWORD, KEYWORD` line each,
   checked before the generic rules, re-read when the file changes.
+
+## Step 3u.96 — Sparklines and scores written once (2026-11-13)
+
+The same sparkline query — closes of the last 90 days, adjusted for splits
+— was written three times, in `routers/prices.py`, `watchlist.py` and
+`screener.py`; only the set of instruments differed. The three `/scores`
+routes likewise repeated the `compute_scores` + `score_to_out` lines.
+
+- `prices/sparklines.py::sparklines(db, instrument_ids, days)` takes the
+  set as a one-column select (held positions; watched and not held;
+  candidates neither held nor watched) and does the rest.
+- `routers/scoring.py::scores_for(db, instruments)` returns the scores in
+  API shape; the screener still sorts its own, best first.
+
+Same routes, same responses.
+
+Verification: backend suite green.

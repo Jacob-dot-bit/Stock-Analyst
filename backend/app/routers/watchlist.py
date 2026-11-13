@@ -11,20 +11,18 @@ reappear if it's ever fully sold again).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.corporate_actions.service import load_actions_by_instrument, price_factor_from
 from app.db import get_db
 from app.ingest.service import get_or_create_instrument
-from app.models import Instrument, Position, PriceBar, WatchlistItem
+from app.models import Instrument, Position, WatchlistItem
+from app.prices.sparklines import sparklines
 from app.prices.service import is_permanently_unresolvable, latest_bar_date, price_status as _price_status, refresh_instrument
 from app.providers.registry import get_provider_chain
 from app.routers.portfolio import _resolve_current_price
-from app.routers.scoring import score_to_out
+from app.routers.scoring import scores_for
 from app.schemas import (
     InstrumentOut,
     ScoreOut,
@@ -186,10 +184,7 @@ def delete_watchlist_item(item_id: int, db: Session = Depends(get_db)) -> Respon
 
 @router.get("/scores", response_model=list[ScoreOut])
 def get_watchlist_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
-    instruments = _watchlist_instruments(db)
-    config = get_scoring_config()
-    results = compute_scores(db, instruments, config)
-    return [score_to_out(result) for result in results]
+    return scores_for(db, _watchlist_instruments(db))
 
 
 @router.get("/signals", response_model=list[WatchlistSignalOut])
@@ -244,26 +239,10 @@ def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignal
 
 @router.get("/sparklines", response_model=list[SparklineOut])
 def get_watchlist_sparklines(db: Session = Depends(get_db)) -> list[SparklineOut]:
-    """Same shape as `GET /api/prices/sparklines`, joined against
-    `WatchlistItem` instead of `Position`."""
-    since = datetime.now(UTC).date() - timedelta(days=90)
-
-    rows = db.execute(
-        select(PriceBar.instrument_id, PriceBar.bar_date, PriceBar.close)
-        .join(WatchlistItem, WatchlistItem.instrument_id == PriceBar.instrument_id)
-        .where(
-            PriceBar.bar_date >= since,
-            PriceBar.close.is_not(None),
-            ~select(Position.id).where(Position.instrument_id == PriceBar.instrument_id).exists(),
-        )
-        .order_by(PriceBar.instrument_id, PriceBar.bar_date)
-        .distinct()
-    ).all()
-
-    actions_by_instrument = load_actions_by_instrument(db, list({instrument_id for instrument_id, _, _ in rows}))
-    series: dict[int, list[float]] = {}
-    for instrument_id, bar_date, close in rows:
-        factor = price_factor_from(actions_by_instrument.get(instrument_id, []), bar_date)
-        series.setdefault(instrument_id, []).append(close * factor)
-
-    return [SparklineOut(instrument_id=instrument_id, closes=closes) for instrument_id, closes in series.items()]
+    """Same shape as `GET /api/prices/sparklines`, for watched, unheld instruments."""
+    return sparklines(
+        db,
+        select(WatchlistItem.instrument_id).where(
+            ~select(Position.id).where(Position.instrument_id == WatchlistItem.instrument_id).exists()
+        ),
+    )
