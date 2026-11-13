@@ -1,14 +1,16 @@
 import { Fragment, useState } from 'react'
 import type { Score, ScreenerCandidate } from '../api/types'
+import { matchesInstrument } from '../format'
 import { useI18n } from '../i18n'
 import { useHiddenColumns } from '../hooks/useHiddenColumns'
 import { ColumnPicker } from './ColumnPicker'
 import { InsightsBadge } from './InsightsBadge'
 import { InsightsDetailRow } from './InsightsDetailRow'
 import { PriceStatusBadge } from './PriceStatusBadge'
+import { RowActions } from './RowActions'
 import { ScoreBadge } from './ScoreBadge'
 import { ScoreDetailRow } from './ScoreDetailRow'
-import { SortableHeader, type SortState } from './SortableHeader'
+import { SortableHeader, sortRows, useSort } from './SortableHeader'
 import { Sparkline } from './Sparkline'
 
 interface Props {
@@ -46,7 +48,7 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
   // The server already ranks by composite score descending — default the
   // table's own sort to match, since ranking is the whole point of a
   // screener (unlike the watchlist, which defaults to most-recently-added).
-  const [sort, setSort] = useState<SortState<SortableKey>>({ key: 'score', direction: 'desc' })
+  const [sort, handleSort] = useSort<SortableKey>({ key: 'score', direction: 'desc' })
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [expandedInsightsId, setExpandedInsightsId] = useState<number | null>(null)
@@ -57,9 +59,6 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
   const [rowWarning, setRowWarning] = useState<string | null>(null)
   const { hidden, toggle } = useHiddenColumns('stock-analyst.screener.columns')
 
-  function handleSort(key: SortableKey) {
-    setSort((prev) => (prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }))
-  }
 
   function startEdit(item: ScreenerCandidate) {
     setEditingId(item.id)
@@ -96,6 +95,9 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
     { key: 'added', label: t('watchlist.addedOn') },
     { key: 'insights', label: t('table.insights') },
   ]
+  // Each cell repeats its column name, shown as a label when the table
+  // collapses into one card per row on a phone (see .table-stack in index.css).
+  const colLabel = (key: string) => columns.find((c) => c.key === key)?.label
 
   if (items.length === 0) {
     return <div className="empty">{t('gems.empty')}</div>
@@ -107,33 +109,21 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
   // rather than relying on that fallthrough.
   const minPrice = priceMin.trim() === '' ? null : Number(priceMin)
   const maxPrice = priceMax.trim() === '' ? null : Number(priceMax)
-  const visible = items
-    .filter(
-      (i) =>
-        !query ||
-        i.instrument.broker_symbol.toLowerCase().includes(query) ||
-        (i.instrument.name?.toLowerCase().includes(query) ?? false),
-    )
-    .filter((i) => {
-      if (minPrice === null && maxPrice === null) return true
-      // A candidate with no known price can't be confirmed to be within a
-      // price filter's range — excluded rather than shown as a false match.
-      if (i.current_price === null) return false
-      if (minPrice !== null && i.current_price < minPrice) return false
-      if (maxPrice !== null && i.current_price > maxPrice) return false
-      return true
-    })
-    .slice()
-    .sort((a, b) => {
-      const av = sortValue(a, sort.key, scores)
-      const bv = sortValue(b, sort.key, scores)
-      if (av === null || av === undefined) return bv === null || bv === undefined ? 0 : 1
-      if (bv === null || bv === undefined) return -1
-
-      const dir = sort.direction === 'asc' ? 1 : -1
-      if (typeof av === 'string' && typeof bv === 'string') return av.localeCompare(bv) * dir
-      return ((av as number) - (bv as number)) * dir
-    })
+  const visible = sortRows(
+    items
+      .filter((i) => matchesInstrument(i.instrument, query))
+      .filter((i) => {
+        if (minPrice === null && maxPrice === null) return true
+        // A candidate with no known price can't be confirmed to be within a
+        // price filter's range — excluded rather than shown as a false match.
+        if (i.current_price === null) return false
+        if (minPrice !== null && i.current_price < minPrice) return false
+        if (maxPrice !== null && i.current_price > maxPrice) return false
+        return true
+      }),
+    sort,
+    (row, key) => sortValue(row, key, scores),
+  )
 
   return (
     <>
@@ -157,7 +147,7 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
       )}
 
       <div className="table-wrap">
-        <table>
+        <table className="table-stack">
           <thead>
             <tr>
               <SortableHeader label={t('table.instrument')} sortKeyName="symbol" sort={sort} onSort={handleSort} />
@@ -187,7 +177,7 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
               return (
                 <Fragment key={item.id}>
                   <tr>
-                    <td>
+                    <td className="cell-primary">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <PriceStatusBadge instrument={item.instrument} />
                         <strong>{item.instrument.broker_symbol}</strong>
@@ -208,7 +198,7 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
                       )}
                     </td>
                     {!hidden.has('type') && (
-                      <td>
+                      <td data-label={colLabel('type')}>
                         {item.instrument.category ? (
                           <span className="tag neutral">{t(`breakdown.category.${item.instrument.category}`)}</span>
                         ) : (
@@ -217,15 +207,15 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
                       </td>
                     )}
                     {!hidden.has('price') && (
-                      <td className="num">{item.current_price !== null ? formatNumber(item.current_price) : '—'}</td>
+                      <td className="num" data-label={colLabel('price')}>{item.current_price !== null ? formatNumber(item.current_price) : '—'}</td>
                     )}
                     {!hidden.has('trend') && (
-                      <td>
+                      <td data-label={colLabel('trend')}>
                         <Sparkline closes={sparklines[item.instrument.id] ?? []} />
                       </td>
                     )}
                     {!hidden.has('score') && (
-                      <td className="num">
+                      <td className="num" data-label={colLabel('score')}>
                         <ScoreBadge
                           score={score}
                           expanded={expandedId === item.instrument.id}
@@ -233,9 +223,9 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
                         />
                       </td>
                     )}
-                    {!hidden.has('added') && <td>{formatDate(item.added_at)}</td>}
+                    {!hidden.has('added') && <td data-label={colLabel('added')}>{formatDate(item.added_at)}</td>}
                     {!hidden.has('insights') && (
-                      <td>
+                      <td data-label={colLabel('insights')}>
                         <InsightsBadge
                           expanded={expandedInsightsId === item.instrument.id}
                           onToggle={() =>
@@ -244,26 +234,15 @@ export function ScreenerTable({ items, sparklines, scores, onDelete, onUpdate, p
                         />
                       </td>
                     )}
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {editingId === item.id ? (
-                        <>
-                          <button className="link" disabled={rowBusy} onClick={() => void saveEdit(item.id)}>
-                            {rowBusy ? t('common.saving') : t('common.save')}
-                          </button>{' '}
-                          <button className="link" disabled={rowBusy} onClick={cancelEdit}>
-                            {t('common.cancel')}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button className="link" onClick={() => startEdit(item)}>
-                            {t('common.edit')}
-                          </button>{' '}
-                          <button className="link" onClick={() => onDelete(item.id)}>
-                            {t('common.delete')}
-                          </button>
-                        </>
-                      )}
+                    <td className="cell-actions" style={{ whiteSpace: 'nowrap' }}>
+                      <RowActions
+                        editing={editingId === item.id}
+                        busy={rowBusy}
+                        onEdit={() => startEdit(item)}
+                        onDelete={() => onDelete(item.id)}
+                        onSave={() => void saveEdit(item.id)}
+                        onCancel={cancelEdit}
+                      />
                     </td>
                   </tr>
                   {expandedId === item.instrument.id && score && (

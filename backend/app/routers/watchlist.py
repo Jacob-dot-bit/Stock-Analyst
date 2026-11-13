@@ -16,11 +16,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.ingest.service import get_or_create_instrument
-from app.models import Instrument, Position, WatchlistItem
+from app.models import Instrument, WatchlistItem
 from app.prices.sparklines import sparklines
-from app.prices.service import is_permanently_unresolvable, latest_bar_date, price_status as _price_status, refresh_instrument
-from app.providers.registry import get_provider_chain
+from app.prices.service import price_status as _price_status
 from app.routers.portfolio import _resolve_current_price
 from app.routers.scoring import scores_for
 from app.schemas import (
@@ -35,7 +33,7 @@ from app.schemas import (
 from app.scoring.config import get_scoring_config
 from app.scoring.service import compute_scores, score_band
 from app.symbols.duplicates import check_for_duplicate
-from app.symbols.mapping import looks_like_equity
+from app.tracking import instrument_to_follow, not_held
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
@@ -46,7 +44,7 @@ def _watchlist_instruments(db: Session) -> list[Instrument]:
     query = (
         select(Instrument)
         .join(WatchlistItem, WatchlistItem.instrument_id == Instrument.id)
-        .where(~select(Position.id).where(Position.instrument_id == Instrument.id).exists())
+        .where(not_held(Instrument.id))
         .distinct()
     )
     return list(db.execute(query).scalars())
@@ -76,53 +74,14 @@ def _watchlist_item_out(db: Session, item: WatchlistItem) -> WatchlistItemOut:
 
 @router.post("", response_model=WatchlistItemOut, status_code=status.HTTP_201_CREATED)
 def add_watchlist_item(payload: WatchlistItemIn, db: Session = Depends(get_db)) -> WatchlistItemOut:
-    """Add a symbol to the watchlist.
-
-    Best-effort fetches this one instrument's price history right away (not
-    budget-limited like the batch refresh, so a slow/throttled provider chain
-    can make this take a few seconds) so the new row shows a real price
-    immediately rather than waiting for the next global refresh.
-    """
-    # A watchlist add has no broker-supplied category (unlike an import row),
-    # same gap `create_manual_position` already has — without this, `category`
-    # stays `None` and `compute_scores` silently excludes the instrument from
-    # every pillar, defeating the whole point of watching it. `looks_like_equity`
-    # is this codebase's own existing heuristic for exactly this situation
-    # ("manual entries, where no category exists" — its own docstring).
-    category = "STOCK" if looks_like_equity(payload.broker_symbol) else None
-    instrument = get_or_create_instrument(db, payload.broker_symbol, currency=payload.currency, category=category)
-
-    already_held = db.execute(
-        select(Position.id).where(Position.instrument_id == instrument.id).limit(1)
-    ).first()
-    if already_held:
-        raise HTTPException(
-            status_code=400,
-            detail="This instrument is currently a live position — track it from the "
-            "Portfolio page instead.",
-        )
-
-    already_watched = db.execute(
-        select(WatchlistItem.id).where(WatchlistItem.instrument_id == instrument.id).limit(1)
-    ).first()
-    if already_watched:
-        raise HTTPException(
-            status_code=400,
-            detail="Already on your watchlist — edit it from the table instead of "
-            "re-adding it.",
-        )
-
-    # Checked before the row exists, not after: a symbol no provider recognizes
-    # would otherwise sit on the watchlist forever, silently re-asked and
-    # re-failed on every future refresh for zero chance of success.
-    message = refresh_instrument(db, instrument, get_provider_chain(), force=False)
-    db.commit()
-    if is_permanently_unresolvable(message) and latest_bar_date(db, instrument.id) is None:
-        raise HTTPException(
-            status_code=422,
-            detail=f"No price provider recognizes '{payload.broker_symbol}' — check the "
-            "symbol format, or use the search suggestions instead of typing it by hand.",
-        )
+    """Add a symbol to the watchlist — refusals and the immediate price
+    fetch are `tracking.instrument_to_follow`'s."""
+    instrument = instrument_to_follow(
+        db,
+        payload.broker_symbol,
+        payload.currency,
+        [(WatchlistItem, "Already on your watchlist — edit it from the table instead of re-adding it.")],
+    )
 
     item = WatchlistItem(
         instrument_id=instrument.id,
@@ -145,9 +104,7 @@ def list_watchlist(db: Session = Depends(get_db)) -> list[WatchlistItemOut]:
     `GET /api/prices/{id}/history`."""
     items = list(
         db.execute(
-            select(WatchlistItem).where(
-                ~select(Position.id).where(Position.instrument_id == WatchlistItem.instrument_id).exists()
-            )
+            select(WatchlistItem).where(not_held(WatchlistItem.instrument_id))
         ).scalars()
     )
     return [_watchlist_item_out(db, item) for item in items]
@@ -197,9 +154,7 @@ def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignal
     """
     items = list(
         db.execute(
-            select(WatchlistItem).where(
-                ~select(Position.id).where(Position.instrument_id == WatchlistItem.instrument_id).exists()
-            )
+            select(WatchlistItem).where(not_held(WatchlistItem.instrument_id))
         ).scalars()
     )
     instruments = [item.instrument for item in items]
@@ -242,7 +197,5 @@ def get_watchlist_sparklines(db: Session = Depends(get_db)) -> list[SparklineOut
     """Same shape as `GET /api/prices/sparklines`, for watched, unheld instruments."""
     return sparklines(
         db,
-        select(WatchlistItem.instrument_id).where(
-            ~select(Position.id).where(Position.instrument_id == WatchlistItem.instrument_id).exists()
-        ),
+        select(WatchlistItem.instrument_id).where(not_held(WatchlistItem.instrument_id)),
     )

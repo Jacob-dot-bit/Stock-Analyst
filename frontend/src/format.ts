@@ -19,3 +19,9 @@ export function rangeLabel(minPct: number | null, maxPct: number | null, formatN
   if (minPct !== null) return `≥ ${formatNumber(minPct)}%`
   return '—'
 }
+
+/** Whether a table's free-text search (already trimmed and lower-cased)
+ * matches an instrument's symbol or name. An empty query matches everything. */
+export function matchesInstrument(instrument: { broker_symbol: string; name?: string | null }, query: string): boolean {
+  return !query || instrument.broker_symbol.toLowerCase().includes(query) || (instrument.name?.toLowerCase().includes(query) ?? false)
+}

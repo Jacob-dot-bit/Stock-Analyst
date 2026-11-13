@@ -9767,6 +9767,29 @@ blur that lets a click land.
 
 Verification: `tsc -b` clean.
 
+## Step 3u.98 — Watchlist and gems share their mechanics (2026-11-13)
+
+The watchlist and the gems (screener) list are the same idea — an
+instrument followed without being held — and their code had been copied
+from one to the other: ~100 identical lines between the two routers, ~170
+between the two tables. They had started to drift: the gems table never got
+the one-card-per-row layout the watchlist has on a phone.
+
+- `app/tracking.py`: `instrument_to_follow` (create the instrument, refuse
+  it when held or already listed, fetch its prices, refuse a symbol no
+  provider knows) and the `not_held` / `not_watched` anti-joins. Both
+  routers keep their table, their routes and their own messages.
+- Front: `useSort` + `sortRows` (also used by the positions table, which had
+  the same comparator), `matchesInstrument` for the search box, and
+  `RowActions` for the Edit/Delete — Save/Cancel links.
+- The gems table now collapses into cards on a phone, like the watchlist.
+
+Two pages stay: the watchlist is for entry timing (target price, note,
+signal), the gems list for ranking candidates by score.
+
+Verification: backend suite green; `tsc -b` clean; both pages checked in a
+browser on demo data, at desktop and phone width.
+
 ## Step 3u.99 — All data catch-up actions in one tab (2026-11-13)
 
 Seven catch-up actions were spread over six places: the ISIN and FIGI
