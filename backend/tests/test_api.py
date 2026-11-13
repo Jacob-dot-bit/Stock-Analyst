@@ -71,7 +71,7 @@ class TestEmptyPortfolio:
 class TestImportEndpoint:
     def test_upload_and_read_back(self, client, xtb_export):
         response = client.post(
-            "/api/imports/xtb",
+            "/api/imports/auto",
             files={
                 "file": (
                     "EUR_1234567.xlsx",
@@ -98,7 +98,7 @@ class TestImportEndpoint:
 
     def test_accounts_are_broken_down(self, client, xtb_export, xtb_pea_export):
         for name, content in (("EUR.xlsx", xtb_export), ("PEA.xlsx", xtb_pea_export)):
-            client.post("/api/imports/xtb", files={"file": (name, content, "application/octet-stream")})
+            client.post("/api/imports/auto", files={"file": (name, content, "application/octet-stream")})
 
         accounts = {a["account"]: a for a in client.get("/api/portfolio").json()["accounts"]}
 
@@ -107,21 +107,20 @@ class TestImportEndpoint:
         assert accounts["My Trades"]["positions_count"] == 2
 
     def test_empty_file_is_rejected(self, client):
-        response = client.post("/api/imports/xtb", files={"file": ("empty.xlsx", b"", "application/octet-stream")})
+        response = client.post("/api/imports/auto", files={"file": ("empty.xlsx", b"", "application/octet-stream")})
 
         assert response.status_code == 400
 
-    def test_unsupported_format_reports_warning_not_crash(self, client):
+    def test_unrecognised_file_is_rejected_not_crash(self, client):
         response = client.post(
-            "/api/imports/xtb", files={"file": ("report.pdf", b"%PDF-1.4", "application/pdf")}
+            "/api/imports/auto", files={"file": ("report.pdf", b"%PDF-1.4", "application/pdf")}
         )
 
-        assert response.status_code == 200
-        assert response.json()["warnings"]
+        assert response.status_code == 400
 
     def test_sections_describe_each_sheet(self, client, xtb_export):
         response = client.post(
-            "/api/imports/xtb",
+            "/api/imports/auto",
             files={"file": ("EUR_1234567.xlsx", xtb_export, "application/octet-stream")},
         )
 
@@ -142,16 +141,16 @@ class TestLanguageNeutrality:
 
     def test_warnings_are_codes_with_parameters(self, client):
         response = client.post(
-            "/api/imports/xtb", files={"file": ("report.pdf", b"%PDF-1.4", "application/pdf")}
+            "/api/imports/auto/preview", files={"file": ("report.pdf", b"%PDF-1.4", "application/pdf")}
         )
 
         warning = response.json()["warnings"][0]
-        assert warning["code"] == "import.unsupportedFileType"
-        assert warning["params"] == {"extension": ".pdf"}
+        assert warning["code"] == "import.fileNotRecognised"
+        assert warning.get("params") in (None, {})
 
     def test_no_warning_contains_a_sentence(self, client, xtb_export):
         client.post(
-            "/api/imports/xtb",
+            "/api/imports/auto",
             files={"file": ("EUR_1234567.xlsx", xtb_export, "application/octet-stream")},
         )
 

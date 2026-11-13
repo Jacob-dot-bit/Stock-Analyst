@@ -102,42 +102,6 @@ export const pl: Catalogue = {
   'import.auto.multiAccount':
     'Ponowny import tego samego pliku nie tworzy duplikatów. Dla tej samej wartości (pożyczki Mintos, fundusze Amundi) zawsze wygrywa najnowszy eksport. Eksport XTB obejmuje tylko jedno konto: importuj każde osobno.',
   'import.auto.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx, .csv, .pdf, .xlsb)',
-  'import.xtb.title': 'Zaimportuj wyciąg XTB',
-  'import.xtb.instructions':
-    'W xStation: Account history → Export → okres „All”, format Excel. XTB wyłączyło swoje API 14 marca 2025 roku, więc eksport pliku to jedyny pewny sposób pobrania pozycji. Aplikacja nie prosi o żadne dane logowania ani ich nie przechowuje.',
-  'import.xtb.multiAccount':
-    'Jeden eksport obejmuje tylko jeden rachunek. Jeśli masz ich kilka (na przykład maklerski i PEA), wyeksportuj je osobno i zaimportuj oba pliki: współistnieją, nie nadpisując się wzajemnie.',
-  'import.xtb.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx lub .csv)',
-  'import.mintos.title': 'Zaimportuj wyciąg Mintos',
-  'import.mintos.instructions':
-    'Portfolio → Account Statement, jeden plik PDF na kwartał. Nie istnieje eksport zbiorczy: zaimportuj każdy kwartalny wyciąg osobno (kolejność nie ma znaczenia).',
-  'import.mintos.multiAccount':
-    'Wyciąg obejmuje dwa odrębne portfele: ETF-y „Core ETF 90” stają się zwykłymi pozycjami, a portfel pożyczek „Mintos Core” staje się jednym zbiorczym składnikiem wycenianym przez Mintos.',
-  'import.mintos.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.pdf)',
-  'import.mintos-investments.title': 'Zaktualizuj wartość Mintos (eksport Investments)',
-  'import.mintos-investments.instructions':
-    'Na Mintos: My investments → Export (.xlsx). W przeciwieństwie do kwartalnego wyciągu PDF, ten eksport pokazuje rzeczywistą wartość portfela pożyczek na dzień eksportu — przydatne do odświeżenia kwoty bez czekania na kolejny kwartał.',
-  'import.mintos-investments.multiAccount':
-    'Nowszy eksport zawsze wygrywa w wyświetlanej wartości, niezależnie czy pochodzi z tego pliku, czy z kwartalnego wyciągu PDF — zawsze pokazywany jest ten nowszy z obu.',
-  'import.mintos-investments.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx)',
-  'import.mintos-transactions.title': 'Zyski Mintos (wyciąg z konta)',
-  'import.mintos-transactions.instructions':
-    'Na Mintos: Wyciąg z konta (Account statement) → Export, jako .xlsx lub .csv. Ten plik zawiera każde odsetki, bonusy, opłaty i pobrany podatek: służy do obliczenia rzeczywistego zysku portfela pożyczek. Nie zmienia jego wartości — do tego służy eksport My investments powyżej.',
-  'import.mintos-transactions.multiAccount':
-    'Ponowny import tego samego wyciągu nie tworzy duplikatów. Wyciąg obejmujący dłuższy okres uzupełnia poprzednie.',
-  'import.mintos-transactions.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsx, .csv)',
-  'import.amundi.title': 'Zaimportuj wyciąg Amundi ESR',
-  'import.amundi.instructions':
-    'Twoje konto na amundi-ee.com → roczny wyciąg (PDF). Każdy wyciąg to zdjęcie stanu na koniec roku, a nie historia transakcji z datami — zaimportuj każdy rok osobno.',
-  'import.amundi.multiAccount':
-    'Starszy wyciąg zaimportowany po nowszym nigdy nie nadpisuje bieżących pozycji — pozostaje dostępny w historii importów poniżej.',
-  'import.amundi.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.pdf)',
-  'import.amundi-synthese.title': 'Zaktualizuj wartość Amundi (eksport Synthese)',
-  'import.amundi-synthese.instructions':
-    'Na koncie amundi-ee.com: eksport „Synthese" (.xlsb). W przeciwieństwie do rocznego wyciągu PDF, ten eksport pokazuje rzeczywistą wartość każdego funduszu na dzień eksportu — przydatne do odświeżenia kwoty bez czekania na kolejny roczny wyciąg.',
-  'import.amundi-synthese.multiAccount':
-    'Nowszy eksport zawsze wygrywa w wyświetlanej wartości, niezależnie czy pochodzi z tego pliku, czy z rocznego wyciągu PDF — zawsze pokazywany jest ten nowszy z obu.',
-  'import.amundi-synthese.dropzone': 'Przeciągnij plik tutaj albo wskaż go ręcznie (.xlsb)',
   'import.chooseFile': 'Wybierz plik',
   'import.importing': 'Importowanie…',
   'import.failed': 'Import nie powiódł się: {error}',
