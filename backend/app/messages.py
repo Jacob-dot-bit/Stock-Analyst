@@ -72,6 +72,14 @@ class MessageCode:
     #: {count} were not already on file from an earlier export.
     BANK_OPERATIONS_KEPT = "import.bankOperationsKept"  # {count, inserted}
 
+    # --- Income tax notice (`ingest/tax_notice_import.py`) -----------------------
+    #: The notice of income year {year} kept, {lines} amount lines.
+    TAX_NOTICE_KEPT = "import.taxNoticeKept"  # {year, lines}
+    #: Same, replacing the notice already on file for that year.
+    TAX_NOTICE_REPLACED = "import.taxNoticeReplaced"  # {year, lines}
+    #: Recognised as a notice, but no year or no amount line found in it.
+    TAX_NOTICE_UNREADABLE = "import.taxNoticeUnreadable"
+
     # --- Single upload slot (`ingest/detect.py`) -----------------------------
     #: Which export was recognised, as ``import.detected.<FileKind value>`` —
     #: one code per kind so each locale words it fully. Shown first in the

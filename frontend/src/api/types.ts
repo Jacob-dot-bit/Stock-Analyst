@@ -1219,3 +1219,32 @@ export interface BudgetOperations {
   since: string | null
   operations: BudgetOperation[]
 }
+
+/** What the income tax notice of one year says — see backend
+ * `ingest/tax_notice_import.py` (Step 3u.109). */
+export interface TaxNoticeFigures {
+  gross_income: number | null
+  taxable_income: number | null
+  scale_tax: number | null
+  net_tax: number | null
+  tax_due: number | null
+  reference_income: number | null
+  /** Left to pay; negative when refunded. */
+  balance: number | null
+  withholding_rate: number | null
+  /** Retirement savings ceiling for next year's payments, per declarant. */
+  retirement_ceiling: number[]
+}
+
+export interface TaxNoticeLine {
+  section: string
+  label: string
+  values: number[]
+}
+
+export interface TaxNotice {
+  income_year: number
+  imported_at: string
+  figures: TaxNoticeFigures
+  lines: TaxNoticeLine[]
+}

@@ -61,6 +61,7 @@ import type {
   ScreenerCandidate,
   Sparkline,
   SymbolSearchResult,
+  TaxNotice,
   TaxYearSummary,
   Transaction,
   TransactionList,
@@ -278,6 +279,7 @@ export const api = {
   getTaxYears: () => request<{ years: number[] }>('/api/tax/years'),
 
   getTaxSummary: (year: number) => request<TaxYearSummary>(`/api/tax/summary?year=${year}`),
+  getTaxNotices: () => request<TaxNotice[]>('/api/tax/notices'),
 
   createBackup: () => request<Backup>('/api/backup', { method: 'POST' }),
 

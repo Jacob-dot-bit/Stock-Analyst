@@ -30,6 +30,7 @@ from app.ingest.amundi_operations_import import (
 )
 from app.ingest.amundi_synthese_import import parse_amundi_synthese_export
 from app.ingest.bank_import import BankLine, BrokerTransfer, ParsedBankExport, parse_bank_export
+from app.ingest.tax_notice_import import parse_tax_notice
 from app.ingest.mintos_import import (
     MINTOS_CORE_ACCOUNT,
     MINTOS_CORE_BROKER_SYMBOL,
@@ -59,6 +60,7 @@ from app.models import (
     Position,
     Source,
     SymbolOverride,
+    TaxNotice,
     Transaction,
     TxType,
 )
@@ -1655,6 +1657,49 @@ def import_bank_file(
     if extra:
         batch.warnings = [*batch.warnings, *extra]
 
+    return _finish_import(db, batch, commit)
+
+
+def import_tax_notice_file(
+    db: Session, content: bytes, filename: str, *, commit: bool = True
+) -> ImportBatch | dict[str, Any]:
+    """Keep what an income tax notice says (`ingest/tax_notice_import.py`):
+    no position, no transaction, one `tax_notices` row for its income year,
+    replacing the one already there. See DEVLOG "Step 3u.109"."""
+    parsed = parse_tax_notice(content)
+    batch = _new_batch(
+        db,
+        content,
+        filename=filename,
+        warnings=[],
+        sections=[],
+        accounts=[],
+        positions_found=0,
+        transactions_found=len(parsed.lines),
+    )
+    if parsed.is_empty:
+        batch.warnings = [Message(MessageCode.TAX_NOTICE_UNREADABLE).as_dict()]
+        return _finish_import(db, batch, commit)
+
+    replaced = db.execute(select(TaxNotice).where(TaxNotice.income_year == parsed.income_year)).scalar_one_or_none()
+    if replaced is not None:
+        db.delete(replaced)
+        db.flush()
+    db.add(
+        TaxNotice(
+            income_year=parsed.income_year,
+            figures=parsed.figures_dict(),
+            lines=parsed.lines_list(),
+            import_batch_id=batch.id,
+        )
+    )
+    batch.transactions_inserted = len(parsed.lines)
+    batch.warnings = [
+        Message(
+            MessageCode.TAX_NOTICE_REPLACED if replaced is not None else MessageCode.TAX_NOTICE_KEPT,
+            {"year": parsed.income_year, "lines": len(parsed.lines)},
+        ).as_dict()
+    ]
     return _finish_import(db, batch, commit)
 
 

@@ -278,6 +278,23 @@ class BankOperation(Base):
     import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
 
 
+class TaxNotice(Base):
+    """What the income tax notice of one year says (`ingest/tax_notice_import.py`):
+    named figures and every amount line, as printed. One row per income
+    year: a newer notice for the same year (a corrected one) replaces it.
+    Nothing from the address block is kept. See DEVLOG "Step 3u.109".
+    """
+
+    __tablename__ = "tax_notices"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    income_year: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    figures: Mapped[dict] = mapped_column(JSON, default=dict)
+    lines: Mapped[list] = mapped_column(JSON, default=list)
+    imported_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
+
+
 class Position(Base):
     """An open holding. Comes from a broker export or from manual entry."""
 
