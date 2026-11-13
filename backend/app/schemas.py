@@ -1374,6 +1374,38 @@ class TaxYearsAvailableOut(BaseModel):
     years: list[int]
 
 
+class TaxNoticeFiguresOut(BaseModel):
+    """Named figures of an income tax notice — see `ingest/tax_notice_import.py`."""
+
+    gross_income: int | None = None
+    taxable_income: int | None = None
+    scale_tax: int | None = None
+    net_tax: int | None = None
+    tax_due: int | None = None
+    reference_income: int | None = None
+    #: Left to pay according to the notice; negative when refunded.
+    balance: int | None = None
+    withholding_rate: float | None = None
+    #: Retirement savings (PER) ceiling for the next year's payments, per declarant.
+    retirement_ceiling: list[int] = Field(default_factory=list)
+
+
+class TaxNoticeLineOut(BaseModel):
+    section: str
+    label: str
+    #: One amount per declarant column then the total, as printed.
+    values: list[int]
+
+
+class TaxNoticeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    income_year: int
+    imported_at: datetime
+    figures: TaxNoticeFiguresOut
+    lines: list[TaxNoticeLineOut]
+
+
 class DividendSummaryRowOut(BaseModel):
     """One calendar year × account's dividend totals — see
     `dividends/service.py::dividend_summary`. Computed directly from

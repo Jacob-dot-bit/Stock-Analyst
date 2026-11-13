@@ -10008,3 +10008,33 @@ driven in Chromium against a real backend with `AUTH_REQUIRED=true`
 (wrong password, code asked, wrong code, right code, cookie flags, a raw
 write without the header refused, session lost mid-visit, sign-out, phone
 width), plus a fresh install with no account opening straight on the app.
+
+## Step 3u.109 — Income tax notice as one more import (2026-11-13)
+
+The annual tax prep only had the app's own sums. The tax office's notice
+(the PDF from impots.gouv.fr) is what those sums must agree with, and it
+says things the app cannot know: taxable income after deductions, the
+reference income, the withholding rate, the unused retirement savings
+ceiling.
+
+- `ingest/tax_notice_import.py` reads the notice with pdfplumber. The first
+  page is an address block: only the year and the "left to pay" sentence
+  are read there, the name, address and tax number are not kept. On the
+  following pages, every line printed with dot leaders becomes
+  `{section, label, values}`, one value per declarant column then the
+  total, a leading `-`/`+`/`=` kept as the sign. Two lines have no leaders
+  and are read on their own (tax from the scale, tax due), plus the
+  withholding rate. A few labels are also named figures
+  (`TaxNoticeFigures`).
+- Detection runs first among the PDFs: the notice speaks of retirement
+  savings and could otherwise pass for an Amundi statement.
+- `tax_notices` table, one row per income year: a corrected notice for the
+  same year replaces the earlier one. Undoing the import removes it.
+- `GET /api/tax/notices` and `/api/tax/notices/{year}`; the tax prep page
+  shows the notice of the selected year, its lines folded away, and offers
+  the year even when no transaction falls in it.
+
+Verification: tests on a made-up notice built as a small PDF (parsing,
+signs, columns, sections, nothing from the address block kept, detection,
+import, replacement, preview, undo); full suite; checked once on a real
+notice outside the repository.

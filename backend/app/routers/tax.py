@@ -10,14 +10,17 @@ import csv
 import io
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.messages import Message, TaxPrepNote
+from app.models import TaxNotice
 from app.schemas import (
     MessageOut,
     TaxEnvelopeSummaryOut,
+    TaxNoticeOut,
     TaxOtherFlowOut,
     TaxYearSummaryOut,
     TaxYearsAvailableOut,
@@ -45,6 +48,22 @@ def _envelope_out(envelope: TaxEnvelopeSummary) -> TaxEnvelopeSummaryOut:
         status=envelope.status,
         notes=[MessageOut(**m.as_dict()) for m in envelope.notes],
     )
+
+
+@router.get("/notices", response_model=list[TaxNoticeOut])
+def list_tax_notices(db: Session = Depends(get_db)) -> list[TaxNotice]:
+    """Every income tax notice imported, newest income year first: what
+    the tax office worked out, to set against this app's own figures. See
+    DEVLOG "Step 3u.109"."""
+    return list(db.execute(select(TaxNotice).order_by(TaxNotice.income_year.desc())).scalars())
+
+
+@router.get("/notices/{year}", response_model=TaxNoticeOut)
+def get_tax_notice(year: int, db: Session = Depends(get_db)) -> TaxNotice:
+    notice = db.execute(select(TaxNotice).where(TaxNotice.income_year == year)).scalar_one_or_none()
+    if notice is None:
+        raise HTTPException(status_code=404, detail="No tax notice for that year.")
+    return notice
 
 
 @router.get("/years", response_model=TaxYearsAvailableOut)

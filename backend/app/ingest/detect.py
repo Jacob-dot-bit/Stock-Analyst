@@ -1,7 +1,7 @@
 """Recognise which broker export a file is from its content, so a single
 upload slot can take any of them.
 
-Eight files are supported, and each one has an unambiguous signature:
+Nine files are supported, and each one has an unambiguous signature:
 
 - Mintos quarterly "Periodic statement" — a PDF mentioning Mintos;
 - Amundi ESR annual statement — a PDF mentioning Amundi;
@@ -11,6 +11,8 @@ Eight files are supported, and each one has an unambiguous signature:
 - Mintos "My investments" — a sheet whose header has ``Montant investi``;
 - Mintos account statement — a sheet or csv whose header has
   ``Mouvement`` and ``Type de paiement``;
+- income tax notice from impots.gouv.fr — a PDF titled "Impôt sur les
+  revenus de <year>" that gives a "Revenu fiscal de référence";
 - bank "Vos comptes" export (Monabanq and the rest of the Crédit Mutuel
   group) — an .xlsx whose first cell is ``Votre situation financière au``;
 - XTB xStation report — any other .xlsx/.csv. Its tables do not start on
@@ -33,6 +35,7 @@ import pdfplumber
 from app.ingest.amundi_operations_import import SHEET_NAME as _AMUNDI_OPERATIONS_SHEET
 from app.ingest.amundi_synthese_import import _SHEET_NAME as _AMUNDI_SYNTHESE_SHEET
 from app.ingest.bank_import import looks_like_bank_export
+from app.ingest.tax_notice_import import looks_like_tax_notice
 from app.ingest.readers import header_cells, xlsb_sheet_names, xlsx_first_sheet
 
 
@@ -45,6 +48,7 @@ class FileKind(str, Enum):
     AMUNDI_SYNTHESE = "amundi_synthese"
     AMUNDI_OPERATIONS = "amundi_operations"
     BANK_STATEMENT = "bank_statement"
+    TAX_NOTICE = "tax_notice"
 
     @property
     def broker(self) -> str:
@@ -67,6 +71,9 @@ def _classify_header(header: list[str]) -> FileKind:
 def _pdf_kind(content: bytes) -> FileKind | None:
     with pdfplumber.open(io.BytesIO(content)) as pdf:
         text = " ".join((page.extract_text() or "") for page in pdf.pages[:2]).lower()
+    # First: a notice mentions savings plans, never a broker by name.
+    if looks_like_tax_notice(text):
+        return FileKind.TAX_NOTICE
     if "mintos" in text:
         return FileKind.MINTOS_STATEMENT
     if any(hint in text for hint in _AMUNDI_PDF_HINTS):
