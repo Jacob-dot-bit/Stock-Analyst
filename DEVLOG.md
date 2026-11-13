@@ -10110,3 +10110,29 @@ Verification: tests on made-up data for each; full suite; frontend build;
 the real year re-run outside the repository: per security, the weighted
 average gains match the broker's own closed positions to the cent where
 only one lot was held.
+
+## Step 3u.112 — Gaps with the tax notice, Mintos interest by year (2026-11-13)
+
+A real notice showed a year with a net loss on CFDs that was never
+declared, so never carried forward: the app had both figures and said
+nothing. It now sets each year it has a notice for against its own.
+
+- `tax/checks.py::notice_checks`. Gains on sales: a net loss with no
+  "Moins-value provenant de l'année …" line on the notice; a gain with
+  none on it; a gain kept whole when earlier losses could have reduced it;
+  a plain difference. Investment income: dividends (gross) and interest of
+  CTO and P2P against "Revenus de capitaux mobiliers déclarés". A gap
+  counts from 20 € and 5 %. Each check states both figures and never what
+  to declare. Shown on the tax prep page above the notice, and in
+  `GET /api/tax/summary` as `notice_checks`, so Hermes sees them.
+- Mintos account statement: income and costs are now split by calendar
+  year, one row each, dated at the year's end. They were one row dated at
+  the file's last day, so a file covering 2025 and 2026 put all of 2025's
+  interest on 2026. A later, longer statement replaces the rows of an
+  earlier one it covers. Quarterly-statement rows inside a period the
+  account statement covers are left out of the tax summary, so interest is
+  not counted twice.
+
+Verification: tests on made-up data (each check, the summary with a
+notice, the split by year, replacement, overlap with quarterly rows);
+full suite; frontend build.

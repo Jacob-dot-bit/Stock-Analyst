@@ -44,7 +44,8 @@ from sqlalchemy.orm import Session
 
 from app.dividends.service import dividend_summary
 from app.messages import Message, TaxPrepNote
-from app.models import Transaction, TxType
+from app.models import TaxNotice, Transaction, TxType
+from app.tax.checks import notice_checks
 from app.tax.gains import (
     CapitalGainsYear,
     DerivativeGain,
@@ -138,6 +139,8 @@ class TaxYearSummary:
     sales: list[SaleGain] = field(default_factory=list)
     #: Closed CFD positions of the year (CTO), counted in `capital_gains`.
     derivatives: list[DerivativeGain] = field(default_factory=list)
+    #: Set against the year's income tax notice, when one is imported.
+    notice_checks: list[Message] = field(default_factory=list)
     #: The year's net gain by the weighted average price, with losses
     #: carried in from earlier years; None when the year has no CTO sale
     #: and no loss to carry.
@@ -269,6 +272,7 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
         ).scalars()
     )
 
+    rows = _without_superseded_p2p_rows(db, rows)
     by_account: dict[str, list[Transaction]] = defaultdict(list)
     for tx in rows:
         by_account[tx.account].append(tx)
@@ -306,13 +310,57 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
     capital_gains = capital_gains_by_year(all_sales, all_derivatives).get(tax_year)
     if capital_gains is not None and not year_sales and not year_derivatives and not capital_gains.losses_carried_in:
         capital_gains = None
+    checks: list[Message] = []
+    notice = db.execute(select(TaxNotice).where(TaxNotice.income_year == tax_year)).scalar_one_or_none()
+    if notice is not None:
+        investment_income = sum(
+            (e.dividends_gross or 0.0) + max(e.interest or 0.0, 0.0)
+            for e in envelopes
+            if e.envelope_kind in (TaxEnvelopeKind.CTO, TaxEnvelopeKind.P2P)
+        )
+        checks = notice_checks(tax_year, notice.figures or {}, notice.lines or [], capital_gains, investment_income)
+
     return TaxYearSummary(
         tax_year=tax_year,
         envelopes=envelopes,
+        notice_checks=checks,
         sales=year_sales,
         derivatives=year_derivatives,
         capital_gains=capital_gains,
     )
+
+
+def _period(tx: Transaction) -> tuple[datetime, datetime] | None:
+    raw = tx.raw or {}
+    try:
+        return datetime.fromisoformat(raw["period_start"]), datetime.fromisoformat(raw["period_end"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _without_superseded_p2p_rows(db: Session, rows: list[Transaction]) -> list[Transaction]:
+    """Mintos interest comes from two sources that overlap: the quarterly
+    statement (one row per quarter) and the full account statement (one row
+    per year it covers). Where the account statement covers a quarter, the
+    quarterly row is left out, so the interest is not counted twice. See
+    DEVLOG "Step 3u.112"."""
+    p2p = ("P2P_INTEREST", "P2P_FEE")
+    covered: dict[str, list[tuple[datetime, datetime]]] = defaultdict(list)
+    for tx in db.execute(select(Transaction).where(Transaction.type.in_(p2p))).scalars():
+        if (tx.raw or {}).get("source") == "transactions_export" and (period := _period(tx)):
+            covered[tx.account].append(period)
+    if not covered:
+        return rows
+
+    def superseded(tx: Transaction) -> bool:
+        if tx.type not in p2p or (tx.raw or {}).get("source") == "transactions_export":
+            return False
+        period = _period(tx)
+        return period is not None and any(
+            start <= period[0] and period[1] <= end for start, end in covered.get(tx.account, [])
+        )
+
+    return [tx for tx in rows if not superseded(tx)]
 
 
 def available_tax_years(db: Session) -> list[int]:

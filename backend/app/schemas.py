@@ -1417,6 +1417,8 @@ class TaxYearSummaryOut(BaseModel):
     envelopes: list[TaxEnvelopeSummaryOut]
     sales: list[TaxSaleGainOut] = []
     derivatives: list[TaxDerivativeGainOut] = []
+    #: Set against the year's income tax notice; empty with no notice.
+    notice_checks: list[MessageOut] = []
     capital_gains: TaxCapitalGainsYearOut | None = None
     #: Always present — the permanent, non-dismissible boundary statement
     #: this feature must never let the user forget.

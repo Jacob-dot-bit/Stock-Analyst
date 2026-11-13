@@ -249,6 +249,22 @@ class TaxPrepNote:
     #: The permanent, non-dismissible boundary statement shown on every
     #: tax-prep view — this feature reconciles, it never calculates.
     DISCLAIMER = "taxPrep.disclaimer"
+    #: Set against the year's income tax notice (`tax/checks.py`, DEVLOG
+    #: "Step 3u.112"). Facts about a gap, never a figure to declare.
+    #: A net loss on sales the notice does not carry forward.
+    CHECK_LOSS_NOT_ON_NOTICE = "taxPrep.check.lossNotOnNotice"  # {loss}
+    #: A net gain on sales, none on the notice.
+    CHECK_GAINS_NOT_ON_NOTICE = "taxPrep.check.gainsNotOnNotice"  # {app}
+    #: Both have a gain, they differ.
+    CHECK_GAINS_DIFFER = "taxPrep.check.gainsDiffer"  # {app, notice}
+    #: Earlier losses could have been set off and were not.
+    CHECK_LOSSES_NOT_USED = "taxPrep.check.lossesNotUsed"  # {available, notice, app}
+    #: Dividends and interest on file, none on the notice.
+    CHECK_INCOME_NOT_ON_NOTICE = "taxPrep.check.incomeNotOnNotice"  # {app}
+    #: Both have investment income, they differ.
+    CHECK_INCOME_DIFFERS = "taxPrep.check.incomeDiffers"  # {app, notice}
+    #: Nothing to report: the notice agrees with the app.
+    CHECK_AGREES = "taxPrep.check.agrees"
 
 
 class SymbolReason:

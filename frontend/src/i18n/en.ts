@@ -968,6 +968,14 @@ export const en: Catalogue = {
   'dividends.exportDetailCsv': 'Export (CSV, transaction detail)',
 
   // --- Tax prep ---------------------------------------------------------
+  'taxPrep.check.title': 'Gaps with the tax notice',
+  'taxPrep.check.lossNotOnNotice': 'Net loss of {loss} on the year, missing from the notice: it was not declared and cannot be carried forward until it is.',
+  'taxPrep.check.gainsNotOnNotice': 'Net gain of {app} on the year, no gain on the notice.',
+  'taxPrep.check.gainsDiffer': 'Gains: {app} according to the app, {notice} on the notice. Check unmatched sales and accounts not imported.',
+  'taxPrep.check.lossesNotUsed': 'Earlier losses ({available}) could have reduced the year\'s gain: the notice keeps {notice}, against {app} after carry-forward.',
+  'taxPrep.check.incomeNotOnNotice': 'Dividends and interest of {app} on the year, no investment income on the notice.',
+  'taxPrep.check.incomeDiffers': 'Investment income: {app} according to the app (gross dividends and interest outside PEA), {notice} on the notice.',
+  'taxPrep.check.agrees': 'The app\'s gains and investment income agree with the notice.',
   'taxPrep.notice.title': 'Tax notice for {year} income',
   'taxPrep.notice.none': 'No tax notice for {year} yet. Import the PDF from impots.gouv.fr with the other files to set it against these figures.',
   'taxPrep.notice.grossIncome': 'Gross income',

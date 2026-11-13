@@ -983,6 +983,14 @@ export const pl: Catalogue = {
   'dividends.exportDetailCsv': 'Eksportuj (CSV, szczegóły transakcji)',
 
   // --- Przygotowanie podatkowe ---------------------------------------------
+  'taxPrep.check.title': 'Rozbieżności z decyzją podatkową',
+  'taxPrep.check.lossNotOnNotice': 'Strata netto {loss} w roku, nieobecna w decyzji: nie została zadeklarowana i nie można jej przenieść na kolejne lata, dopóki nie zostanie.',
+  'taxPrep.check.gainsNotOnNotice': 'Zysk netto {app} w roku, brak zysku w decyzji.',
+  'taxPrep.check.gainsDiffer': 'Zyski: {app} według aplikacji, {notice} w decyzji. Sprawdź nierozliczone sprzedaże i niezaimportowane rachunki.',
+  'taxPrep.check.lossesNotUsed': 'Wcześniejsze straty ({available}) mogły obniżyć zysk roku: decyzja przyjmuje {notice}, wobec {app} po odliczeniu.',
+  'taxPrep.check.incomeNotOnNotice': 'Dywidendy i odsetki {app} w roku, brak dochodów kapitałowych w decyzji.',
+  'taxPrep.check.incomeDiffers': 'Dochody kapitałowe: {app} według aplikacji (dywidendy brutto i odsetki poza PEA), {notice} w decyzji.',
+  'taxPrep.check.agrees': 'Zyski i dochody kapitałowe aplikacji zgadzają się z decyzją.',
   'taxPrep.notice.title': 'Decyzja podatkowa za dochody {year}',
   'taxPrep.notice.none': 'Brak decyzji podatkowej za {year}. Zaimportuj PDF z impots.gouv.fr razem z innymi plikami, aby porównać go z tymi liczbami.',
   'taxPrep.notice.grossIncome': 'Dochód brutto',

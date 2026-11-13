@@ -236,7 +236,7 @@ function TaxNoticeCard({ notice }: { notice: TaxNotice }) {
  * "Decision 3u.60".
  */
 export function TaxPrep() {
-  const { t } = useI18n()
+  const { t, formatNumber } = useI18n()
   const [years, setYears] = useState<number[] | null>(null)
   const [year, setYear] = useState<number | null>(null)
   const [yearsError, setYearsError] = useState<string | null>(null)
@@ -299,6 +299,26 @@ export function TaxPrep() {
               </a>
             )}
           </div>
+        </div>
+      )}
+
+      {summary && summary.notice_checks.length > 0 && (
+        <div className="card">
+          <h2 className="compact">{t('taxPrep.check.title')}</h2>
+          {summary.notice_checks.map((check, i) => (
+            <p
+              key={i}
+              className={`notice ${check.code === 'taxPrep.check.agrees' ? 'info' : 'warning'}`}
+              style={{ marginTop: '0.6rem' }}
+            >
+              {t(
+                check.code,
+                Object.fromEntries(
+                  Object.entries(check.params).map(([k, v]) => [k, typeof v === 'number' ? formatNumber(v) : v]),
+                ),
+              )}
+            </p>
+          ))}
         </div>
       )}
 
