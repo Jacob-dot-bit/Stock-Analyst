@@ -48,11 +48,11 @@ def no_real_network_by_default(monkeypatch):
     this, that fetch would fall through to the real, no-key-required
     Boursorama provider and hit the actual network on every test. Tests that
     want a working fetch call `use_provider` themselves, which overrides this."""
-    monkeypatch.setattr("app.routers.watchlist.get_provider_chain", lambda: ProviderChain([]))
+    monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([]))
 
 
 def use_provider(monkeypatch, provider):
-    monkeypatch.setattr("app.routers.watchlist.get_provider_chain", lambda: ProviderChain([provider]))
+    monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([provider]))
 
 
 def daily_bars(close: float = 100.0, count: int = 30) -> list[Bar]:
