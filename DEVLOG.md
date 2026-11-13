@@ -9754,6 +9754,19 @@ Same routes, same responses.
 
 Verification: backend suite green.
 
+## Step 3u.97 — One symbol field for every "add" form (2026-11-13)
+
+The manual position, watchlist, gems and journal forms each carried their
+own copy of the symbol field: the 350 ms debounce, the FMP company-name
+search, the suggestion list, the ".US" suffix on a pick and the delayed
+blur that lets a click land.
+
+- `components/SymbolInput.tsx` is that field. `onPick` hands the picked
+  company to forms that also fill in its name (watchlist, gems).
+- The four forms keep their own state and submit logic.
+
+Verification: `tsc -b` clean.
+
 ## Step 3u.100 — The nav bell and the weekly summary read one rule (2026-11-13)
 
 "Target reached" was decided in two places: the nav bell filtered
