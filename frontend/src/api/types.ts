@@ -629,6 +629,8 @@ export interface TaxCapitalGainsYear {
   net: number
   matched_sales: number
   unmatched_sales: number
+  /** Net of closed CFD positions, already inside gains/losses. */
+  derivatives: number
   losses_carried_in: Record<string, number>
   losses_used: number
   taxable_net: number
@@ -1264,6 +1266,9 @@ export interface TaxNoticeFigures {
   net_tax: number | null
   tax_due: number | null
   reference_income: number | null
+  investment_income: number | null
+  capital_gains: number | null
+  social_levies: number | null
   /** Left to pay; negative when refunded. */
   balance: number | null
   withholding_rate: number | null

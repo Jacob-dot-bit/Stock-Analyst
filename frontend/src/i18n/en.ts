@@ -976,6 +976,9 @@ export const en: Catalogue = {
   'taxPrep.notice.scaleTax': 'Tax from the scale',
   'taxPrep.notice.netTax': 'Net income tax',
   'taxPrep.notice.taxDue': 'Due after withholding',
+  'taxPrep.notice.investmentIncome': 'Investment income declared',
+  'taxPrep.notice.capitalGains': 'Gains on sales kept',
+  'taxPrep.notice.socialLevies': 'Social levies, net',
   'taxPrep.notice.balance': 'Left to pay',
   'taxPrep.notice.rate': 'Withholding rate',
   'taxPrep.notice.ceiling': 'Retirement savings ceiling',
@@ -1016,6 +1019,7 @@ export const en: Catalogue = {
   'taxPrep.gains.title': 'Gains on securities {year} (ordinary brokerage account)',
   'taxPrep.gains.hint':
     'Worked out by the weighted average acquisition price, fees included, over every brokerage account holding the same security. PEA, employee savings and P2P are not counted.',
+  'taxPrep.gains.derivatives': 'Of which CFDs (closed positions)',
   'taxPrep.gains.gains': 'Gains',
   'taxPrep.gains.losses': 'Losses',
   'taxPrep.gains.net': 'Net for the year',

@@ -127,6 +127,26 @@ class TestParse:
         parsed = parse_tax_notice_pages(["\n".join(first), "\n".join(DETAIL_PAGE)])
         assert parsed.figures.balance == 0
 
+    def test_notice_with_social_levies(self):
+        """The newer title, cents on the first page next to a date, and the
+        investment income lines."""
+        first = ["Impôt et prélèvements sociaux sur les revenus de 2025", "Somme qu'il vous reste à payer",
+                 "15/09/2026 418,00 €"]
+        detail = [
+            "Impôt et prélèvements sociaux sur les revenus de 2025",
+            "Revenus de capitaux mobiliers déclarés............... 1210",
+            "Plus-values de cession de valeurs mobilières....... 4380",
+            "Total des prélèvements sociaux nets................ 702",
+            "Revenu fiscal de référence 25.............................. 5590",
+        ]
+        parsed = parse_tax_notice_pages(["\n".join(first), "\n".join(detail)])
+
+        assert parsed.income_year == 2025
+        assert parsed.figures.balance == 418
+        assert parsed.figures.investment_income == 1210
+        assert parsed.figures.capital_gains == 4380
+        assert parsed.figures.social_levies == 702
+
     def test_from_pdf(self):
         parsed = parse_tax_notice(NOTICE)
         assert parsed.income_year == 2024

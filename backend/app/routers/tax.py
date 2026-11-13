@@ -21,6 +21,7 @@ from app.models import TaxNotice
 from app.schemas import (
     MessageOut,
     TaxCapitalGainsYearOut,
+    TaxDerivativeGainOut,
     TaxEnvelopeSummaryOut,
     TaxNoticeOut,
     TaxOtherFlowOut,
@@ -105,6 +106,7 @@ def get_tax_summary(
             )
             for s in summary.sales
         ],
+        derivatives=[TaxDerivativeGainOut(**asdict(d)) for d in summary.derivatives],
         capital_gains=TaxCapitalGainsYearOut(**asdict(summary.capital_gains)) if summary.capital_gains else None,
         disclaimer=MessageOut(**Message(TaxPrepNote.DISCLAIMER).as_dict()),
     )

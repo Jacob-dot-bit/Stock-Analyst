@@ -991,6 +991,9 @@ export const pl: Catalogue = {
   'taxPrep.notice.scaleTax': 'Podatek według skali',
   'taxPrep.notice.netTax': 'Podatek netto',
   'taxPrep.notice.taxDue': 'Należny po poborze u źródła',
+  'taxPrep.notice.investmentIncome': 'Zadeklarowane dochody kapitałowe',
+  'taxPrep.notice.capitalGains': 'Przyjęte zyski ze zbycia',
+  'taxPrep.notice.socialLevies': 'Składki społeczne netto',
   'taxPrep.notice.balance': 'Do zapłaty',
   'taxPrep.notice.rate': 'Stawka poboru u źródła',
   'taxPrep.notice.ceiling': 'Limit oszczędności emerytalnych',
@@ -1032,6 +1035,7 @@ export const pl: Catalogue = {
   'taxPrep.gains.title': 'Zyski z papierów wartościowych {year} (zwykły rachunek maklerski)',
   'taxPrep.gains.hint':
     'Obliczone według średniej ważonej ceny nabycia, z opłatami, na wszystkich rachunkach maklerskich z tym samym papierem. PEA, oszczędności pracownicze i P2P nie są liczone.',
+  'taxPrep.gains.derivatives': 'W tym CFD (zamknięte pozycje)',
   'taxPrep.gains.gains': 'Zyski',
   'taxPrep.gains.losses': 'Straty',
   'taxPrep.gains.net': 'Saldo roku',
