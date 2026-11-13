@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { BreakdownDimension, BreakdownItem } from '../api/types'
 import { type TranslateParams, useI18n } from '../i18n'
+import { MaintenanceLink } from './MaintenanceLink'
 
 const DIMENSIONS: BreakdownDimension[] = ['category', 'currency', 'country', 'sector']
 
@@ -22,8 +23,6 @@ export function PortfolioBreakdown() {
   const [dimension, setDimension] = useState<BreakdownDimension>('category')
   const [items, setItems] = useState<BreakdownItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [enriching, setEnriching] = useState(false)
-  const [enrichNotice, setEnrichNotice] = useState<string | null>(null)
 
   const load = () => {
     let cancelled = false
@@ -42,26 +41,6 @@ export function PortfolioBreakdown() {
   }
 
   useEffect(load, [dimension])
-
-  async function handleEnrichSectors() {
-    setEnriching(true)
-    setEnrichNotice(null)
-    try {
-      const result = await api.enrichSectors()
-      setEnrichNotice(
-        t('breakdown.enrichResult', {
-          enriched: result.enriched,
-          skipped: result.skipped,
-          failed: result.failed,
-        }),
-      )
-      load()
-    } catch (err) {
-      setEnrichNotice(err instanceof Error ? err.message : String(err))
-    } finally {
-      setEnriching(false)
-    }
-  }
 
   const slices = items ? foldTail(items) : null
 
@@ -89,14 +68,7 @@ export function PortfolioBreakdown() {
 
       {dimension === 'sector' && (
         <div style={{ marginBottom: '0.8rem' }}>
-          <button onClick={() => void handleEnrichSectors()} disabled={enriching}>
-            {enriching ? t('breakdown.enriching') : t('breakdown.enrichSectors')}
-          </button>
-          {enrichNotice && (
-            <span className="muted" style={{ marginLeft: '0.6rem', fontSize: '0.82rem' }}>
-              {enrichNotice}
-            </span>
-          )}
+          <MaintenanceLink />
         </div>
       )}
 

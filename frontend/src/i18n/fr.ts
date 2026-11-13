@@ -28,6 +28,7 @@ export const fr: Catalogue = {
   'common.cancel': 'Annuler',
   'common.save': 'Enregistrer',
   'common.saving': 'Enregistrement…',
+  'common.running': 'En cours…',
   'common.add': 'Ajouter',
   'common.delete': 'Supprimer',
   'common.edit': 'Modifier',
@@ -232,7 +233,6 @@ export const fr: Catalogue = {
   'breakdown.dimension.country': 'Pays',
   'breakdown.dimension.sector': 'Secteur',
   'breakdown.enrichSectors': 'Récupérer les secteurs (FMP + Wikidata)',
-  'breakdown.enriching': 'Récupération des secteurs…',
   'breakdown.enrichResult': '{enriched} enrichis, {skipped} sans secteur, {failed} échoués.',
   'breakdown.empty': 'Pas assez de positions valorisées pour calculer une répartition.',
   'breakdown.unknown': 'Inconnu',
@@ -240,7 +240,6 @@ export const fr: Catalogue = {
 
   // --- Détection de doublons par ISIN (watchlist/pépites) -------------------
   'duplicates.backfillIsins': 'Rechercher les identifiants manquants',
-  'duplicates.backfilling': 'Recherche en cours…',
   'duplicates.backfillResult': '{checked} vérifiés, {updated} mis à jour.',
   'duplicates.backfillFigis': "Rechercher l'identité OpenFIGI manquante",
   'duplicates.backfillFigisResultMore': '{checked} vérifiés, {remaining} restants — clique à nouveau pour continuer.',
@@ -598,6 +597,19 @@ export const fr: Catalogue = {
   'settings.groupIntegrity.title': 'Intégrité et corrections',
   'settings.groupIntegrity.subtitle':
     "Corrigez les symboles ou enregistrez les opérations sur capital qui influencent l'historique.",
+  'settings.groupMaintenance.title': 'Mise à jour des données',
+  'settings.groupMaintenance.subtitle':
+    "Les rattrapages qui complètent les identifiants, secteurs et historiques manquants. Chacun peut être relancé sans risque : il ne complète que ce qui manque.",
+  'maintenance.run': 'Lancer',
+  'maintenance.link': 'Mettre à jour dans Paramètres → Mise à jour des données',
+  'maintenance.discoveryHint': "Plusieurs années d'historique de cours rendent le backtest ci-dessous parlant.",
+  'maintenance.identity.title': 'Identité des titres',
+  'maintenance.analysis.title': "Données d'analyse",
+  'maintenance.isins.description': "Recherche l'ISIN des titres détenus, suivis et des pépites qui n'en ont pas encore. Sert à repérer les doublons entre courtiers.",
+  'maintenance.figis.description': "Demande à OpenFIGI l'identité des titres qui n'en ont pas encore. Fonctionne par lots : relance tant qu'il en reste.",
+  'maintenance.sectors.description': 'Complète le secteur des actions détenues (FMP, puis Wikidata) pour la répartition par secteur.',
+  'maintenance.factors.description': "Télécharge les séries de facteurs de Kenneth French utilisées par le tableau d'exposition aux facteurs.",
+  'maintenance.dividends.description': "Complète l'historique de dividendes de l'univers Découverte. Fonctionne par lots : relance tant qu'il en reste.",
   'settings.groupBackup.title': 'Sauvegarde',
   'settings.groupDataSources.title': 'Sources de données',
   'settings.groupDataSources.subtitle':
@@ -755,7 +767,7 @@ export const fr: Catalogue = {
 
   'prediction.title': 'Historique de prix',
   'prediction.description':
-    "Un vrai modèle prédictif a besoin d'un vrai backtest, qui a besoin d'un historique de prix plus profond que ce que l'app garde normalement. Cette étape récupère plusieurs années de bougies journalières pour les instruments déjà cotés — prix uniquement, car les fondamentaux ne sont pas encore stockés avec une date de dépôt, et utiliser le score d'aujourd'hui pour « prédire » un rendement passé serait un biais de anticipation. Voir « Backtest » ci-dessous pour ce que le modèle fait de ces données.",
+    "Un vrai modèle prédictif a besoin d'un vrai backtest, qui a besoin d'un historique de prix plus profond que ce que l'app garde normalement. Cette étape récupère plusieurs années de bougies journalières pour les instruments déjà cotés — prix uniquement, car les fondamentaux ne sont pas encore stockés avec une date de dépôt, et utiliser le score d'aujourd'hui pour « prédire » un rendement passé serait un biais de anticipation. Voir « Backtest » sur la page Pépites pour ce que le modèle fait de ces données.",
   'prediction.backfill': "Récupérer l'historique de prix",
   'prediction.running': 'Récupération…',
   'prediction.alreadyRunning': 'Une récupération est déjà en cours.',

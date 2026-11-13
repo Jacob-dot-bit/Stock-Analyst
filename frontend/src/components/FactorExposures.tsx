@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { FactorLoadings } from '../api/types'
 import { useI18n } from '../i18n'
+import { MaintenanceLink } from './MaintenanceLink'
 
 /**
  * Carhart four-factor exposure for held positions — explanatory only
@@ -17,8 +18,6 @@ export function FactorExposures() {
   const { t, formatNumber } = useI18n()
   const [rows, setRows] = useState<FactorLoadings[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [importing, setImporting] = useState(false)
-  const [importNotice, setImportNotice] = useState<string | null>(null)
 
   function load() {
     setError(null)
@@ -29,20 +28,6 @@ export function FactorExposures() {
   }
 
   useEffect(load, [])
-
-  async function handleImport() {
-    setImporting(true)
-    setError(null)
-    try {
-      const result = await api.importFactorData()
-      setImportNotice(t('factors.importResult', { imported: result.imported, alreadyPresent: result.already_present }))
-      load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setImporting(false)
-    }
-  }
 
   function pct(value: number | null): string {
     return value === null ? '—' : formatNumber(value * 100, 1) + ' %'
@@ -59,16 +44,8 @@ export function FactorExposures() {
           <h2 className="compact">{t('factors.title')}</h2>
           <span className="muted">{t('factors.description')}</span>
         </div>
-        <button disabled={importing} onClick={() => void handleImport()}>
-          {importing ? t('common.saving') : t('factors.import')}
-        </button>
+        <MaintenanceLink />
       </div>
-
-      {importNotice && (
-        <div className="muted" style={{ fontSize: '0.82rem', marginTop: '0.5rem' }}>
-          {importNotice}
-        </div>
-      )}
 
       {error && (
         <div className="notice error" style={{ marginTop: '1rem', marginBottom: 0 }}>
