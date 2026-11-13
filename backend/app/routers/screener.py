@@ -10,20 +10,18 @@ held instruments. Every read here anti-joins against both `Position` and
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.corporate_actions.service import load_actions_by_instrument, price_factor_from
 from app.db import get_db
 from app.ingest.service import get_or_create_instrument
-from app.models import Instrument, Position, PriceBar, ScreenerCandidate, WatchlistItem
+from app.models import Instrument, Position, ScreenerCandidate, WatchlistItem
+from app.prices.sparklines import sparklines
 from app.prices.service import is_permanently_unresolvable, latest_bar_date, price_status as _price_status, refresh_instrument
 from app.providers.registry import get_provider_chain
 from app.routers.portfolio import _resolve_current_price
-from app.routers.scoring import score_to_out
+from app.routers.scoring import scores_for
 from app.schemas import (
     InstrumentOut,
     ScreenerCandidateIn,
@@ -32,8 +30,6 @@ from app.schemas import (
     ScoreOut,
     SparklineOut,
 )
-from app.scoring.config import get_scoring_config
-from app.scoring.service import compute_scores
 from app.symbols.duplicates import check_for_duplicate
 from app.symbols.mapping import looks_like_equity
 
@@ -179,36 +175,19 @@ def get_screener_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
     not fetched yet) sorts last rather than being dropped, so it's still
     visible as "needs a fundamentals refresh" instead of silently vanishing.
     """
-    instruments = _screener_instruments(db)
-    config = get_scoring_config()
-    results = compute_scores(db, instruments, config)
-    results.sort(key=lambda r: (r.composite is None, -(r.composite or 0)))
-    return [score_to_out(result) for result in results]
+    scores = scores_for(db, _screener_instruments(db))
+    scores.sort(key=lambda s: (s.composite is None, -(s.composite or 0)))
+    return scores
 
 
 @router.get("/sparklines", response_model=list[SparklineOut])
 def get_screener_sparklines(db: Session = Depends(get_db)) -> list[SparklineOut]:
-    """Same shape as `GET /api/watchlist/sparklines`, joined against
-    `ScreenerCandidate` instead."""
-    since = datetime.now(UTC).date() - timedelta(days=90)
-
-    rows = db.execute(
-        select(PriceBar.instrument_id, PriceBar.bar_date, PriceBar.close)
-        .join(ScreenerCandidate, ScreenerCandidate.instrument_id == PriceBar.instrument_id)
-        .where(
-            PriceBar.bar_date >= since,
-            PriceBar.close.is_not(None),
-            ~select(Position.id).where(Position.instrument_id == PriceBar.instrument_id).exists(),
-            ~select(WatchlistItem.id).where(WatchlistItem.instrument_id == PriceBar.instrument_id).exists(),
-        )
-        .order_by(PriceBar.instrument_id, PriceBar.bar_date)
-        .distinct()
-    ).all()
-
-    actions_by_instrument = load_actions_by_instrument(db, list({instrument_id for instrument_id, _, _ in rows}))
-    series: dict[int, list[float]] = {}
-    for instrument_id, bar_date, close in rows:
-        factor = price_factor_from(actions_by_instrument.get(instrument_id, []), bar_date)
-        series.setdefault(instrument_id, []).append(close * factor)
-
-    return [SparklineOut(instrument_id=instrument_id, closes=closes) for instrument_id, closes in series.items()]
+    """Same shape as `GET /api/watchlist/sparklines`, for candidates that are
+    neither held nor watched."""
+    return sparklines(
+        db,
+        select(ScreenerCandidate.instrument_id).where(
+            ~select(Position.id).where(Position.instrument_id == ScreenerCandidate.instrument_id).exists(),
+            ~select(WatchlistItem.id).where(WatchlistItem.instrument_id == ScreenerCandidate.instrument_id).exists(),
+        ),
+    )

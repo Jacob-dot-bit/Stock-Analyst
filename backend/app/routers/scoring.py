@@ -35,9 +35,15 @@ def _held_instruments(db: Session) -> list[Instrument]:
     return list(db.execute(query).scalars())
 
 
+def scores_for(db: Session, instruments: list[Instrument]) -> list[ScoreOut]:
+    """Composite scores of `instruments` with the current `scoring.yaml`, in
+    API shape — behind the `/scores` of the portfolio, watchlist and
+    screener."""
+    return [score_to_out(result) for result in compute_scores(db, instruments, get_scoring_config())]
+
+
 def score_to_out(result: InstrumentScore) -> ScoreOut:
-    """Shared by this router's `/scores` and `routers/watchlist.py`'s
-    equivalent — both convert the same `compute_scores` result shape."""
+    """One `compute_scores` result in API shape."""
     return ScoreOut(
         instrument_id=result.instrument_id,
         composite=result.composite,
@@ -123,11 +129,7 @@ def get_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
     live-but-cached path the portfolio's current value already uses). CFDs
     never appear: see `scoring/service.py::compute_scores`.
     """
-    instruments = _held_instruments(db)
-    config = get_scoring_config()
-    results = compute_scores(db, instruments, config)
-
-    return [score_to_out(result) for result in results]
+    return scores_for(db, _held_instruments(db))
 
 
 @router.post("/backtest", response_model=ScoreBacktestOut)

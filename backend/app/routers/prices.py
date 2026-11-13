@@ -14,6 +14,7 @@ from app.db import get_db
 from app.models import AppMetadata, Instrument, MappingStatus, Position, PriceBar
 from app.prices.history_service import get_or_create_benchmark_instrument
 from app.prices.service import get_refresh_progress, refresh_many
+from app.prices.sparklines import sparklines
 from app.providers.registry import get_provider_chain
 from app.routers.screener import _screener_instruments
 from app.routers.watchlist import _watchlist_instruments
@@ -139,28 +140,7 @@ def get_sparklines(
     One request rather than one per row: the payload is closes only, and the table
     needs all of them at once to draw its sparklines.
     """
-    since = datetime.now(UTC).date() - timedelta(days=days)
-
-    rows = db.execute(
-        select(PriceBar.instrument_id, PriceBar.bar_date, PriceBar.close)
-        .join(Position, Position.instrument_id == PriceBar.instrument_id)
-        .where(PriceBar.bar_date >= since, PriceBar.close.is_not(None))
-        .order_by(PriceBar.instrument_id, PriceBar.bar_date)
-        .distinct()
-    ).all()
-
-    instrument_ids = {instrument_id for instrument_id, _, _ in rows}
-    actions_by_instrument = load_actions_by_instrument(db, list(instrument_ids))
-
-    series: dict[int, list[float]] = {}
-    for instrument_id, bar_date, close in rows:
-        factor = price_factor_from(actions_by_instrument.get(instrument_id, []), bar_date)
-        series.setdefault(instrument_id, []).append(close * factor)
-
-    return [
-        SparklineOut(instrument_id=instrument_id, closes=closes)
-        for instrument_id, closes in series.items()
-    ]
+    return sparklines(db, select(Position.instrument_id), days)
 
 
 @router.get("/{instrument_id}/history", response_model=PriceHistoryOut)
