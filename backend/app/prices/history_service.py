@@ -87,7 +87,7 @@ def get_or_create_benchmark_instrument(db: Session) -> Instrument | None:
 def compute_value_history(db: Session, base_currency: str, today: date) -> ValueHistoryResult:
     lots = list(db.execute(select(Lot).options(joinedload(Lot.instrument))).scalars())
 
-    # Same exclusion as the live "current value" path (`_resolve_current_price`
+    # Same exclusion as the live "current value" path (`resolve_current_price`
     # in routers/portfolio.py): a CFD's quantity is a contract count, not a share
     # count, and anything never priceable has nothing to replay.
     lots = [

@@ -5,7 +5,7 @@ relevant `Fundamental` row, one for every relevant `PriceBar` close, grouped in
 memory, every instrument's pillars and composite computed with no further
 queries. A score is a cheap derivation over already-cached data — computed
 live on every request, never itself persisted (same posture as
-`routers/portfolio.py::_resolve_current_price`), so there is nothing here to
+`portfolio/valuation.py::resolve_current_price`), so there is nothing here to
 go stale.
 
 Missing data is dropped, never guessed, at two nested levels: a metric with
@@ -314,7 +314,7 @@ def _load_closes(
 def compute_scores(db: Session, instruments: list[Instrument], config: ScoringConfig) -> list[InstrumentScore]:
     """One score per instrument in `ANALYSABLE_CATEGORIES` (STOCK, ETF) —
     CFDs are excluded entirely, same exclusion `history_service.py` and
-    `_resolve_current_price` already apply (a contract count has no
+    `resolve_current_price` already apply (a contract count has no
     fundamentals and no meaningful long-term trend the way a share does).
     """
     scorable = [i for i in instruments if i.category in ANALYSABLE_CATEGORIES]

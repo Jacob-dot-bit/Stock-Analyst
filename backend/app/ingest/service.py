@@ -598,7 +598,7 @@ def _recompute_mintos_p2p_position(db: Session, instrument: Instrument, batch: I
             quantity=1,
             # Not a real per-unit cost — deliberately never used to derive a
             # PRU or gain/loss for this category (see the `category == "P2P"`
-            # branch in `routers/portfolio.py::_current_position_figures`).
+            # branch in `portfolio/valuation.py::position_figures`).
             # A required NOT NULL placeholder only.
             avg_price=latest.amount,
             broker_market_value=latest.amount,
@@ -1233,7 +1233,7 @@ def _persist_amundi_export(
                 # invented — see DEVLOG "Decision 3u.39". Amundi discloses
                 # only one P&L figure ("brute"/gross); stored in both
                 # broker_gross_pl and broker_net_pl since
-                # `_current_position_figures`'s broker-value fallback
+                # `position_figures`'s broker-value fallback
                 # (routers/portfolio.py) reads specifically the latter.
                 gain = fund.estimated_gain_loss
                 cost = fund.gross_value - gain

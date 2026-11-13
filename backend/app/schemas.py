@@ -96,7 +96,7 @@ class PositionOut(BaseModel):
     weight_percent: float | None = None
 
     # Up-to-date figures, computed server-side from whatever pricing is
-    # currently available — see `_current_position_figures` in
+    # currently available — see `position_figures` in
     # `routers/portfolio.py` and DEVLOG "Decision 2f.3". None until the backend
     # populates it (immediately after `POST /positions`, before the next
     # `GET /portfolio`).
@@ -920,7 +920,7 @@ class DeclaredValuationSourceOut(BaseModel):
     freshest_as_of: date | None
     stalest_as_of: date | None
     #: True when any position in this source is stale per
-    #: `DECLARED_VALUE_FRESHNESS_DAYS` — see `_declared_valuation_note`.
+    #: `DECLARED_VALUE_FRESHNESS_DAYS` — see `declared_valuation_note`.
     has_stale: bool
 
 

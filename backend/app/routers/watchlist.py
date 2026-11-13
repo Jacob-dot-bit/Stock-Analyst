@@ -17,9 +17,9 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Instrument, WatchlistItem
+from app.portfolio.valuation import resolve_current_price
 from app.prices.sparklines import sparklines
 from app.prices.service import price_status as _price_status
-from app.routers.portfolio import _resolve_current_price
 from app.routers.scoring import scores_for
 from app.schemas import (
     InstrumentOut,
@@ -86,7 +86,7 @@ def _watchlist_item_out(db: Session, item: WatchlistItem) -> WatchlistItemOut:
     instrument_out = InstrumentOut.model_validate(instrument)
     instrument_out.price_status = _price_status(instrument)
 
-    price, source = _resolve_current_price(db, instrument, {})
+    price, source = resolve_current_price(db, instrument, {})
     distance = distance_to_target(price, item.target_entry_price)
 
     return WatchlistItemOut(
@@ -185,7 +185,7 @@ def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignal
     out = []
     for item in items:
         instrument = item.instrument
-        price, _source = _resolve_current_price(db, instrument, {})
+        price, _source = resolve_current_price(db, instrument, {})
         distance = distance_to_target(price, item.target_entry_price)
 
         score_result = scores.get(instrument.id)

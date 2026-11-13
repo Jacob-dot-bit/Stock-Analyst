@@ -16,9 +16,9 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Instrument, ScreenerCandidate, WatchlistItem
+from app.portfolio.valuation import resolve_current_price
 from app.prices.sparklines import sparklines
 from app.prices.service import price_status as _price_status
-from app.routers.portfolio import _resolve_current_price
 from app.routers.scoring import scores_for
 from app.schemas import (
     InstrumentOut,
@@ -54,7 +54,7 @@ def _screener_candidate_out(db: Session, item: ScreenerCandidate) -> ScreenerCan
     instrument_out = InstrumentOut.model_validate(instrument)
     instrument_out.price_status = _price_status(instrument)
 
-    price, source = _resolve_current_price(db, instrument, {})
+    price, source = resolve_current_price(db, instrument, {})
 
     return ScreenerCandidateOut(
         id=item.id,

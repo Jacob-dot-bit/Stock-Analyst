@@ -204,7 +204,7 @@ class ValuationNote:
     """
 
     #: The declared value is within this source's expected update cadence
-    #: (see `routers/portfolio.py::DECLARED_VALUE_FRESHNESS_DAYS`).
+    #: (see `portfolio/valuation.py::DECLARED_VALUE_FRESHNESS_DAYS`).
     DECLARED_FRESH = "valuation.declaredFresh"  # {provider, date}
     #: The declared value predates this source's expected update cadence —
     #: still included in every total (a known value is never dropped for

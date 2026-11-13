@@ -23,10 +23,10 @@ from app.discovery.service import (
 from app.fundamentals.service import fetch_fundamentals
 from app.ingest.service import get_or_create_instrument
 from app.models import DiscoveryCandidate
+from app.portfolio.valuation import resolve_current_price
 from app.prices.service import price_status as _price_status, refresh_instrument
 from app.providers.finviz_screener import fetch_preset
 from app.providers.registry import get_edgar_provider, get_esef_provider, get_provider_chain
-from app.routers.portfolio import _resolve_current_price
 from app.schemas import (
     DiscoveryCandidateOut,
     DiscoveryFinvizOut,
@@ -82,7 +82,7 @@ def _to_out(db: Session, row: dict, pending_ids: set[int]) -> DiscoveryCandidate
     instrument = row["instrument"]
     instrument_out = InstrumentOut.model_validate(instrument)
     instrument_out.price_status = _price_status(instrument)
-    price, source = _resolve_current_price(db, instrument, {})
+    price, source = resolve_current_price(db, instrument, {})
     return DiscoveryCandidateOut(
         instrument=instrument_out,
         source=row["source"],
@@ -155,7 +155,7 @@ def finviz_scan(
             scores = compute_scores(db, [instrument], config)
             score = scores[0] if scores else None
 
-            price, price_source = _resolve_current_price(db, instrument, {})
+            price, price_source = resolve_current_price(db, instrument, {})
             composite = score.composite if score else None
             instrument_out = InstrumentOut.model_validate(instrument)
             instrument_out.price_status = _price_status(instrument)

@@ -22,9 +22,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db import get_db
 from app.models import Instrument, JournalEntry, WatchlistItem
+from app.portfolio.valuation import FIGURES_SNAPSHOT_KEY, positions_figures_and_total
 from app.routers.portfolio import (
-    FIGURES_SNAPSHOT_KEY,
-    _positions_figures_and_total,
     get_allocation,
     get_attention,
     get_personal_policy_gaps,
@@ -50,7 +49,7 @@ _DATA_RELIABILITY_KINDS = {"price_error", "price_stale", "unresolved_instruments
 def _instrument_weights(db: Session) -> dict[int, float]:
     """Share of total portfolio value per instrument, summed across accounts
     — same figures as `GET /risk/concentration`, keyed by instrument."""
-    positions, figures, total_value = _positions_figures_and_total(db)
+    positions, figures, total_value = positions_figures_and_total(db)
     if not total_value:
         return {}
     values: dict[int, float] = defaultdict(float)
@@ -69,7 +68,7 @@ def get_weekly_summary(db: Session = Depends(get_db)) -> WeeklySummaryOut:
     `FIGURES_SNAPSHOT_KEY`). Like the endpoints it composes, it reads cached
     prices but may fetch and store today's FX rate on a cache miss
     (`prices/fx_service.py::get_rate`)."""
-    db.info[FIGURES_SNAPSHOT_KEY] = _positions_figures_and_total(db)
+    db.info[FIGURES_SNAPSHOT_KEY] = positions_figures_and_total(db)
     try:
         return _build_summary(db)
     finally:

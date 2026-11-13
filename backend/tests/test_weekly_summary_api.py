@@ -213,16 +213,20 @@ def test_portfolio_valuation_is_computed_once_per_request(client, monkeypatch):
     client.post("/api/portfolio/policy/limits", json={"dimension": "line", "max_pct": 50})
     patch_scores(monkeypatch, {})
 
+    import app.portfolio.valuation as valuation
     import app.routers.portfolio as portfolio
 
     calls = []
-    original = portfolio._compute_figures
+    original = valuation.compute_figures
 
     def counting(*args, **kwargs):
         calls.append(1)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(portfolio, "_compute_figures", counting)
+    # Counted wherever it is called from: the shared valuation module or a
+    # route that computes figures itself.
+    monkeypatch.setattr(valuation, "compute_figures", counting)
+    monkeypatch.setattr(portfolio, "compute_figures", counting)
 
     body = client.get("/api/weekly-summary").json()
 

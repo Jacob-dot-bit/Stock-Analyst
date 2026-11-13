@@ -9,6 +9,8 @@ whenever a router endpoint, model, or pattern changes.
 ```
 backend/app/
   routers/       FastAPI endpoints — one file per resource area
+  portfolio/     valuation.py: current price, FX-converted value, P&L and
+                 totals of held positions, shared by every router
   ingest/        XTB file parsing + get_or_create_instrument
   prices/        Daily-bar history, live quotes, FX, provider-quota tracking
   fundamentals/  SEC EDGAR + ESEF fetch/cache
@@ -426,7 +428,7 @@ category-only shape is gone, replaced outright — no migration, no new
 tables, everything was already computable from existing columns).
 
 - **Valuation signal** (`_valuation_report`): reuses `_price_status`/
-  `_declared_valuation_note`/`DECLARED_VALUE_FRESHNESS_DAYS` unchanged.
+  `declared_valuation_note`/`DECLARED_VALUE_FRESHNESS_DAYS` unchanged.
   `kind` is `market_price` | `declared_value` | `unavailable`;
   `freshness` is `fresh` | `stale` | `unknown`. An unresolved mapping
   (keyed off `_unresolved_instruments()`, not `_price_status()`'s
@@ -489,7 +491,7 @@ dynamic" profile by the app. Two tables:
 Reuses (rather than reinvents) the same "group market value by one
 `Instrument` attribute" computation `/breakdown` and `/allocation`
 already needed: both were unified into a shared
-`_positions_figures_and_total`/`_weight_buckets(positions, figures,
+`positions_figures_and_total`/`weight_buckets(positions, figures,
 attribute)` pair, so all three endpoints now compute from one code path.
 Only breaches are returned, same "nothing to report when nothing needs a
 look" posture as `/attention`; a `line` breach is reported per breaching
@@ -945,8 +947,8 @@ silently fall through as "needs fixing" rather than "not priceable."
 Decision 3u.39). When a broker discloses a current value but no
 attributable per-unit cost (auto-reinvestment mixes principal and
 interest with no way to separate them), don't guess — `avg_price` still
-holds a schema-required placeholder, but `routers/portfolio.py::
-_current_position_figures()` short-circuits *before* the generic
+holds a schema-required placeholder, but `portfolio/valuation.py::
+position_figures()` short-circuits *before* the generic
 broker-value fallback for that category, always returning `pl`/`pl_pct`/
 `price` as `None` regardless of what the placeholder contains. The
 frontend renders the placeholder-holding field as "non applicable," not
@@ -962,17 +964,17 @@ made a portfolio total that mixed today's XTB quotes with a Mintos
 statement from a year ago look uniformly current. `Position.value_as_of`
 (set at import time — the winning snapshot's own date, never `opened_at`,
 which answers a different question, "since held") plus
-`routers/portfolio.py::_declared_valuation_note` (keyed by
+`portfolio/valuation.py::declared_valuation_note` (keyed by
 `Instrument.not_priceable_reason`, with a per-source cadence in
 `DECLARED_VALUE_FRESHNESS_DAYS`) produce a `ValuationNote`
 (`app/messages.py`) exposed as `PositionOut.valuation_note` — 'fresh' or
 'stale', never a reason to exclude the value itself from any total
-(`_aggregate` is untouched by this decision). Surfaced in four places:
+(`aggregate` is untouched by this decision). Surfaced in four places:
 the `PriceStatusBadge` 🗓 icon (overrides the generic 🚫 for these two
 categories specifically), the value cell's tooltip in `PositionsTable`,
 `PortfolioTotals.has_stale_declared_valuations` (a portfolio-total
 warning banner, computed in `_build_portfolio_out` from the same notes,
-not from `_aggregate`/`_compute_totals`), and `AccountTotals.valuation_note`
+not from `aggregate`/`compute_totals`), and `AccountTotals.valuation_note`
 (Bug 3u.51 — independent of `AccountTotals.performance_note`: an account
 can have a P&L caveat, a declared-value caveat, both, or neither; the
 "By account" table footnote list shows one bullet per note per account).
