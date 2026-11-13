@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { DataHealth, DataHealthRow, DataHealthSeverity, FigiDuplicatePair } from '../api/types'
+import { useApiResource } from '../hooks/useApiResource'
+import type { DataHealthRow, DataHealthSeverity, FigiDuplicatePair } from '../api/types'
 import { useI18n } from '../i18n'
 
 //: Which CSS badge class each overall severity maps to. "action_required"
@@ -86,15 +86,7 @@ function CorporateActionsCell({ row }: { row: DataHealthRow }) {
  */
 export function DataHealthPanel() {
   const { t } = useI18n()
-  const [data, setData] = useState<DataHealth | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    api
-      .getDataHealth()
-      .then(setData)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [])
+  const { data, error } = useApiResource(() => api.getDataHealth(), [])
 
   if (error || data === null) return null
 

@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { PositionConcentration as PositionConcentrationRow } from '../api/types'
+import { useApiResource } from '../hooks/useApiResource'
 import { useI18n } from '../i18n'
 
 /**
@@ -13,23 +12,7 @@ import { useI18n } from '../i18n'
  */
 export function PositionConcentration() {
   const { t, formatNumber } = useI18n()
-  const [rows, setRows] = useState<PositionConcentrationRow[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    api
-      .getRiskConcentration()
-      .then((result) => {
-        if (!cancelled) setRows(result)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { data: rows, error } = useApiResource(() => api.getRiskConcentration(), [])
 
   return (
     <div className="card">

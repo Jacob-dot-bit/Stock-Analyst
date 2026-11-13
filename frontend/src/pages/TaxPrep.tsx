@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api/client'
+import { errorMessage, useApiResource } from '../hooks/useApiResource'
 import type { TaxEnvelopeSummary, TaxYearSummary } from '../api/types'
 import { signClass } from '../format'
 import { useI18n } from '../i18n'
@@ -97,8 +98,7 @@ export function TaxPrep() {
   const { t } = useI18n()
   const [years, setYears] = useState<number[] | null>(null)
   const [year, setYear] = useState<number | null>(null)
-  const [summary, setSummary] = useState<TaxYearSummary | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [yearsError, setYearsError] = useState<string | null>(null)
 
   useEffect(() => {
     api
@@ -107,18 +107,15 @@ export function TaxPrep() {
         setYears(res.years)
         setYear(res.years[0] ?? new Date().getFullYear())
       })
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      .catch((err) => setYearsError(errorMessage(err)))
   }, [])
 
-  const loadSummary = useCallback(() => {
-    if (year === null) return
-    api
-      .getTaxSummary(year)
-      .then(setSummary)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [year])
-
-  useEffect(loadSummary, [loadSummary])
+  const summaryResource = useApiResource<TaxYearSummary | null>(
+    () => (year === null ? Promise.resolve(null) : api.getTaxSummary(year)),
+    [year],
+  )
+  const summary = summaryResource.data
+  const error = yearsError ?? summaryResource.error
 
   return (
     <>

@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { Drawdown as DrawdownData } from '../api/types'
+import { useApiResource } from '../hooks/useApiResource'
 import { useI18n } from '../i18n'
 
 /**
@@ -13,23 +12,7 @@ import { useI18n } from '../i18n'
  */
 export function Drawdown() {
   const { t, formatNumber, formatDate } = useI18n()
-  const [data, setData] = useState<DrawdownData | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    api
-      .getRiskDrawdown()
-      .then((result) => {
-        if (!cancelled) setData(result)
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { data, error } = useApiResource(() => api.getRiskDrawdown(), [])
 
   return (
     <div className="card">

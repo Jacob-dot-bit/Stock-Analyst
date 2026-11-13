@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { api } from '../api/client'
-import type { DividendDetailRow, DividendSummaryRow } from '../api/types'
+import { useApiResource } from '../hooks/useApiResource'
+import type { DividendSummaryRow } from '../api/types'
 import { useI18n } from '../i18n'
 import { SkeletonCards } from '../components/Skeleton'
 
@@ -48,28 +49,23 @@ function byCurrency(
  */
 export function Dividends() {
   const { t, formatNumber, formatDate } = useI18n()
-  const [summary, setSummary] = useState<DividendSummaryRow[] | null>(null)
-  const [detail, setDetail] = useState<DividendDetailRow[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [yearFilter, setYearFilter] = useState('')
   const [accountFilter, setAccountFilter] = useState('')
 
-  const loadSummary = useCallback(() => {
-    api.getDividendSummary().then(setSummary).catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [])
-
-  const loadDetail = useCallback(() => {
-    api
-      .getDividendDetail({
+  const summaryResource = useApiResource(() => api.getDividendSummary(), [])
+  // Refetched on every filter change; a slower answer for an older filter
+  // is dropped rather than overwriting the newer one.
+  const detailResource = useApiResource(
+    () =>
+      api.getDividendDetail({
         year: yearFilter ? Number(yearFilter) : undefined,
         account: accountFilter || undefined,
-      })
-      .then(setDetail)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [yearFilter, accountFilter])
-
-  useEffect(loadSummary, [loadSummary])
-  useEffect(loadDetail, [loadDetail])
+      }),
+    [yearFilter, accountFilter],
+  )
+  const summary = summaryResource.data
+  const detail = detailResource.data
+  const error = summaryResource.error ?? detailResource.error
 
   const years = useMemo(
     () => [...new Set((summary ?? []).map((r) => r.year))].sort((a, b) => b - a),
