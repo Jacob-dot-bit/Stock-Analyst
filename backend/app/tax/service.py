@@ -43,8 +43,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.dividends.service import dividend_summary
+from app.ingest.mintos_import import MINTOS_CORE_ACCOUNT
 from app.messages import Message, TaxPrepNote
-from app.models import TaxNotice, Transaction, TxType
+from app.models import MintosTaxReport, TaxNotice, Transaction, TxType
 from app.tax.checks import notice_checks
 from app.tax.gains import (
     CapitalGainsYear,
@@ -306,9 +307,20 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
         _summarize_envelope(account, txs, dividend_rows_by_account, sales_by_account.get(account, []))
         for account, txs in sorted(by_account.items())
     ]
+    reports = {report.year: report.figures or {} for report in db.execute(select(MintosTaxReport)).scalars()}
+    if tax_year in reports:
+        envelopes = _with_mintos_tax_report(envelopes, reports[tax_year])
+    platform = {year: _platform_net(figures) for year, figures in reports.items()}
+
     year_derivatives = [d for d in all_derivatives if d.executed_at.year == tax_year]
-    capital_gains = capital_gains_by_year(all_sales, all_derivatives).get(tax_year)
-    if capital_gains is not None and not year_sales and not year_derivatives and not capital_gains.losses_carried_in:
+    capital_gains = capital_gains_by_year(all_sales, all_derivatives, platform).get(tax_year)
+    if (
+        capital_gains is not None
+        and not year_sales
+        and not year_derivatives
+        and not platform.get(tax_year)
+        and not capital_gains.losses_carried_in
+    ):
         capital_gains = None
     checks: list[Message] = []
     notice = db.execute(select(TaxNotice).where(TaxNotice.income_year == tax_year)).scalar_one_or_none()
@@ -328,6 +340,45 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
         derivatives=year_derivatives,
         capital_gains=capital_gains,
     )
+
+
+def _platform_net(figures: dict) -> float:
+    """Gains or losses on notes sold, from a Mintos tax report. A row about
+    ETFs is left out: ETF sales are in the "Mintos ETF" account, priced by
+    the weighted average with the other securities, and would count twice."""
+    return round(
+        sum(amount for label, amount in (figures.get("capital_gains") or {}).items() if "etf" not in label.lower()),
+        2,
+    )
+
+
+def _with_mintos_tax_report(envelopes: list[TaxEnvelopeSummary], figures: dict) -> list[TaxEnvelopeSummary]:
+    """The P2P envelope's interest and fees for the year, as Mintos's annual
+    tax report gives them: the whole year, in every category (interest,
+    bonuses, discount on bonds, interest on pending payments), where the
+    quarterly statements give only loan interest and the account statement
+    only the dates it covers. The envelope is added when nothing else
+    brought it. See DEVLOG "Step 3u.113"."""
+    envelope = next((e for e in envelopes if e.account == MINTOS_CORE_ACCOUNT), None)
+    if envelope is None:
+        envelope = TaxEnvelopeSummary(account=MINTOS_CORE_ACCOUNT, envelope_kind=_classify_envelope(MINTOS_CORE_ACCOUNT))
+        envelopes = sorted([*envelopes, envelope], key=lambda e: e.account)
+    other = round(sum((figures.get("other_income") or {}).values()), 2)
+    envelope.interest = figures.get("income_total") or None
+    envelope.fees = figures.get("cost_total") or None
+    envelope.status = "to_reconcile"
+    envelope.notes = [note for note in envelope.notes if note.code != TaxPrepNote.NOT_APPLICABLE]
+    envelope.notes.append(
+        Message(
+            TaxPrepNote.MINTOS_TAX_REPORT_USED,
+            {
+                "interest": figures.get("interest") or 0.0,
+                "other": other,
+                "withholding": figures.get("withholding_tax") or 0.0,
+            },
+        )
+    )
+    return envelopes
 
 
 def _period(tx: Transaction) -> tuple[datetime, datetime] | None:
@@ -372,4 +423,5 @@ def available_tax_years(db: Session) -> list[int]:
             select(Transaction.executed_at).where(Transaction.executed_at.is_not(None))
         ).scalars()
     }
+    years |= set(db.execute(select(MintosTaxReport.year)).scalars())
     return sorted(years, reverse=True)

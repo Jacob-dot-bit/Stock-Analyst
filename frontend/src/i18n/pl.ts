@@ -158,9 +158,13 @@ export const pl: Catalogue = {
   'import.detected.amundi_operations': 'Rozpoznano: dziennik operacji Amundi (.xlsb).',
   'import.detected.bank_statement': 'Rozpoznano: eksport rachunków bankowych (Monabanq, Crédit Mutuel, CIC).',
   'import.detected.tax_notice': 'Rozpoznany plik: francuska decyzja podatkowa (avis d\'impôt, PDF).',
+  'import.detected.mintos_tax_report': 'Rozpoznano: roczny raport podatkowy Mintos (PDF).',
   'import.taxNoticeKept': 'Zachowano decyzję podatkową za dochody {year} ({lines} wierszy z kwotami). Imię i adres nie są zapisywane.',
   'import.taxNoticeReplaced': 'Decyzja podatkowa za dochody {year} zastąpiona tą ({lines} wierszy z kwotami).',
   'import.taxNoticeUnreadable': 'Wygląda na decyzję podatkową, ale nie udało się odczytać roku ani kwot.',
+  'import.mintosTaxReportKept': 'Zachowano raport podatkowy Mintos za {year}: {income} dochodu z inwestycji, {costs} podatku u źródła i opłat. Dane inwestora nie są zapisywane.',
+  'import.mintosTaxReportReplaced': 'Raport podatkowy Mintos za {year} zastąpiony tym: {income} dochodu z inwestycji, {costs} podatku u źródła i opłat.',
+  'import.mintosTaxReportUnreadable': 'Wygląda na raport podatkowy Mintos, ale nie udało się odczytać roku.',
   'import.bankBrokerTransfers':
     'Przelewy między bankiem a brokerami (wysłane, zwrócone = netto, w €): {totals}. Udział w zyskach wypłacony przez Amundi na konto nie jest liczony.',
   'import.bankBalanceKept':
@@ -1044,6 +1048,7 @@ export const pl: Catalogue = {
   'taxPrep.gains.hint':
     'Obliczone według średniej ważonej ceny nabycia, z opłatami, na wszystkich rachunkach maklerskich z tym samym papierem. PEA, oszczędności pracownicze i P2P nie są liczone.',
   'taxPrep.gains.derivatives': 'W tym CFD (zamknięte pozycje)',
+  'taxPrep.gains.platform': 'W tym papiery sprzedane na Mintos (raport podatkowy)',
   'taxPrep.gains.gains': 'Zyski',
   'taxPrep.gains.losses': 'Straty',
   'taxPrep.gains.net': 'Saldo roku',
@@ -1067,6 +1072,7 @@ export const pl: Catalogue = {
     'Wykryto wypłatę na kwotę {amount}. Obowiązujące zasady podatkowe (wiek planu, warunki wyjścia) nie są obliczane automatycznie przez to narzędzie — sprawdź je samodzielnie lub z doradcą podatkowym.',
   'taxPrep.unmatchedSales': '{count} sprzedaż(y) bez możliwego do obliczenia zysku (brak zakupu w zaimportowanych wyciągach, zob. IFU).',
   'taxPrep.notApplicable': 'Nie wykryto żadnej istotnej podatkowo operacji w tej kopercie w tym roku.',
+  'taxPrep.mintosTaxReportUsed': 'Odsetki i opłaty z rocznego raportu podatkowego Mintos: {interest} odsetek, {other} innych dochodów (bonusy, dyskonto obligacji…), {withholding} pobrane na Łotwie.',
 
   // --- Ryzyko portfela (DEVLOG "Decision 3u.67") ------------------------------
   'risk.title': 'Ryzyko portfela',

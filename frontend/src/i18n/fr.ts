@@ -149,9 +149,13 @@ export const fr: Catalogue = {
   'import.detected.amundi_operations': 'Fichier reconnu : journal des opérations Amundi (.xlsb).',
   'import.detected.bank_statement': 'Fichier reconnu : export de comptes bancaires (Monabanq, Crédit Mutuel, CIC).',
   'import.detected.tax_notice': 'Fichier reconnu : avis d\'impôt sur les revenus (PDF).',
+  'import.detected.mintos_tax_report': 'Fichier reconnu : rapport fiscal annuel Mintos (PDF).',
   'import.taxNoticeKept': 'Avis d\'impôt des revenus {year} gardé ({lines} lignes de montants). Le nom et l\'adresse ne sont pas gardés.',
   'import.taxNoticeReplaced': 'Avis d\'impôt des revenus {year} remplacé par celui-ci ({lines} lignes de montants).',
   'import.taxNoticeUnreadable': 'Cela ressemble à un avis d\'impôt, mais ni l\'année ni les montants n\'ont pu être lus.',
+  'import.mintosTaxReportKept': 'Rapport fiscal Mintos {year} conservé : {income} de revenus de placement, {costs} de retenue et de frais. Rien sur l\'investisseur n\'est gardé.',
+  'import.mintosTaxReportReplaced': 'Rapport fiscal Mintos {year} remplacé par celui-ci : {income} de revenus de placement, {costs} de retenue et de frais.',
+  'import.mintosTaxReportUnreadable': 'Ce fichier ressemble à un rapport fiscal Mintos, mais aucune année n\'a pu y être lue.',
   'import.bankBrokerTransfers':
     'Virements entre la banque et les courtiers (envoyé, revenu = net, en €) : {totals}. La participation versée par Amundi sur le compte n\'est pas comptée.',
   'import.bankBalanceKept':
@@ -1034,6 +1038,7 @@ export const fr: Catalogue = {
   'taxPrep.gains.hint':
     'Calculées au prix moyen pondéré d\'acquisition, frais inclus, sur tous les comptes-titres qui détiennent le même titre. PEA, épargne salariale et P2P ne sont pas comptés.',
   'taxPrep.gains.derivatives': 'Dont CFD (positions clôturées)',
+  'taxPrep.gains.platform': 'Dont titres cédés sur Mintos (rapport fiscal)',
   'taxPrep.gains.gains': 'Plus-values',
   'taxPrep.gains.losses': 'Moins-values',
   'taxPrep.gains.net': 'Solde de l\'année',
@@ -1057,6 +1062,7 @@ export const fr: Catalogue = {
     'Un retrait de {amount} a été détecté. La fiscalité applicable dépend de règles (ancienneté du plan, conditions de sortie) que cet outil ne calcule pas automatiquement — à vérifier vous-même ou avec un conseil fiscal.',
   'taxPrep.unmatchedSales': '{count} vente(s) sans plus-value calculable (achat absent des relevés importés, voir l\'IFU).',
   'taxPrep.notApplicable': "Aucune opération fiscalement pertinente détectée dans cette enveloppe pour cette année.",
+  'taxPrep.mintosTaxReportUsed': 'Intérêts et frais repris du rapport fiscal annuel Mintos : {interest} d\'intérêts, {other} d\'autres revenus (bonus, décote sur obligations…), {withholding} retenus en Lettonie.',
 
   // --- Risques du portefeuille (DEVLOG "Decision 3u.67") --------------------
   'risk.title': 'Risques du portefeuille',

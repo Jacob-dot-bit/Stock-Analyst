@@ -631,6 +631,8 @@ export interface TaxCapitalGainsYear {
   unmatched_sales: number
   /** Net of closed CFD positions, already inside gains/losses. */
   derivatives: number
+  /** Net of notes sold on a P2P platform (its annual tax report), already inside gains/losses. */
+  platform: number
   losses_carried_in: Record<string, number>
   losses_used: number
   taxable_net: number

@@ -295,6 +295,23 @@ class TaxNotice(Base):
     import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
 
 
+class MintosTaxReport(Base):
+    """What Mintos's annual tax report says for one calendar year
+    (`ingest/mintos_tax_report_import.py`): interest, withholding tax, other
+    income, gains on notes sold and fees. One row per year: a newer report
+    for the same year replaces it. Nothing about the investor is kept. See
+    DEVLOG "Step 3u.113".
+    """
+
+    __tablename__ = "mintos_tax_reports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    year: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    figures: Mapped[dict] = mapped_column(JSON, default=dict)
+    imported_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
+
+
 class Position(Base):
     """An open holding. Comes from a broker export or from manual entry."""
 

@@ -1406,6 +1406,8 @@ class TaxCapitalGainsYearOut(BaseModel):
     unmatched_sales: int
     #: Net of closed CFD positions, already inside gains/losses.
     derivatives: float = 0.0
+    #: Net of notes sold on a P2P platform (its tax report), inside gains/losses.
+    platform: float = 0.0
     losses_carried_in: dict[int, float]
     losses_used: float
     taxable_net: float

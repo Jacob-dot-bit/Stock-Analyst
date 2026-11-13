@@ -246,6 +246,9 @@ class CapitalGainsYear:
     unmatched_sales: int = 0
     #: Net result of closed CFD positions, already in gains/losses.
     derivatives: float = 0.0
+    #: Net result of notes sold on a P2P platform, as its annual tax report
+    #: gives it (Mintos, Step 3u.113), already in gains/losses.
+    platform: float = 0.0
     #: gains + losses of the year.
     net: float = 0.0
     #: Earlier losses still usable at the start of the year, by year of origin.
@@ -258,12 +261,24 @@ class CapitalGainsYear:
 
 
 def capital_gains_by_year(
-    sales: list[SaleGain], derivatives: list[DerivativeGain] = ()
+    sales: list[SaleGain],
+    derivatives: list[DerivativeGain] = (),
+    platform: dict[int, float] | None = None,
 ) -> dict[int, CapitalGainsYear]:
-    """Matched sales and closed CFD positions summed per calendar year, with
-    losses carried forward up to `LOSS_CARRY_YEARS` years, the oldest used
-    first."""
+    """Matched sales, closed CFD positions and the platform results of
+    `platform` (year → net, from a P2P tax report) summed per calendar
+    year, with losses carried forward up to `LOSS_CARRY_YEARS` years, the
+    oldest used first."""
     years: dict[int, CapitalGainsYear] = {}
+    for y, net in (platform or {}).items():
+        if not net:
+            continue
+        year = years.setdefault(y, CapitalGainsYear(year=y))
+        year.platform += net
+        if net >= 0:
+            year.gains += net
+        else:
+            year.losses += net
     for d in derivatives:
         year = years.setdefault(d.executed_at.year, CapitalGainsYear(year=d.executed_at.year))
         year.derivatives += d.gain
@@ -290,6 +305,7 @@ def capital_gains_by_year(
         pool = {origin: left for origin, left in pool.items() if y - origin <= LOSS_CARRY_YEARS and left > _EPS}
         year.gains, year.losses = round(year.gains, 2), round(year.losses, 2)
         year.derivatives = round(year.derivatives, 2)
+        year.platform = round(year.platform, 2)
         year.net = round(year.gains + year.losses, 2)
         year.losses_carried_in = {k: round(v, 2) for k, v in pool.items()}
         if year.net < 0:

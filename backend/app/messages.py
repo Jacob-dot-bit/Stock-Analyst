@@ -80,6 +80,15 @@ class MessageCode:
     #: Recognised as a notice, but no year or no amount line found in it.
     TAX_NOTICE_UNREADABLE = "import.taxNoticeUnreadable"
 
+    # --- Mintos annual tax report (`ingest/mintos_tax_report_import.py`) -------
+    #: The report for {year} kept: {income} of investment income, {costs} of
+    #: withholding tax and fees.
+    MINTOS_TAX_REPORT_KEPT = "import.mintosTaxReportKept"  # {year, income, costs}
+    #: Same, replacing the report already on file for that year.
+    MINTOS_TAX_REPORT_REPLACED = "import.mintosTaxReportReplaced"  # {year, income, costs}
+    #: Recognised as a Mintos tax report, but no reporting year found in it.
+    MINTOS_TAX_REPORT_UNREADABLE = "import.mintosTaxReportUnreadable"
+
     # --- Single upload slot (`ingest/detect.py`) -----------------------------
     #: Which export was recognised, as ``import.detected.<FileKind value>`` —
     #: one code per kind so each locale words it fully. Shown first in the
@@ -265,6 +274,10 @@ class TaxPrepNote:
     CHECK_INCOME_DIFFERS = "taxPrep.check.incomeDiffers"  # {app, notice}
     #: Nothing to report: the notice agrees with the app.
     CHECK_AGREES = "taxPrep.check.agrees"
+    #: The P2P envelope's interest and fees of the year come from Mintos's
+    #: annual tax report, not from the statements (DEVLOG "Step 3u.113"):
+    #: {interest} of interest, {other} of other income, {withholding} withheld.
+    MINTOS_TAX_REPORT_USED = "taxPrep.mintosTaxReportUsed"  # {interest, other, withholding}
 
 
 class SymbolReason:

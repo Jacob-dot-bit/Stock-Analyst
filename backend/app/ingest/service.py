@@ -30,6 +30,7 @@ from app.ingest.amundi_operations_import import (
 )
 from app.ingest.amundi_synthese_import import parse_amundi_synthese_export
 from app.ingest.bank_import import BankLine, BrokerTransfer, ParsedBankExport, parse_bank_export
+from app.ingest.mintos_tax_report_import import parse_mintos_tax_report
 from app.ingest.tax_notice_import import parse_tax_notice
 from app.ingest.mintos_import import (
     MINTOS_CORE_ACCOUNT,
@@ -60,6 +61,7 @@ from app.models import (
     Position,
     Source,
     SymbolOverride,
+    MintosTaxReport,
     TaxNotice,
     Transaction,
     TxType,
@@ -1726,6 +1728,42 @@ def import_tax_notice_file(
         Message(
             MessageCode.TAX_NOTICE_REPLACED if replaced is not None else MessageCode.TAX_NOTICE_KEPT,
             {"year": parsed.income_year, "lines": len(parsed.lines)},
+        ).as_dict()
+    ]
+    return _finish_import(db, batch, commit)
+
+
+def import_mintos_tax_report_file(
+    db: Session, content: bytes, filename: str, *, commit: bool = True
+) -> ImportBatch | dict[str, Any]:
+    """Keep what Mintos's annual tax report says
+    (`ingest/mintos_tax_report_import.py`): no position, no transaction, one
+    `mintos_tax_reports` row for its year, replacing the one already there.
+    The tax summary reads it for that year. See DEVLOG "Step 3u.113"."""
+    parsed = parse_mintos_tax_report(content)
+    batch = _new_batch(
+        db,
+        content,
+        filename=filename,
+        warnings=[],
+        sections=[],
+        accounts=[],
+        positions_found=0,
+        transactions_found=0,
+    )
+    if parsed.is_empty:
+        batch.warnings = [Message(MessageCode.MINTOS_TAX_REPORT_UNREADABLE).as_dict()]
+        return _finish_import(db, batch, commit)
+
+    replaced = db.execute(select(MintosTaxReport).where(MintosTaxReport.year == parsed.year)).scalar_one_or_none()
+    if replaced is not None:
+        db.delete(replaced)
+        db.flush()
+    db.add(MintosTaxReport(year=parsed.year, figures=parsed.figures(), import_batch_id=batch.id))
+    batch.warnings = [
+        Message(
+            MessageCode.MINTOS_TAX_REPORT_REPLACED if replaced is not None else MessageCode.MINTOS_TAX_REPORT_KEPT,
+            {"year": parsed.year, "income": parsed.income_total, "costs": -parsed.cost_total},
         ).as_dict()
     ]
     return _finish_import(db, batch, commit)
