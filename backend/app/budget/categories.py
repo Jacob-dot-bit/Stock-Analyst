@@ -141,6 +141,10 @@ _REFUND_RE = re.compile(
     r"|\b(?:AVOIR|REMBOURSEMENT|REMB|RBT|ANNULATION|ANNUL|RETOUR)\b"
 )
 
+#: A card payment: a shop, never a fee the bank charges (a shop's name can
+#: hold FRAIS or COMMISSION).
+_CARD_PAYMENT_RE = re.compile(r"^\s*(?:PAIEMENT\s+(?:CB|PSC|CARTE|PAR\s+CARTE)|CARTE|CB|ACHAT\s+CB)\b")
+
 #: A VIR / VIREMENT nobody recognised: money sent to someone, or received.
 _TRANSFER_RE = re.compile(r"^\s*(?:VIR|VIREMENT)\b")
 
@@ -234,7 +238,10 @@ def categorize(
     elif _BENEFITS_RE.search(upper):
         # Paying back benefits received too much: lowers that income.
         return Categorized("benefits", INCOME, name)
+    card = bool(_CARD_PAYMENT_RE.match(upper))
     for category, pattern in _RULES:
+        if category == "bank_fees" and card:
+            continue
         if pattern.search(upper):
             # A credit here lowers that category's spending only when it is
             # a refund: a card credit, or a label that says so. Money a
