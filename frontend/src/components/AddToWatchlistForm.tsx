@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { api } from '../api/client'
-import type { SymbolSearchResult } from '../api/types'
 import { useI18n } from '../i18n'
+import { SymbolInput } from './SymbolInput'
 
 interface Props {
   onCreated: () => void
 }
-
-//: Same debounce as `ManualPositionForm` — avoids firing a request (and
-//: spending FMP's quota) on every character typed.
-const SEARCH_DEBOUNCE_MS = 350
 
 export function AddToWatchlistForm({ onCreated }: Props) {
   const { t } = useI18n()
@@ -21,34 +17,6 @@ export function AddToWatchlistForm({ onCreated }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<SymbolSearchResult[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    const query = symbol.trim()
-    if (query.length < 2 || query.includes('.')) {
-      setSuggestions([])
-      return
-    }
-    debounceRef.current = setTimeout(() => {
-      api
-        .searchSymbols(query)
-        .then(setSuggestions)
-        .catch(() => setSuggestions([]))
-    }, SEARCH_DEBOUNCE_MS)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [symbol])
-
-  function pickSuggestion(result: SymbolSearchResult) {
-    setSymbol(`${result.symbol}.US`)
-    setCompanyName(result.name)
-    setShowSuggestions(false)
-    setSuggestions([])
-  }
 
   // Accept both decimal separators, same reasoning as ManualPositionForm.
   const targetPriceValue = targetPrice.trim() === '' ? null : Number(targetPrice.replace(',', '.'))
@@ -104,29 +72,13 @@ export function AddToWatchlistForm({ onCreated }: Props) {
       <h2>{t('watchlist.form.newTitle')}</h2>
 
       <div className="form-row">
-        <div className="field" style={{ position: 'relative' }}>
-          <label htmlFor="wl-symbol">{t('watchlist.form.symbol')}</label>
-          <input
-            id="wl-symbol"
-            value={symbol}
-            placeholder="AAPL.US"
-            autoComplete="off"
-            onChange={(e) => setSymbol(e.target.value)}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-          />
-          {showSuggestions && suggestions.length > 0 && (
-            <ul className="symbol-suggestions">
-              {suggestions.map((s) => (
-                <li key={s.symbol}>
-                  <button type="button" onClick={() => pickSuggestion(s)}>
-                    <strong>{s.symbol}</strong> <span className="muted">{s.name}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <SymbolInput
+          id="wl-symbol"
+          label={t('watchlist.form.symbol')}
+          value={symbol}
+          onChange={setSymbol}
+          onPick={(result) => setCompanyName(result.name)}
+        />
         <div className="field">
           <label htmlFor="wl-company">{t('watchlist.form.companyName')}</label>
           <input
