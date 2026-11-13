@@ -973,6 +973,14 @@ export const fr: Catalogue = {
   'dividends.exportDetailCsv': 'Exporter (CSV, détail des transactions)',
 
   // --- Préparation fiscale ---------------------------------------------------
+  'taxPrep.check.title': 'Écarts avec l\'avis d\'impôt',
+  'taxPrep.check.lossNotOnNotice': 'Moins-value nette de {loss} sur l\'année, absente de l\'avis : elle n\'a pas été déclarée et ne pourra pas être reportée sur les années suivantes tant qu\'elle ne l\'est pas.',
+  'taxPrep.check.gainsNotOnNotice': 'Plus-value nette de {app} sur l\'année, aucune plus-value sur l\'avis.',
+  'taxPrep.check.gainsDiffer': 'Plus-values : {app} d\'après l\'appli, {notice} sur l\'avis. Vérifiez les ventes non rapprochées et les comptes non importés.',
+  'taxPrep.check.lossesNotUsed': 'Des moins-values antérieures ({available}) pouvaient réduire la plus-value de l\'année : l\'avis retient {notice}, contre {app} après report.',
+  'taxPrep.check.incomeNotOnNotice': 'Dividendes et intérêts de {app} sur l\'année, aucun revenu de capitaux mobiliers sur l\'avis.',
+  'taxPrep.check.incomeDiffers': 'Revenus de capitaux mobiliers : {app} d\'après l\'appli (dividendes bruts et intérêts hors PEA), {notice} sur l\'avis.',
+  'taxPrep.check.agrees': 'Les plus-values et revenus de placement de l\'appli concordent avec l\'avis.',
   'taxPrep.notice.title': 'Avis d\'impôt des revenus {year}',
   'taxPrep.notice.none': 'Pas encore d\'avis d\'impôt pour {year}. Importez le PDF d\'impots.gouv.fr avec les autres fichiers pour le comparer à ces chiffres.',
   'taxPrep.notice.grossIncome': 'Revenu brut global',

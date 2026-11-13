@@ -82,6 +82,9 @@ class ParsedMintosTransactionsExport:
     income_total: float = 0.0
     cost_total: float = 0.0
     deposits_total: float = 0.0
+    #: Income and costs per calendar year: what the tax summary needs,
+    #: since a file usually spans more than one year.
+    by_year: dict[int, tuple[float, float]] = field(default_factory=dict)
     transaction_count: int = 0
     warnings: list[Message] = field(default_factory=list)
 
@@ -123,6 +126,7 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     income_total = 0.0
     cost_total = 0.0
     deposits_total = 0.0
+    by_year: dict[int, tuple[float, float]] = {}
 
     for row in rows:
         if len(row) <= max(idx_date, idx_amount, idx_type):
@@ -137,10 +141,13 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
         latest = when if latest is None or when > latest else latest
         count += 1
 
+        year_income, year_cost = by_year.get(when.year, (0.0, 0.0))
         if payment_type in _INCOME_TYPES:
             income_total += amount
+            by_year[when.year] = (year_income + amount, year_cost)
         elif payment_type in _COST_TYPES:
             cost_total += amount
+            by_year[when.year] = (year_income, year_cost + amount)
         elif payment_type.startswith(_DEPOSIT_PREFIX):
             deposits_total += amount
 
@@ -153,5 +160,6 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     result.income_total = round(income_total, 2)
     result.cost_total = round(cost_total, 2)
     result.deposits_total = round(deposits_total, 2)
+    result.by_year = {year: (round(i, 2), round(c, 2)) for year, (i, c) in sorted(by_year.items())}
     result.transaction_count = count
     return result

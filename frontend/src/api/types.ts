@@ -641,6 +641,8 @@ export interface TaxYearSummary {
   tax_year: number
   envelopes: TaxEnvelopeSummary[]
   sales: TaxSaleGain[]
+  /** Set against the year's income tax notice; empty with no notice. */
+  notice_checks: ApiMessage[]
   capital_gains: TaxCapitalGainsYear | null
   disclaimer: ApiMessage
 }
