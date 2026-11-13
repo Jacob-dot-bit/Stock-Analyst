@@ -339,7 +339,7 @@ class Position(Base):
     # and Amundi ESR funds (`AmundiFundSnapshot.as_of` of the import that
     # currently wins). `None` for every ordinary priced position, where
     # freshness is instead judged from `Instrument.prices_checked_at`.
-    # Drives `routers/portfolio.py::_declared_valuation_note` — separate
+    # Drives `portfolio/valuation.py::declared_valuation_note` — separate
     # from `opened_at` ("since held", Decision 3u.49), which answers a
     # different question and must not be reused for this one. See DEVLOG
     # "Decision 3u.50".

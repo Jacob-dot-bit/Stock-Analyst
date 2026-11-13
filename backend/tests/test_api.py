@@ -378,12 +378,12 @@ class TestP2PAggregate:
         }
 
     def test_p2p_value_still_counts_toward_portfolio_and_account_totals(self, client):
-        """Real bug found live 2026-09-07: `_aggregate()` excluded a position
+        """Real bug found live 2026-09-07: `aggregate()` excluded a position
         from *every* total (not just the P&L sum) whenever its P&L was
         `None` — which is always true for P2P by design. Mintos Core's
         entire declared value was silently invisible everywhere in the
         app, not just its unknown gain/loss, even though the value itself
-        was known and deliberately surfaced by `_current_position_figures`
+        was known and deliberately surfaced by `position_figures`
         for exactly this purpose."""
         instrument = Instrument(
             broker_symbol="MINTOS-CORE-P2P",
@@ -448,7 +448,7 @@ class TestP2PAggregate:
 class TestBrokerValueFallbackWithoutPnl:
     """Real bug found live 2026-09-08, immediately after adding the Amundi
     Synthese import (DEVLOG "Decision 3u.44"): the generic broker-value
-    fallback in `_current_position_figures` required *both*
+    fallback in `position_figures` required *both*
     `broker_market_value` and `broker_net_pl` to be known before
     surfacing a value at all — so a position with a real, known value but
     no known gain/loss (that new import's raw export carries no P&L
@@ -500,7 +500,7 @@ class TestUnknownPnlIsNeverDisplayedAsZero:
     account where *every* position's P&L is unknown (Mintos Core P2P by
     design; Amundi funds once updated only from the Synthese export,
     which carries no gain/loss column) summed to a literal `0.0` in
-    `_aggregate()` — displayed as a confident "0.00 / 0.00%" that reads as
+    `aggregate()` — displayed as a confident "0.00 / 0.00%" that reads as
     "no gain, no loss" when the honest answer is "unknown." Fixed by
     returning `None` (not `0.0`) whenever no position in the group
     contributed a known figure — see DEVLOG "Decision 3u.42"/"3u.44"'s own
