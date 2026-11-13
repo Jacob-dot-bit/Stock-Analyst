@@ -255,9 +255,10 @@ export const api = {
 
   getBudgetSummary: (months = 12) => request<BudgetSummary>(`/api/budget/summary?months=${months}`),
 
-  getBudgetOperations: (params: { days?: number; category?: string; account?: string } = {}) => {
+  getBudgetOperations: (params: { days?: number; category?: string; account?: string; month?: string } = {}) => {
     const q = new URLSearchParams()
     q.set('days', String(params.days ?? 90))
+    if (params.month) q.set('month', params.month)
     if (params.category) q.set('category', params.category)
     if (params.account) q.set('account', params.account)
     return request<BudgetOperations>(`/api/budget/operations?${q.toString()}`)

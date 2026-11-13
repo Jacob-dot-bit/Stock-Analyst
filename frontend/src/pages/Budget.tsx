@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { BudgetMonth, BudgetOperations, BudgetSummary } from '../api/types'
 import { SkeletonCards } from '../components/Skeleton'
@@ -27,6 +27,10 @@ export function Budget() {
   const [selected, setSelected] = useState<string | null>(null)
   const [category, setCategory] = useState('')
   const [days, setDays] = useState(60)
+  // A category clicked in the month's bars: the list below shows that month only.
+  const [opsMonth, setOpsMonth] = useState<string | null>(null)
+  const [hovered, setHovered] = useState<string | null>(null)
+  const operationsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     api
@@ -37,10 +41,10 @@ export function Budget() {
 
   useEffect(() => {
     api
-      .getBudgetOperations({ days, category: category || undefined })
+      .getBudgetOperations({ days, category: category || undefined, month: opsMonth ?? undefined })
       .then(setOperations)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [days, category])
+  }, [days, category, opsMonth])
 
   const months = summary?.months ?? []
   const lastFull = [...months].reverse().find((m) => !m.partial) ?? months[months.length - 1]
@@ -52,7 +56,19 @@ export function Budget() {
       .filter(([name]) => !INCOME_CATEGORIES.has(name))
       .sort((a, b) => b[1] - a[1])
   }, [month])
-  const maxSpending = Math.max(1, ...spendingRows.map(([, value]) => value))
+  const averages = summary?.averages?.categories ?? {}
+  const maxSpending = Math.max(1, ...spendingRows.map(([name, value]) => Math.max(value, averages[name] ?? 0)))
+  const monthSpending = spendingRows.reduce((sum, [, value]) => sum + Math.max(0, value), 0)
+  const detailName = hovered && spendingRows.some(([name]) => name === hovered) ? hovered : null
+  const detailValue = detailName ? (month?.categories[detailName] ?? 0) : 0
+  const detailAvg = detailName ? averages[detailName] : undefined
+
+  const showCategory = (name: string) => {
+    if (!month) return
+    setCategory(name)
+    setOpsMonth(month.month)
+    operationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const categoryLabel = (name: string) => t(`budget.category.${name}`)
   const monthLabel = (key: string) => {
@@ -139,21 +155,59 @@ export function Budget() {
       {month && spendingRows.length > 0 && (
         <div className="card">
           <h2>{t('budget.categoriesOf', { month: monthLabel(month.month) })}</h2>
-          <div className="budget-bars">
-            {spendingRows.map(([name, value]) => (
-              <div className="budget-bar-row" key={name}>
-                <span className="budget-bar-label">{categoryLabel(name)}</span>
-                <span className="budget-bar-track">
-                  <span className="budget-bar-fill" style={{ width: `${Math.max(0, (value / maxSpending) * 100)}%` }} />
-                </span>
-                <span className={`budget-bar-value num ${value < 0 ? 'budget-pos' : ''}`}>{formatNumber(value)}</span>
-                <span className="budget-bar-avg num">
-                  {summary?.averages?.categories[name] !== undefined
-                    ? t('budget.avgShort', { value: formatNumber(summary.averages.categories[name]) })
-                    : ''}
-                </span>
-              </div>
-            ))}
+          <p className="budget-hint">{t('budget.barHint')}</p>
+          <div className="budget-bars" onMouseLeave={() => setHovered(null)}>
+            {spendingRows.map(([name, value]) => {
+              const avg = averages[name]
+              return (
+                <button
+                  type="button"
+                  className={`budget-bar-row${name === detailName ? ' is-active' : ''}`}
+                  key={name}
+                  onMouseEnter={() => setHovered(name)}
+                  onFocus={() => setHovered(name)}
+                  onClick={() => showCategory(name)}
+                >
+                  <span className="budget-bar-label">{categoryLabel(name)}</span>
+                  <span className="budget-bar-track">
+                    <span className="budget-bar-fill" style={{ width: `${Math.max(0, (value / maxSpending) * 100)}%` }} />
+                    {avg !== undefined && avg > 0 && (
+                      <span className="budget-bar-avg-mark" style={{ left: `${Math.min(100, (avg / maxSpending) * 100)}%` }} />
+                    )}
+                  </span>
+                  <span className={`budget-bar-value num ${value < 0 ? 'budget-pos' : ''}`}>{formatNumber(value)}</span>
+                  <span className="budget-bar-avg num">
+                    {avg !== undefined ? t('budget.avgShort', { value: formatNumber(avg) }) : ''}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="budget-bar-detail" aria-live="polite">
+            {detailName ? (
+              <>
+                <strong>{categoryLabel(detailName)}</strong>
+                {' · '}
+                {formatNumber(detailValue)}
+                {' · '}
+                {t('budget.barDetail', {
+                  share: monthSpending > 0 ? `${formatNumber((Math.max(0, detailValue) / monthSpending) * 100, 0)} %` : '—',
+                })}
+                {detailAvg !== undefined && (
+                  <>
+                    {' · '}
+                    <span className={signClass(detailAvg - detailValue)}>
+                      {t('budget.barVsAvg', {
+                        delta: `${detailValue - detailAvg >= 0 ? '+' : ''}${formatNumber(detailValue - detailAvg)}`,
+                        avg: formatNumber(detailAvg),
+                      })}
+                    </span>
+                  </>
+                )}
+              </>
+            ) : (
+              '\u00a0'
+            )}
           </div>
         </div>
       )}
@@ -240,9 +294,13 @@ export function Budget() {
       )}
 
       {months.length > 0 && (
-        <div className="card">
+        <div className="card" ref={operationsRef}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h2>{t('budget.operations')}</h2>
+            <h2>
+              {opsMonth && category
+                ? t('budget.opsOf', { category: categoryLabel(category), month: monthLabel(opsMonth) })
+                : t('budget.operations')}
+            </h2>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <select aria-label={t('budget.category')} value={category} onChange={(e) => setCategory(e.target.value)}>
                 <option value="">{t('budget.allCategories')}</option>
@@ -255,7 +313,17 @@ export function Budget() {
                     </option>
                   ))}
               </select>
-              <select aria-label={t('budget.period')} value={days} onChange={(e) => setDays(Number(e.target.value))}>
+              {opsMonth && (
+                <button type="button" onClick={() => setOpsMonth(null)}>
+                  {t('budget.clearFilter')}
+                </button>
+              )}
+              <select
+                aria-label={t('budget.period')}
+                value={days}
+                disabled={opsMonth !== null}
+                onChange={(e) => setDays(Number(e.target.value))}
+              >
                 {[30, 60, 90, 180, 365].map((d) => (
                   <option key={d} value={d}>
                     {t('budget.lastDays', { count: d })}
