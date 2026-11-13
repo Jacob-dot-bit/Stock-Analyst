@@ -3,31 +3,20 @@ import { api } from '../api/client'
 import type { ImportBatch, ImportPreview } from '../api/types'
 import { useI18n } from '../i18n'
 
-type BrokerKind = 'auto' | 'xtb' | 'mintos' | 'mintos-investments' | 'mintos-transactions' | 'amundi' | 'amundi-synthese'
+const ACCEPT = '.xlsx,.xlsm,.xlsb,.csv,.pdf'
 
 interface Props {
-  kind: BrokerKind
   onImported: () => void
-}
-
-const ACCEPT_BY_KIND: Record<BrokerKind, string> = {
-  auto: '.xlsx,.xlsm,.xlsb,.csv,.pdf',
-  xtb: '.xlsx,.xlsm,.csv',
-  mintos: '.pdf',
-  'mintos-investments': '.xlsx',
-  'mintos-transactions': '.xlsx,.csv',
-  amundi: '.pdf',
-  'amundi-synthese': '.xlsb',
 }
 
 /**
  * Import a broker file — now a preview-then-confirm flow rather than an
  * immediate commit, plus a history of past imports with the ability to undo
  * the most recent one. See DEVLOG "Decision 3h.1" for why undo is restricted
- * to the newest import only. Shared across all three broker sources (XTB,
- * Mintos, Amundi) — see DEVLOG "Decision 3u.39".
+ * to the newest import only. One upload slot for every supported
+ * export: the backend recognises the file by its content (DEVLOG "Step 3u.87").
  */
-export function ImportPanel({ kind, onImported }: Props) {
+export function ImportPanel({ onImported }: Props) {
   const { t } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +44,7 @@ export function ImportPanel({ kind, onImported }: Props) {
     setResult(null)
     setPreview(null)
     try {
-      const report = await api.previewBrokerFile(kind, file)
+      const report = await api.previewBrokerFile(file)
       setPreview(report)
       setPendingFile(file)
     } catch (err) {
@@ -75,7 +64,7 @@ export function ImportPanel({ kind, onImported }: Props) {
     setBusy(true)
     setError(null)
     try {
-      const batch = await api.importBrokerFile(kind, pendingFile)
+      const batch = await api.importBrokerFile(pendingFile)
       setResult(batch)
       setPreview(null)
       setPendingFile(null)
@@ -104,12 +93,12 @@ export function ImportPanel({ kind, onImported }: Props) {
 
   return (
     <div className="card">
-      <h2>{t(`import.${kind}.title`)}</h2>
+      <h2>{t('import.auto.title')}</h2>
 
       <p className="muted section-desc">
-        {t(`import.${kind}.instructions`)}
+        {t('import.auto.instructions')}
       </p>
-      <p className="muted">{t(`import.${kind}.multiAccount`)}</p>
+      <p className="muted">{t('import.auto.multiAccount')}</p>
 
       {!preview && (
         <div
@@ -126,11 +115,11 @@ export function ImportPanel({ kind, onImported }: Props) {
             if (file) void runPreview(file)
           }}
         >
-          <p style={{ margin: '0 0 0.7rem' }}>{t(`import.${kind}.dropzone`)}</p>
+          <p style={{ margin: '0 0 0.7rem' }}>{t('import.auto.dropzone')}</p>
           <input
             ref={inputRef}
             type="file"
-            accept={ACCEPT_BY_KIND[kind]}
+            accept={ACCEPT}
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0]

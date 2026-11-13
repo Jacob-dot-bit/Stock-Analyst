@@ -35,7 +35,7 @@ def _check_upload_size(content: bytes) -> None:
     if not content:
         raise HTTPException(status_code=400, detail="Empty file.")
     if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="File too large (25 MB limit).")
+        raise HTTPException(status_code=413, detail=f"File too large ({MAX_UPLOAD_BYTES // (1024 * 1024)} MB limit).")
 
 
 #: Importer and fallback filename per recognised file. The filename matters
@@ -65,9 +65,8 @@ def _detected(kind: FileKind) -> MessageOut:
 @router.post("/auto", response_model=ImportBatchOut)
 async def import_auto(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
     """Import any supported export — XTB, the three Mintos files or the
-    three Amundi ones, or a bank account export. The content decides which importer runs (`ingest/detect.py`);
-    the per-broker endpoints below stay for scripts that already call them.
-    See DEVLOG "Step 3u.87".
+    three Amundi ones, or a bank account export. The content decides which importer runs (`ingest/detect.py`).
+    The only upload route: the per-broker ones went in Step 3u.93. See DEVLOG "Step 3u.87".
     """
     content = await file.read()
     _check_upload_size(content)
@@ -105,177 +104,6 @@ async def preview_auto(file: UploadFile = File(...), db: Session = Depends(get_d
     preview = ImportPreviewOut(**importer(db, content, file.filename or _fallback_name(kind, content), commit=False))
     preview.warnings.insert(0, _detected(kind))
     return preview
-
-
-@router.post("/xtb", response_model=ImportBatchOut)
-async def import_xtb(
-    file: UploadFile = File(...), db: Session = Depends(get_db)
-) -> ImportBatchOut:
-    """Import an xStation report (Account history → Export).
-
-    The import is idempotent: transactions are deduplicated on the broker operation
-    id, and open positions replace the previous snapshot of the same account.
-    """
-    content = await file.read()
-    _check_upload_size(content)
-
-    batch = import_export_file(db, content, file.filename or "export")
-    return ImportBatchOut.model_validate(batch)
-
-
-@router.post("/xtb/preview", response_model=ImportPreviewOut)
-async def preview_xtb(
-    file: UploadFile = File(...), db: Session = Depends(get_db)
-) -> ImportPreviewOut:
-    """Dry-run an xStation report: the same parse/dedup logic as a real import,
-    rolled back instead of committed — so the counts shown are exactly what a
-    real import would do. See DEVLOG "Decision 3h.1".
-    """
-    content = await file.read()
-    _check_upload_size(content)
-
-    summary = import_export_file(db, content, file.filename or "export", commit=False)
-    return ImportPreviewOut(**summary)
-
-
-@router.post("/mintos", response_model=ImportBatchOut)
-async def import_mintos(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
-    """Import a Mintos "Periodic statement of Financial instruments" PDF.
-
-    No cumulative export exists — Mintos only provides one PDF per calendar
-    quarter, so every quarterly file the user has must be imported
-    separately (any order — everything here is deduplicated on a
-    content-derived key, and Core ETF 90 holdings are always recomputed
-    from every fill persisted so far, not just this file). See DEVLOG
-    "Decision 3u.39".
-    """
-    content = await file.read()
-    _check_upload_size(content)
-
-    batch = import_mintos_file(db, content, file.filename or "mintos-statement.pdf")
-    return ImportBatchOut.model_validate(batch)
-
-
-@router.post("/mintos/preview", response_model=ImportPreviewOut)
-async def preview_mintos(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportPreviewOut:
-    """Dry-run a Mintos statement — same parse/dedup logic as a real import,
-    rolled back instead of committed."""
-    content = await file.read()
-    _check_upload_size(content)
-
-    summary = import_mintos_file(db, content, file.filename or "mintos-statement.pdf", commit=False)
-    return ImportPreviewOut(**summary)
-
-
-@router.post("/mintos-investments", response_model=ImportBatchOut)
-async def import_mintos_investments(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
-    """Import Mintos's "Investments" .xlsx export (from the "My investments"
-    page) — a live, point-in-time snapshot of the Mintos Core P2P
-    portfolio's true current value, unlike the quarterly PDF statement
-    (`/mintos` above) which can be weeks or months stale by the time it's
-    imported. Complements, does not replace, that PDF import — the P2P
-    aggregate always shows whichever snapshot (from either source) is
-    dated latest. Idempotent: re-importing the same file (same "as of"
-    date, from its filename) is a no-op. See DEVLOG "Decision 3u.43".
-    """
-    content = await file.read()
-    _check_upload_size(content)
-
-    batch = import_mintos_investments_file(db, content, file.filename or "Investments.xlsx")
-    return ImportBatchOut.model_validate(batch)
-
-
-@router.post("/mintos-investments/preview", response_model=ImportPreviewOut)
-async def preview_mintos_investments(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportPreviewOut:
-    """Dry-run a Mintos Investments export — same parse/dedup logic as a
-    real import, rolled back instead of committed."""
-    content = await file.read()
-    _check_upload_size(content)
-
-    summary = import_mintos_investments_file(db, content, file.filename or "Investments.xlsx", commit=False)
-    return ImportPreviewOut(**summary)
-
-
-@router.post("/mintos-transactions", response_model=ImportBatchOut)
-async def import_mintos_transactions(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
-    """Import Mintos's full "account-statement" .csv export — real
-    interest/bonus/fee/tax transactions, used to compute a real net gain
-    (income minus costs) for the Mintos Core P2P position that doesn't
-    depend on knowing a complete deposit history. Complements the value
-    from `/mintos` or `/mintos-investments` — this endpoint only updates
-    the gain/performance figures, never the position's value. See DEVLOG
-    "Decision 3u.47".
-    """
-    content = await file.read()
-    _check_upload_size(content)
-
-    batch = import_mintos_transactions_file(db, content, file.filename or "account-statement.csv")
-    return ImportBatchOut.model_validate(batch)
-
-
-@router.post("/mintos-transactions/preview", response_model=ImportPreviewOut)
-async def preview_mintos_transactions(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportPreviewOut:
-    """Dry-run a Mintos account-statement export — same parse/dedup logic
-    as a real import, rolled back instead of committed."""
-    content = await file.read()
-    _check_upload_size(content)
-
-    summary = import_mintos_transactions_file(db, content, file.filename or "account-statement.csv", commit=False)
-    return ImportPreviewOut(**summary)
-
-
-@router.post("/amundi", response_model=ImportBatchOut)
-async def import_amundi(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
-    """Import an Amundi ESR "Relevé annuel de situation" PDF.
-
-    An annual snapshot, not a transaction ledger — each of the user's yearly
-    statements must be imported separately. Safe in any order: an older
-    statement never regresses current positions, but is still fully
-    persisted. See DEVLOG "Decision 3u.39".
-    """
-    content = await file.read()
-    _check_upload_size(content)
-
-    batch = import_amundi_file(db, content, file.filename or "amundi-statement.pdf")
-    return ImportBatchOut.model_validate(batch)
-
-
-@router.post("/amundi/preview", response_model=ImportPreviewOut)
-async def preview_amundi(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportPreviewOut:
-    """Dry-run an Amundi statement — same parse/dedup logic as a real
-    import, rolled back instead of committed."""
-    content = await file.read()
-    _check_upload_size(content)
-
-    summary = import_amundi_file(db, content, file.filename or "amundi-statement.pdf", commit=False)
-    return ImportPreviewOut(**summary)
-
-
-@router.post("/amundi-synthese", response_model=ImportBatchOut)
-async def import_amundi_synthese(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportBatchOut:
-    """Import Amundi's "Synthese_YYYYMMDD_HHMMSS.xlsb" export (downloaded
-    directly from the ESR portal) — a live snapshot of every fund holding,
-    unlike the annual PDF statement (`/amundi` above) which can be many
-    months stale by the time it's imported. Complements, does not replace,
-    that PDF import — positions always reflect whichever export (from
-    either source) is dated latest. See DEVLOG "Decision 3u.44".
-    """
-    content = await file.read()
-    _check_upload_size(content)
-
-    batch = import_amundi_synthese_file(db, content, file.filename or "Synthese.xlsb")
-    return ImportBatchOut.model_validate(batch)
-
-
-@router.post("/amundi-synthese/preview", response_model=ImportPreviewOut)
-async def preview_amundi_synthese(file: UploadFile = File(...), db: Session = Depends(get_db)) -> ImportPreviewOut:
-    """Dry-run an Amundi Synthese export — same parse/dedup logic as a
-    real import, rolled back instead of committed."""
-    content = await file.read()
-    _check_upload_size(content)
-
-    summary = import_amundi_synthese_file(db, content, file.filename or "Synthese.xlsb", commit=False)
-    return ImportPreviewOut(**summary)
 
 
 @router.get("", response_model=list[ImportBatchOut])

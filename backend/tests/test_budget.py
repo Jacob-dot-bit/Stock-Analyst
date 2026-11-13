@@ -113,6 +113,14 @@ class TestCategorize:
             ("PAIEMENT CB 0101 CARREFMARKETABC CARTE 1234", -40, "groceries", "spending"),
             ("PAIEMENT CB 0101 VILLE GARAGE DU CENTRE CARTE 1234", -350, "vehicle", "spending"),
             ("PAIEMENT CB 0101 AUTO ECOLE EXEMPLE CARTE 1234", -443, "vehicle", "spending"),
+            ("PAIEMENT CB 0101 ROUBAIX OVHCLOUD CARTE 1234", -6, "subscriptions", "spending"),
+            ("PAIEMENT CB 0101 CZ BRNO KIWI.COM CARTE 1234", -120, "travel", "spending"),
+            ("PAIEMENT CB 0101 VILLE HELLO ASSO CARTE 1234", -20, "leisure", "spending"),
+            ("PAIEMENT CB 0101 VILLE CROUSABCDEF CARTE 1234", -3.3, "restaurants", "spending"),
+            ("PAIEMENT CB 0101 VILLE DAFY MOTO CARTE 1234", -90, "vehicle", "spending"),
+            ("PAIEMENT CB 0101 VILLE EXEMPLE CENTRE AUTO CARTE 1234", -80, "vehicle", "spending"),
+            # Benefits paid back: negative income, not spending.
+            ("PAIEMENT CB 0101 VILLE CAF VILLE CARTE 1234", -500, "benefits", "income"),
             # A PayPal transfer in is money received, not a negative purchase.
             ("VIR SEPA PAYPAL EUROPE", 870, "other_income", "income"),
             ("AVOIR CB 0101 PAYPAL CARTE 1234", 20, "shopping", "spending"),
