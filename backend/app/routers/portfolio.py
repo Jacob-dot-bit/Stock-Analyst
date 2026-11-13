@@ -34,6 +34,16 @@ from app.models import (
     TxType,
     WatchlistItem,
 )
+from app.portfolio.review import (
+    allocation_row,
+    allocation_rows,
+    attention_items,
+    category_limits,
+    current_allocation_values,
+    policy_gaps,
+    position_signals,
+    unresolved_instruments,
+)
 from app.portfolio.valuation import (
     DECLARED_VALUE_FRESHNESS_DAYS,
     DECLARED_VALUE_PROVIDER_NAME,
@@ -91,8 +101,6 @@ from app.schemas import (
     ValueHistoryOut,
     ValueHistoryPointOut,
 )
-from app.scoring.config import get_scoring_config
-from app.scoring.service import compute_scores, score_band
 from app.symbols.duplicates import backfill_figis, backfill_isins, find_figi_duplicates
 
 #: Dimensions the breakdown endpoint can group by, and the Instrument attribute each
@@ -104,30 +112,6 @@ from app.symbols.duplicates import backfill_figis, backfill_isins, find_figi_dup
 BREAKDOWN_DIMENSIONS = {"category", "currency", "country", "sector"}
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
-
-def _unresolved_instruments(db: Session) -> list[Instrument]:
-    """Instruments still needing a symbol correction before they can join any
-    analysis. Excluded:
-      - CFDs, which have no fundamentals by nature;
-      - anything that already carries an ISIN, since the identifier is known and the
-        gap is provider coverage, not missing information;
-      - anything with a `not_priceable_reason` already set (P2P/FUND aggregates,
-        corporate-action residuals) — a permanent, structural non-price, not a
-        correctable mapping gap. See DEVLOG "Decision 3u.39".
-    A CVR whose broker symbol *is* its ISIN falls in the second case: there is no
-    ticker to supply, and asking for one would send the user hunting for nothing.
-    """
-    return list(
-        db.execute(
-            select(Instrument).where(
-                Instrument.mapping_status == MappingStatus.UNRESOLVED,
-                Instrument.category.is_distinct_from("CFD"),
-                Instrument.isin.is_(None),
-                Instrument.not_priceable_reason.is_(None),
-            )
-        ).scalars()
-    )
-
 
 def _build_portfolio_out(
     db: Session, positions: list[Position], live_quotes: dict[int, tuple[float, str]]
@@ -164,7 +148,7 @@ def _build_portfolio_out(
         positions_out.append(position_out)
     totals.has_stale_declared_valuations = any_stale_declared_valuation
 
-    unresolved = _unresolved_instruments(db)
+    unresolved = unresolved_instruments(db)
     last_batch = db.execute(
         select(ImportBatch).order_by(ImportBatch.imported_at.desc()).limit(1)
     ).scalar_one_or_none()
@@ -232,103 +216,9 @@ def get_breakdown(
     return items
 
 
-def _current_allocation_values(db: Session) -> tuple[dict[str, float], float]:
-    """Current market value per category, and the portfolio total — same
-    computation `get_breakdown` already does, reused here for the target
-    comparison rather than re-derived."""
-    positions, figures, total_value = positions_figures_and_total(db)
-    return weight_buckets(positions, figures, "category"), total_value
-
-
-def _category_limits(db: Session) -> dict[str, PersonalPolicyLimit]:
-    """Asset-class target ranges, keyed by category. They are the policy's
-    `dimension="category"` limits — one table for every rule (DEVLOG
-    "Step 3u.101")."""
-    return {
-        limit.target: limit
-        for limit in db.execute(
-            select(PersonalPolicyLimit).where(
-                PersonalPolicyLimit.dimension == "category", PersonalPolicyLimit.target.is_not(None)
-            )
-        ).scalars()
-    }
-
-
-def _allocation_row(
-    category: str, current_value: float, total_value: float, target: PersonalPolicyLimit | None
-) -> AllocationRowOut:
-    current_pct = round(current_value / total_value * 100, 2) if total_value else 0.0
-
-    if target is None:
-        return AllocationRowOut(
-            category=category,
-            current_value=round(current_value, 2),
-            current_pct=current_pct,
-            min_pct=None,
-            max_pct=None,
-            state="no_target",
-            gap_pct=0.0,
-            amount_to_reach_min=None,
-        )
-
-    # A policy limit may set only one bound ("at most 30 %"); the missing one
-    # never triggers.
-    if target.min_pct is not None and current_pct < target.min_pct:
-        state = "under"
-        gap_pct = round(target.min_pct - current_pct, 2)
-        # Deliberately not solving for the new (larger) total after adding
-        # this amount — a one-sentence, honestly-labeled approximation
-        # (this category alone reaching min_pct of the CURRENT total) beats
-        # a "more exact" number that reads as more precise than it is.
-        amount_to_reach_min = round(max(0.0, target.min_pct / 100 * total_value - current_value), 2)
-    elif target.max_pct is not None and current_pct > target.max_pct:
-        state = "over"
-        gap_pct = round(current_pct - target.max_pct, 2)
-        amount_to_reach_min = None  # never a sell suggestion
-    else:
-        state = "within"
-        gap_pct = 0.0
-        amount_to_reach_min = None
-
-    return AllocationRowOut(
-        category=category,
-        current_value=round(current_value, 2),
-        current_pct=current_pct,
-        min_pct=target.min_pct,
-        max_pct=target.max_pct,
-        state=state,
-        gap_pct=gap_pct,
-        amount_to_reach_min=amount_to_reach_min,
-    )
-
-
 @router.get("/allocation", response_model=list[AllocationRowOut])
 def get_allocation(db: Session = Depends(get_db)) -> list[AllocationRowOut]:
-    """Current allocation by asset class vs. a user-configured target range,
-    if any. Descriptive only — never a suggestion to buy or sell a specific
-    security, just the gap against a range the user themselves set. See
-    DEVLOG "Decision 3u.15".
-    """
-    buckets, total_value = _current_allocation_values(db)
-
-    targets = _category_limits(db)
-
-    # Union of categories actually held and categories with a configured
-    # target: a target for a category currently held at 0% must still
-    # appear — that's the most informative row ("you want 10% bonds, you
-    # hold 0%"), not one to silently drop because no position exists. Note
-    # this means a *configured* target still shows even with an entirely
-    # empty portfolio (total_value == 0) — `_allocation_row` treats that as
-    # current_pct=0, not a crash, unlike `get_breakdown`'s early return
-    # (which is fine there: it has no analogous "show it anyway" case).
-    categories = set(buckets) | set(targets)
-
-    rows = [
-        _allocation_row(category, buckets.get(category, 0.0), total_value, targets.get(category))
-        for category in categories
-    ]
-    rows.sort(key=lambda r: r.current_value, reverse=True)
-    return rows
+    return allocation_rows(db)
 
 
 @router.put("/allocation/{category}", response_model=AllocationRowOut)
@@ -338,7 +228,7 @@ def set_allocation_target(
     """Set (or replace) the target range for one asset class."""
     category = category.strip().upper()
 
-    target = _category_limits(db).get(category)
+    target = category_limits(db).get(category)
     if target is None:
         target = PersonalPolicyLimit(
             dimension="category", target=category, min_pct=payload.min_pct, max_pct=payload.max_pct
@@ -349,8 +239,8 @@ def set_allocation_target(
         target.max_pct = payload.max_pct
     db.commit()
 
-    buckets, total_value = _current_allocation_values(db)
-    return _allocation_row(category, buckets.get(category, 0.0), total_value, target)
+    buckets, total_value = current_allocation_values(db)
+    return allocation_row(category, buckets.get(category, 0.0), total_value, target)
 
 
 @router.delete("/allocation/{category}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
@@ -364,12 +254,6 @@ def delete_allocation_target(category: str, db: Session = Depends(get_db)) -> Re
     )
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-#: Every `PersonalPolicyLimit.dimension` except "line"/"declared_valuation"
-#: names a plain `Instrument` column to group
-#: weight by — same shape `weight_buckets`/`/breakdown` already use.
-_POLICY_LIMIT_ATTRIBUTE = {"sector": "sector", "country": "country", "currency": "currency", "category": "category"}
 
 
 def _get_or_create_policy(db: Session) -> PersonalPolicy:
@@ -437,81 +321,9 @@ def delete_personal_policy_limit(limit_id: int, db: Session = Depends(get_db)) -
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def _limit_state(pct: float, min_pct: float | None, max_pct: float | None) -> tuple[str, float]:
-    """('under'|'over'|'within', distance to the nearest breached bound)."""
-    if min_pct is not None and pct < min_pct:
-        return "under", round(min_pct - pct, 2)
-    if max_pct is not None and pct > max_pct:
-        return "over", round(pct - max_pct, 2)
-    return "within", 0.0
-
-
 @router.get("/policy/gaps", response_model=list[PersonalPolicyGapOut])
 def get_personal_policy_gaps(db: Session = Depends(get_db)) -> list[PersonalPolicyGapOut]:
-    """Compares the current portfolio against every configured
-    `PersonalPolicyLimit` and returns the breaches only — same "nothing to
-    report when nothing needs a look" posture as `/attention`. Purely
-    descriptive: a gap here is a fact about the user's own stated rule,
-    never a suggestion to buy or sell anything. See DEVLOG "Decision
-    3u.59".
-    """
-    limits = list(db.execute(select(PersonalPolicyLimit)).scalars())
-    if not limits:
-        return []
-
-    positions, figures, total_value = positions_figures_and_total(db)
-    if not total_value:
-        return []
-
-    configured_dimensions = {limit.dimension for limit in limits}
-    buckets_by_dimension = {
-        dimension: weight_buckets(positions, figures, attribute)
-        for dimension, attribute in _POLICY_LIMIT_ATTRIBUTE.items()
-        if dimension in configured_dimensions
-    }
-    declared_value = 0.0
-    if "declared_valuation" in configured_dimensions:
-        for p in positions:
-            value, *_ = figures[p.id]
-            if value is not None and p.instrument.not_priceable_reason in DECLARED_VALUE_FRESHNESS_DAYS:
-                declared_value += value
-
-    gaps: list[PersonalPolicyGapOut] = []
-    for limit in limits:
-        if limit.dimension == "line":
-            for p in positions:
-                value, *_ = figures[p.id]
-                if value is None:
-                    continue
-                pct = round(value / total_value * 100, 2)
-                state, gap_pct = _limit_state(pct, limit.min_pct, limit.max_pct)
-                if state != "within":
-                    gaps.append(
-                        PersonalPolicyGapOut(
-                            limit_id=limit.id, dimension=limit.dimension, target=p.instrument.broker_symbol,
-                            current_pct=pct, min_pct=limit.min_pct, max_pct=limit.max_pct,
-                            state=state, gap_pct=gap_pct,
-                        )
-                    )
-            continue
-
-        if limit.dimension == "declared_valuation":
-            pct = round(declared_value / total_value * 100, 2)
-        else:
-            bucket_value = buckets_by_dimension.get(limit.dimension, {}).get(limit.target or "", 0.0)
-            pct = round(bucket_value / total_value * 100, 2)
-
-        state, gap_pct = _limit_state(pct, limit.min_pct, limit.max_pct)
-        if state != "within":
-            gaps.append(
-                PersonalPolicyGapOut(
-                    limit_id=limit.id, dimension=limit.dimension, target=limit.target,
-                    current_pct=pct, min_pct=limit.min_pct, max_pct=limit.max_pct,
-                    state=state, gap_pct=gap_pct,
-                )
-            )
-
-    return gaps
+    return policy_gaps(db)
 
 
 @router.get("/risk/concentration", response_model=list[PositionConcentrationOut])
@@ -621,58 +433,7 @@ def get_risk_drawdown(db: Session = Depends(get_db)) -> DrawdownOut:
 
 @router.get("/attention", response_model=list[AttentionItemOut])
 def get_attention(db: Session = Depends(get_db)) -> list[AttentionItemOut]:
-    """A short, ranked list of facts worth checking today — cache-only, never
-    triggers a fetch. Built entirely from indicators the app already
-    computes elsewhere: price freshness (`_price_status`), unresolved
-    symbols, and configured allocation targets. Empty whenever nothing
-    currently warrants a look; the frontend shows a reassuring "all clear"
-    state in that case rather than this endpoint fabricating one.
-
-    Deliberately excludes 'not_priceable' instruments (CFDs and anything
-    else permanently outside pricing by design — not a problem to fix) and
-    "no_target" allocation rows (nothing configured means nothing to flag).
-    """
-    items: list[AttentionItemOut] = []
-
-    positions = list(db.execute(select(Position).options(joinedload(Position.instrument))).scalars())
-    stale_count = 0
-    error_count = 0
-    for position in positions:
-        status = _price_status(position.instrument)
-        if status == "stale":
-            stale_count += 1
-        elif status == "error":
-            error_count += 1
-    if error_count:
-        items.append(AttentionItemOut(severity="missing", kind="price_error", count=error_count))
-    if stale_count:
-        items.append(AttentionItemOut(severity="warning", kind="price_stale", count=stale_count))
-
-    unresolved_count = len(_unresolved_instruments(db))
-    if unresolved_count:
-        items.append(
-            AttentionItemOut(severity="missing", kind="unresolved_instruments", count=unresolved_count)
-        )
-
-    buckets, total_value = _current_allocation_values(db)
-    if total_value:
-        targets = _category_limits(db)
-        for category, target in targets.items():
-            row = _allocation_row(category, buckets.get(category, 0.0), total_value, target)
-            if row.state in ("under", "over"):
-                items.append(
-                    AttentionItemOut(
-                        severity="warning",
-                        kind=f"allocation_{row.state}",
-                        count=1,
-                        category=category,
-                        gap_pct=row.gap_pct,
-                    )
-                )
-
-    severity_order = {"missing": 0, "warning": 1}
-    items.sort(key=lambda item: severity_order[item.severity])
-    return items
+    return attention_items(db)
 
 
 #: severity -> sortable rank, most severe first. "not_applicable" ranks
@@ -808,7 +569,7 @@ def get_data_health(db: Session = Depends(get_db)) -> DataHealthOut:
     declared-valuation rules reused here unchanged).
     """
     positions = list(db.execute(select(Position).options(joinedload(Position.instrument))).scalars())
-    unresolved_ids = {i.id for i in _unresolved_instruments(db)}
+    unresolved_ids = {i.id for i in unresolved_instruments(db)}
 
     confirmed_counts = dict(
         db.execute(select(CorporateAction.instrument_id, func.count()).group_by(CorporateAction.instrument_id)).all()
@@ -908,81 +669,16 @@ def get_onboarding_status(db: Session = Depends(get_db)) -> OnboardingStatusOut:
     return OnboardingStatusOut(
         imported=imported,
         prices_refreshed=metadata is not None and metadata.last_price_refresh_time is not None,
-        unresolved_resolved=len(_unresolved_instruments(db)) == 0,
+        unresolved_resolved=len(unresolved_instruments(db)) == 0,
         fundamentals_fetched=fundamentals_fetched,
         allocation_target_set=allocation_target_set,
         watchlist_started=watchlist_started,
     )
 
 
-def _position_signal(band: str, allocation_state: str) -> str:
-    """Combines two indicators the app already shows separately — the
-    composite score and the asset class's allocation gap — into one label,
-    by a fixed, fully transparent rule. Not a new analysis: every input is
-    already visible elsewhere in the app (`GET /scoring/scores`,
-    `GET /allocation`); this only names the combination.
-
-    "not_applicable" whenever either input can't support a direction: no
-    configured allocation target for the category (no_target — nothing to
-    compare against), or no computable score (none — an ETF/CFD/stock
-    missing fundamentals). Deliberately not defaulting either case to
-    "hold": that would read as a confident "no action needed" when the
-    honest answer is "not enough data to say".
-    """
-    if allocation_state == "no_target" or band == "none":
-        return "not_applicable"
-    if band == "high" and allocation_state == "under":
-        return "reinforce"
-    if band == "low" and allocation_state == "over":
-        return "reduce"
-    return "hold"
-
-
 @router.get("/position-signals", response_model=list[PositionSignalOut])
 def get_position_signals(db: Session = Depends(get_db)) -> list[PositionSignalOut]:
-    """One signal per held instrument, derived from its own composite score
-    and its asset class's allocation gap — see `_position_signal` for the
-    exact rule. Descriptive by construction: it never names a trade, only
-    labels a combination of indicators the app already shows separately.
-    """
-    positions = list(
-        db.execute(select(Position).options(joinedload(Position.instrument))).scalars()
-    )
-    instruments = {p.instrument.id: p.instrument for p in positions}.values()
-
-    config = get_scoring_config()
-    scores = {s.instrument_id: s for s in compute_scores(db, list(instruments), config)}
-
-    buckets, total_value = _current_allocation_values(db)
-    targets = _category_limits(db)
-    categories = set(buckets) | set(targets)
-    allocation_by_category = {
-        category: _allocation_row(category, buckets.get(category, 0.0), total_value, targets.get(category))
-        for category in categories
-    }
-
-    signals = []
-    for instrument in instruments:
-        category = instrument.category or "UNKNOWN"
-        allocation_row = allocation_by_category.get(category)
-        allocation_state = allocation_row.state if allocation_row else "no_target"
-        gap_pct = allocation_row.gap_pct if allocation_row else 0.0
-        score_result = scores.get(instrument.id)
-        composite = score_result.composite if score_result else None
-        band = score_band(composite)
-
-        signals.append(
-            PositionSignalOut(
-                instrument_id=instrument.id,
-                signal=_position_signal(band, allocation_state),
-                composite_score=composite,
-                score_band=band,
-                category=instrument.category,
-                allocation_state=allocation_state,
-                gap_pct=gap_pct,
-            )
-        )
-    return signals
+    return position_signals(db)
 
 
 @router.get("/value-history", response_model=ValueHistoryOut)

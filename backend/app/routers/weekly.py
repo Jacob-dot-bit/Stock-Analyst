@@ -22,13 +22,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db import get_db
 from app.models import Instrument, JournalEntry, WatchlistItem
+from app.portfolio.review import allocation_rows, attention_items, policy_gaps, position_signals
 from app.portfolio.valuation import FIGURES_SNAPSHOT_KEY, positions_figures_and_total
-from app.routers.portfolio import (
-    get_allocation,
-    get_attention,
-    get_personal_policy_gaps,
-    get_position_signals,
-)
 from app.routers.watchlist import get_watchlist_signals
 from app.schemas import (
     WeeklyJournalDueOut,
@@ -79,10 +74,10 @@ def _build_summary(db: Session) -> WeeklySummaryOut:
     today = datetime.now(UTC).date()
     window_end = today + timedelta(days=WINDOW_DAYS)
 
-    allocation_gaps = [row for row in get_allocation(db) if row.state in ("under", "over")]
+    allocation_gaps = [row for row in allocation_rows(db) if row.state in ("under", "over")]
 
     weights = _instrument_weights(db)
-    signals = [s for s in get_position_signals(db) if s.signal in ("reinforce", "reduce")]
+    signals = [s for s in position_signals(db) if s.signal in ("reinforce", "reduce")]
     instruments = {
         i.id: i
         for i in db.execute(select(Instrument).where(Instrument.id.in_([s.instrument_id for s in signals]))).scalars()
@@ -150,14 +145,14 @@ def _build_summary(db: Session) -> WeeklySummaryOut:
         for e in entries
     ]
 
-    data_reliability = [item for item in get_attention(db) if item.kind in _DATA_RELIABILITY_KINDS]
+    data_reliability = [item for item in attention_items(db) if item.kind in _DATA_RELIABILITY_KINDS]
 
     return WeeklySummaryOut(
         as_of=today,
         window_end=window_end,
         # Category limits are the allocation targets, already listed in
         # `allocation_gaps` with their amounts — not repeated here.
-        policy_gaps=[gap for gap in get_personal_policy_gaps(db) if gap.dimension != "category"],
+        policy_gaps=[gap for gap in policy_gaps(db) if gap.dimension != "category"],
         allocation_gaps=allocation_gaps,
         position_flags=position_flags,
         watchlist_flags=watchlist_flags,

@@ -85,7 +85,7 @@ def fake_scores(composites: dict[int, float | None]):
 
 
 def patch_scores(monkeypatch, composites):
-    monkeypatch.setattr("app.routers.portfolio.compute_scores", fake_scores(composites))
+    monkeypatch.setattr("app.portfolio.review.compute_scores", fake_scores(composites))
     monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores(composites))
 
 
