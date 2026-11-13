@@ -9767,6 +9767,29 @@ blur that lets a click land.
 
 Verification: `tsc -b` clean.
 
+## Step 3u.98 — Watchlist and gems share their mechanics (2026-11-13)
+
+The watchlist and the gems (screener) list are the same idea — an
+instrument followed without being held — and their code had been copied
+from one to the other: ~100 identical lines between the two routers, ~170
+between the two tables. They had started to drift: the gems table never got
+the one-card-per-row layout the watchlist has on a phone.
+
+- `app/tracking.py`: `instrument_to_follow` (create the instrument, refuse
+  it when held or already listed, fetch its prices, refuse a symbol no
+  provider knows) and the `not_held` / `not_watched` anti-joins. Both
+  routers keep their table, their routes and their own messages.
+- Front: `useSort` + `sortRows` (also used by the positions table, which had
+  the same comparator), `matchesInstrument` for the search box, and
+  `RowActions` for the Edit/Delete — Save/Cancel links.
+- The gems table now collapses into cards on a phone, like the watchlist.
+
+Two pages stay: the watchlist is for entry timing (target price, note,
+signal), the gems list for ranking candidates by score.
+
+Verification: backend suite green; `tsc -b` clean; both pages checked in a
+browser on demo data, at desktop and phone width.
+
 ## Step 3u.100 — The nav bell and the weekly summary read one rule (2026-11-13)
 
 "Target reached" was decided in two places: the nav bell filtered
@@ -9781,7 +9804,8 @@ together.
   `NEAR_TARGET_PCT` moves there from `weekly.py`.
 - `WatchlistSignalOut` gains `target_flag`. The weekly summary keeps the
   flagged rows; the bell polls `/signals` and counts `target_reached`.
-- The unheld-items query, repeated in three routes, is `_unheld_items(db)`.
+- The unheld-items query, repeated in two routes, is `_unheld_items(db)`
+  (on top of `tracking.not_held`).
 
 Attention (portfolio summary) and Data health (detail) were already split
 that way and stay as they are.
