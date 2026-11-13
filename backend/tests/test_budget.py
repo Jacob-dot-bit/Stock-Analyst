@@ -139,6 +139,15 @@ class TestCategorize:
         assert categorize("VIR AMUNDI VIRT PARTICIPATION", 150, broker="Amundi").category == "salary"
         assert categorize("VIR LIVRET A", -100, own_transfer=True).kind == "internal"
 
+    def test_card_payment_is_never_a_bank_fee(self):
+        """A shop whose name holds FRAIS is a purchase, the bank's own fees stay fees."""
+        assert categorize("PAIEMENT CB 0101 VILLE GRAND FRAIS CARTE 1234", -17).category == "groceries"
+        assert categorize("PAIEMENT CB 0101 VILLE PRIMEUR FRAIS CARTE 1234", -9).category == "groceries"
+        assert categorize("PAIEMENT CB 0101 VILLE BOUTIQUE FRAIS CARTE 1234", -9).category == "other"
+        assert categorize("F COMMISSION D'INTERVENTION", -8).category == "bank_fees"
+        assert categorize("AGIOS/FRAIS", -0.5).category == "bank_fees"
+        assert categorize("FRAIS TENUE DE COMPTE", -2).category == "bank_fees"
+
     def test_savings_move_is_internal_even_unflagged(self, tmp_path, monkeypatch):
         """The savings book may be missing from the export, or the bank may not
         call the move a VIR: it is still my money, ahead of any local rule."""
