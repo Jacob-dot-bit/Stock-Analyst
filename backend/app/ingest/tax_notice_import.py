@@ -30,8 +30,10 @@ from dataclasses import asdict, dataclass, field
 
 import pdfplumber
 
-#: Seen on every notice, top of each page: "Impôt sur les revenus de 2021".
-_YEAR_RE = re.compile(r"Imp[oô]t sur les revenus de (\d{4})", re.IGNORECASE)
+#: Seen on every notice, top of each page: "Impôt sur les revenus de 2021",
+#: or "Impôt et prélèvements sociaux sur les revenus de 2025" on a notice
+#: that also carries social levies.
+_YEAR_RE = re.compile(r"Imp[oô]t (?:et pr[ée]l[èe]vements sociaux )?sur les revenus de (\d{4})", re.IGNORECASE)
 #: "Label.......... 1234", "Label........ + 400", "Label....... 21500 21500".
 _LINE_RE = re.compile(r"^(?P<label>[^.]*?[^.\s])\s*\.{3,}\s*(?P<values>[-+=]?\s*\d+(?:\s+[-+=]?\s*\d+)*)\s*$")
 _VALUE_RE = re.compile(r"([-+=]?)\s*(\d+)")
@@ -45,8 +47,11 @@ _TAX_DUE_RE = re.compile(r"Imp[oô]t sur le revenu \d{4} d[uû]\s*(?:\d{1,3}\s*:
 _SCALE_TAX_RE = re.compile(r"^(Imp[oô]t sur les revenus soumis au bar[eè]me)\s+(?:\d{1,3}\s+)?(-?\d+)$", re.IGNORECASE)
 _RATE_RE = re.compile(r"Taux pour le foyer\s+(\d+(?:,\d+)?)\s*%", re.IGNORECASE)
 _NOTHING_DUE_RE = re.compile(r"n'avez rien [àa] payer", re.IGNORECASE)
-_LEFT_TO_PAY_RE = re.compile(r"reste [àa] payer.*?(\d[\d ]*)\s*€", re.IGNORECASE | re.DOTALL)
-_REFUND_RE = re.compile(r"(?:remboursement|vous sera rembours[ée]).*?(\d[\d ]*)\s*€", re.IGNORECASE | re.DOTALL)
+#: An amount in euros on the first page: "312 €", "1 234 €", "418,00 €"
+#: (cents dropped). Not glued to a date before it ("15/09/2026 418,00 €").
+_EUROS = r"(?<![\d/,])(\d{1,3}(?:[ \u00a0\u202f]\d{3})*)(?:,\d{2})?\s*€"
+_LEFT_TO_PAY_RE = re.compile(r"reste [àa] payer.*?" + _EUROS, re.IGNORECASE | re.DOTALL)
+_REFUND_RE = re.compile(r"(?:remboursement|vous sera rembours[ée]).*?" + _EUROS, re.IGNORECASE | re.DOTALL)
 #: A heading: no digits, mostly upper case ("PLAFOND EPARGNE RETRAITE"), or
 #: the one mixed-case heading of the income table.
 _HEADING_RE = re.compile(r"^(?:[A-ZÉÈÀÇÔ' ]{6,}:?|Détail des revenus.*)$")
@@ -59,6 +64,9 @@ _FIGURES: tuple[tuple[str, str], ...] = (
     ("net_tax", "total de l'impot sur le revenu net"),
     ("reference_income", "revenu fiscal de reference"),
     ("retirement_ceiling", "plafond pour les cotisations versees en"),
+    ("investment_income", "revenus de capitaux mobiliers declares"),
+    ("capital_gains", "plus-values de cession de valeurs mobilieres"),
+    ("social_levies", "total des prelevements sociaux nets"),
 )
 
 
@@ -88,6 +96,12 @@ class TaxNoticeFigures:
     scale_tax: int | None = None
     #: What the first page says is left to pay; negative when refunded.
     balance: int | None = None
+    #: Investment income declared (dividends, interest), before allowances.
+    investment_income: int | None = None
+    #: Net gain on sales of securities the tax office kept.
+    capital_gains: int | None = None
+    #: Social levies on investment income and gains, after credits.
+    social_levies: int | None = None
     #: Withholding rate for the household, in percent.
     withholding_rate: float | None = None
     #: Retirement savings (PER) ceiling for next year's payments, per declarant.
@@ -119,7 +133,7 @@ def _values(text: str) -> list[int]:
 
 
 def _amount(text: str) -> int:
-    return int(text.replace(" ", ""))
+    return int(re.sub(r"\D", "", text))
 
 
 def parse_tax_notice_pages(pages: list[str]) -> ParsedTaxNotice:
@@ -187,5 +201,6 @@ def looks_like_tax_notice(text: str) -> bool:
     """`text`: the first pages, lower case."""
     folded = _fold(text)
     return "avis_ir" in folded or (
-        "impot sur les revenus de" in folded and "revenu fiscal de reference" in folded
+        ("impot sur les revenus de" in folded or "impot et prelevements sociaux sur les revenus de" in folded)
+        and "revenu fiscal de reference" in folded
     )

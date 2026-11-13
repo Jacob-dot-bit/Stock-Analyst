@@ -1383,6 +1383,16 @@ class TaxSaleGainOut(BaseModel):
     unmatched_reason: str | None
 
 
+class TaxDerivativeGainOut(BaseModel):
+    """One closed CFD position, counted with the year's gains on sales."""
+
+    transaction_id: int
+    account: str
+    symbol: str | None
+    executed_at: datetime
+    gain: float
+
+
 class TaxCapitalGainsYearOut(BaseModel):
     """The year's gains on CTO sales, with losses carried in from up to ten
     earlier years (the oldest used first). Keys of the loss maps are the
@@ -1394,6 +1404,8 @@ class TaxCapitalGainsYearOut(BaseModel):
     net: float
     matched_sales: int
     unmatched_sales: int
+    #: Net of closed CFD positions, already inside gains/losses.
+    derivatives: float = 0.0
     losses_carried_in: dict[int, float]
     losses_used: float
     taxable_net: float
@@ -1404,6 +1416,7 @@ class TaxYearSummaryOut(BaseModel):
     tax_year: int
     envelopes: list[TaxEnvelopeSummaryOut]
     sales: list[TaxSaleGainOut] = []
+    derivatives: list[TaxDerivativeGainOut] = []
     capital_gains: TaxCapitalGainsYearOut | None = None
     #: Always present — the permanent, non-dismissible boundary statement
     #: this feature must never let the user forget.
@@ -1425,6 +1438,9 @@ class TaxNoticeFiguresOut(BaseModel):
     reference_income: int | None = None
     #: Left to pay according to the notice; negative when refunded.
     balance: int | None = None
+    investment_income: int | None = None
+    capital_gains: int | None = None
+    social_levies: int | None = None
     withholding_rate: float | None = None
     #: Retirement savings (PER) ceiling for the next year's payments, per declarant.
     retirement_ceiling: list[int] = Field(default_factory=list)
