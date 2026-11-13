@@ -438,7 +438,7 @@ class PositionSignalOut(BaseModel):
 
     instrument_id: int
     #: "reinforce" | "reduce" | "hold" | "not_applicable" — see
-    #: `routers/portfolio.py::_position_signal` for the exact rule.
+    #: `portfolio/review.py::position_signal` for the exact rule.
     signal: str
     composite_score: float | None
     #: "high" | "mid" | "low" | "none" — same thresholds (66/33) as the

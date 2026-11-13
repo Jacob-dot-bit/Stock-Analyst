@@ -173,7 +173,7 @@ def get_watchlist_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
 def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignalOut]:
     """One signal per watched instrument, derived from its own composite
     score and its distance to the target entry price — same transparent,
-    rule-based combination as `routers/portfolio.py::_position_signal`
+    rule-based combination as `portfolio/review.py::position_signal`
     (see its docstring). Only ever "reinforce" | "hold" | "not_applicable":
     nothing here is held, so "reduce" never applies.
     """

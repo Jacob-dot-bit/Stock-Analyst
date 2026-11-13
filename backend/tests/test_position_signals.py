@@ -83,7 +83,7 @@ class TestPositionSignals:
         etf = held_instrument("BBB.FR", "ETF", quantity=1, price=100.0)  # 100 EUR
         client.put("/api/portfolio/allocation/ETF", json={"min_pct": 50, "max_pct": 100})
         monkeypatch.setattr(
-            "app.routers.portfolio.compute_scores", fake_scores({stock.id: 50.0, etf.id: 80.0})
+            "app.portfolio.review.compute_scores", fake_scores({stock.id: 50.0, etf.id: 80.0})
         )
 
         rows = {r["instrument_id"]: r for r in client.get("/api/portfolio/position-signals").json()}
@@ -99,7 +99,7 @@ class TestPositionSignals:
         etf = held_instrument("BBB.FR", "ETF", quantity=1, price=100.0)  # 100 EUR, 10%
         client.put("/api/portfolio/allocation/STOCK", json={"min_pct": 0, "max_pct": 50})
         monkeypatch.setattr(
-            "app.routers.portfolio.compute_scores", fake_scores({stock.id: 20.0, etf.id: 50.0})
+            "app.portfolio.review.compute_scores", fake_scores({stock.id: 20.0, etf.id: 50.0})
         )
 
         rows = {r["instrument_id"]: r for r in client.get("/api/portfolio/position-signals").json()}
@@ -110,7 +110,7 @@ class TestPositionSignals:
 
     def test_not_applicable_without_a_configured_target(self, client, monkeypatch):
         stock = held_instrument("AAA.FR", "STOCK", quantity=1, price=100.0)
-        monkeypatch.setattr("app.routers.portfolio.compute_scores", fake_scores({stock.id: 90.0}))
+        monkeypatch.setattr("app.portfolio.review.compute_scores", fake_scores({stock.id: 90.0}))
 
         row = client.get("/api/portfolio/position-signals").json()[0]
 
@@ -120,7 +120,7 @@ class TestPositionSignals:
     def test_not_applicable_without_a_score(self, client, monkeypatch):
         stock = held_instrument("AAA.FR", "STOCK", quantity=1, price=100.0)
         client.put("/api/portfolio/allocation/STOCK", json={"min_pct": 0, "max_pct": 100})
-        monkeypatch.setattr("app.routers.portfolio.compute_scores", fake_scores({stock.id: None}))
+        monkeypatch.setattr("app.portfolio.review.compute_scores", fake_scores({stock.id: None}))
 
         row = client.get("/api/portfolio/position-signals").json()[0]
 
@@ -131,7 +131,7 @@ class TestPositionSignals:
         # High score but within range (not under) -> no reinforce case applies.
         stock = held_instrument("AAA.FR", "STOCK", quantity=1, price=100.0)
         client.put("/api/portfolio/allocation/STOCK", json={"min_pct": 0, "max_pct": 100})
-        monkeypatch.setattr("app.routers.portfolio.compute_scores", fake_scores({stock.id: 90.0}))
+        monkeypatch.setattr("app.portfolio.review.compute_scores", fake_scores({stock.id: 90.0}))
 
         row = client.get("/api/portfolio/position-signals").json()[0]
 

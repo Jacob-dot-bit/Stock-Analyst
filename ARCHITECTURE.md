@@ -10,7 +10,9 @@ whenever a router endpoint, model, or pattern changes.
 backend/app/
   routers/       FastAPI endpoints — one file per resource area
   portfolio/     valuation.py: current price, FX-converted value, P&L and
-                 totals of held positions, shared by every router
+                 totals of held positions, shared by every router;
+                 review.py: allocation vs targets, policy gaps, attention
+                 list and position signals (portfolio routes + weekly)
   ingest/        XTB file parsing + get_or_create_instrument
   prices/        Daily-bar history, live quotes, FX, provider-quota tracking
   fundamentals/  SEC EDGAR + ESEF fetch/cache
@@ -357,7 +359,7 @@ backfilling a real portfolio, so `map_instruments` distinguishes a
 `FIGI_LOOKUP_FAILED` HTTP/network failure from a genuine `None`
 non-match — only the latter is safe to record as permanently checked.
 
-**Position/watchlist signals** (`routers/portfolio.py::_position_signal`,
+**Position/watchlist signals** (`portfolio/review.py::position_signal`,
 `scoring/service.py::score_band`). A user request for an "Acheter/Vendre/
 Conserver" verdict — twice pushed back on before being built, since a
 labeled recommendation is exactly the line this app has otherwise refused
@@ -369,7 +371,7 @@ indicators the app already shows separately**, never a new analysis and
 never phrased as a trade order. `score_band` buckets a composite score into
 "high"/"mid"/"low"/"none" (thresholds 66/33, matching the frontend's own
 `scoreBand` in `ScoreBadge.tsx` — duplicated deliberately rather than
-shared across the Python/TypeScript boundary). `_position_signal` combines
+shared across the Python/TypeScript boundary). `position_signal` combines
 that band with the instrument's asset class's `GET /allocation` state:
 `high` + `under` → "reinforce", `low` + `over` → "reduce", either input
 missing (`no_target`, or `none` — no computable score) → "not_applicable"
@@ -404,9 +406,9 @@ get_attention`) is the first thing shown on the Portfolio page, above the
 detailed tables — a short, ranked list of facts worth a look today, built
 entirely by re-reading indicators the app already computes elsewhere:
 price status (`_price_status`, reused from the positions table), unresolved
-symbols (`_unresolved_instruments`, factored out of `_build_portfolio_out`
+symbols (`unresolved_instruments`, factored out of `_build_portfolio_out`
 so both call sites share one definition of "needs fixing"), and configured
-allocation targets (`_current_allocation_values` + `_allocation_row`, same
+allocation targets (`current_allocation_values` + `allocation_row`, same
 as `GET /allocation`). No new computation, no new data source — this
 endpoint only picks out what deserves attention and ranks it (`missing`
 before `warning`). Deliberately excludes `not_priceable` instruments (CFDs
@@ -431,7 +433,7 @@ tables, everything was already computable from existing columns).
   `declared_valuation_note`/`DECLARED_VALUE_FRESHNESS_DAYS` unchanged.
   `kind` is `market_price` | `declared_value` | `unavailable`;
   `freshness` is `fresh` | `stale` | `unknown`. An unresolved mapping
-  (keyed off `_unresolved_instruments()`, not `_price_status()`'s
+  (keyed off `unresolved_instruments()`, not `_price_status()`'s
   broader `"unmapped"`, so it matches exactly what `UnresolvedPanel` can
   correct) is handled before this function runs at all, forcing
   `unavailable`/`action_required`/`unresolved_symbol` directly.
@@ -555,7 +557,7 @@ user dismisses it. Each of the six fields (`imported`, `prices_refreshed`,
 `unresolved_resolved`, `fundamentals_fetched`, `allocation_target_set`,
 `watchlist_started`) is a plain existence check against a table the app
 already maintains (`ImportBatch`, `AppMetadata.last_price_refresh_time`,
-`_unresolved_instruments`, `Fundamental`, `AllocationTarget`,
+`unresolved_instruments`, `Fundamental`, `AllocationTarget`,
 `WatchlistItem`) — no new tracking, no derived state, and no timestamp of
 when a step was completed. Dismissal is `localStorage`-only (this is a
 single-user local app, same convention as `i18n`'s locale and
@@ -928,7 +930,7 @@ key per feature.
 **Structurally non-priceable instruments** (`Instrument.not_priceable_reason`).
 One field gates an instrument out of *every* price-related code path at
 once: `prices/service.py`/`history_service.py` never fetch for it,
-`routers/portfolio.py`'s price resolution and `_unresolved_instruments()`
+`routers/portfolio.py`'s price resolution and `unresolved_instruments()`
 both exclude it, `scoring`/`fundamentals` already gate on `category`
 separately so a new category is excluded there for free, and the
 frontend's `MappingCell`/`PriceStatusBadge` both check the same field
