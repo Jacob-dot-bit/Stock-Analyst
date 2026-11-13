@@ -5,13 +5,15 @@ from __future__ import annotations
 import ipaddress
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.auth.dependency import require_auth
 from app.config import get_settings
 from app.db import init_db
 from app.routers import (
+    auth,
     backup,
     budget,
     corporate_actions,
@@ -79,6 +81,9 @@ app = FastAPI(
     ),
     version="0.1.0",
     lifespan=lifespan,
+    # Every route needs a browser session or a service token (app/auth/), on
+    # top of the loopback check below. See DEVLOG "Step 3u.107".
+    dependencies=[Depends(require_auth)],
 )
 
 app.add_middleware(
@@ -111,6 +116,7 @@ async def loopback_only(request: Request, call_next):
             return await call_next(request)
     return JSONResponse({"detail": "This API only accepts local connections."}, status_code=403)
 
+app.include_router(auth.router)
 app.include_router(portfolio.router)
 app.include_router(imports.router)
 app.include_router(prices.router)

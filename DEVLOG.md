@@ -9945,3 +9945,37 @@ Numbers pulled out of free PDF text (Amundi, Mintos) stay in their parsers.
 No dedup id format changes.
 
 Verification: backend suite green, with tests for both modules.
+
+## Step 3u.107 — Login for the API, in log-only mode first (2026-11-13)
+
+Until now the loopback check was the API's only boundary. Behind a local
+proxy (Vite, then Caddy for HTTPS) every request looks local, so it no
+longer told anything apart.
+
+- `app/auth/`: one account (scrypt hash, 12 characters minimum), browser
+  sessions in a `sa_session` cookie (HttpOnly, Secure, SameSite=Strict;
+  7 days without a visit, 30 days at most; only the SHA-256 of the token
+  is stored), optional 6-digit TOTP (RFC 6238, a code is accepted once),
+  service tokens for scripts (`read` = GET only, `write`), sent as
+  `Authorization: Bearer`.
+- Five wrong logins in a row lock the login for 15 minutes; each failure
+  waits one second. Wrong name, password or code all answer the same.
+- Writes with a session need `X-Requested-With: stock-analyst`, which a
+  page on another site can't send without a preflight this API refuses.
+- The check is an app-wide dependency, after the loopback middleware: both
+  must pass. `POST /api/auth/login` and `/logout` are the only open routes.
+- `AUTH_REQUIRED=false` (the default for now) runs the check but only logs
+  what it would refuse (`auth (journal seul)` in the backend log), so the
+  frontend and the scripts can get their session or token before it is
+  turned on.
+- Everything is set from the shell: `python -m app.auth set-password`,
+  `enable-totp`, `add-token NAME --scope read|write`, `revoke-token`,
+  `list-tokens`, `logout-all`, `status`. Secrets are typed at a prompt.
+- `alembic/env.py` now keeps existing loggers when it configures logging:
+  `init_db()` runs it inside the backend, and it silenced the new log.
+
+A restored backup brings back the account and tokens as they were then.
+
+Verification: backend suite green, with `tests/test_auth.py` (RFC 6238
+vectors, lockout, expiry, replay, scopes, CSRF header, loopback still
+enforced). Command line tried on a scratch database.
