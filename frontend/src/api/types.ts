@@ -592,19 +592,54 @@ export interface TaxEnvelopeSummary {
   interest: number | null
   realized_gains: number | null
   realized_losses: number | null
+  /** Gains/losses by the weighted average price (CTO only), Step 3u.110. */
+  pmp_gains: number | null
+  pmp_losses: number | null
+  pmp_matched_sales: number
   fees: number | null
   deposits: number | null
   withdrawals: number | null
   unmatched_sales_count: number
   unmatched_sales_amount: number | null
+  unmatched_reasons: Record<string, number>
   other_flows: TaxOtherFlow[]
   status: 'to_reconcile' | 'not_applicable'
   notes: ApiMessage[]
 }
 
+export type TaxUnmatchedReason = 'no_purchase' | 'incomplete_history' | 'no_units' | 'no_instrument'
+
+export interface TaxSaleGain {
+  transaction_id: number
+  account: string
+  symbol: string | null
+  executed_at: string
+  units: number | null
+  proceeds: number
+  cost: number | null
+  gain: number | null
+  unmatched_reason: TaxUnmatchedReason | null
+}
+
+/** Loss maps are keyed by the year the loss comes from. */
+export interface TaxCapitalGainsYear {
+  year: number
+  gains: number
+  losses: number
+  net: number
+  matched_sales: number
+  unmatched_sales: number
+  losses_carried_in: Record<string, number>
+  losses_used: number
+  taxable_net: number
+  losses_carried_out: Record<string, number>
+}
+
 export interface TaxYearSummary {
   tax_year: number
   envelopes: TaxEnvelopeSummary[]
+  sales: TaxSaleGain[]
+  capital_gains: TaxCapitalGainsYear | null
   disclaimer: ApiMessage
 }
 

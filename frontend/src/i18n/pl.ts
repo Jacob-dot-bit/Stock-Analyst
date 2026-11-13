@@ -1022,14 +1022,40 @@ export const pl: Catalogue = {
   'taxPrep.deposits': 'Wpłaty',
   'taxPrep.withdrawals': 'Wypłaty',
   'taxPrep.otherFlows': 'Inne przepływy (informacyjne)',
+  'taxPrep.pmpGains': 'Zyski (średnia ważona cena)',
+  'taxPrep.pmpLosses': 'Straty (średnia ważona cena)',
   'taxPrep.unmatchedSalesLine':
-    'Wykryto {count} sprzedaż(y) na kwotę {amount} — zysk/strata nieobliczone: uzgodnienie partii (FIFO) niedostępne.',
+    '{count} sprzedaż(y) na kwotę {amount} bez możliwego do obliczenia zysku: zakupu nie ma w zaimportowanych wyciągach. Kwota jest w zestawieniu podatkowym brokera (IFU).',
+  'taxPrep.unmatchedReason.no_purchase': 'zakup sprzed wyciągów: {count}',
+  'taxPrep.unmatchedReason.incomplete_history': 'niepełna historia zakupów: {count}',
+  'taxPrep.unmatchedReason.no_units': 'nieznana liczba jednostek: {count}',
+  'taxPrep.unmatchedReason.no_instrument': 'niezidentyfikowany papier: {count}',
+  'taxPrep.gains.title': 'Zyski z papierów wartościowych {year} (zwykły rachunek maklerski)',
+  'taxPrep.gains.hint':
+    'Obliczone według średniej ważonej ceny nabycia, z opłatami, na wszystkich rachunkach maklerskich z tym samym papierem. PEA, oszczędności pracownicze i P2P nie są liczone.',
+  'taxPrep.gains.gains': 'Zyski',
+  'taxPrep.gains.losses': 'Straty',
+  'taxPrep.gains.net': 'Saldo roku',
+  'taxPrep.gains.carriedIn': 'Straty przeniesione (rok powstania)',
+  'taxPrep.gains.used': 'Straty odliczone',
+  'taxPrep.gains.taxable': 'Zysk netto po odliczeniu strat',
+  'taxPrep.gains.carriedOut': 'Straty do przeniesienia',
+  'taxPrep.gains.unmatched':
+    '{count} sprzedaż(y) z tego roku nie ma w tej sumie: ich zakupu nie ma w zaimportowanych wyciągach. Zaimportuj starszy wyciąg lub sprawdź IFU.',
+  'taxPrep.gains.sales': 'Szczegóły {count} sprzedaży',
+  'taxPrep.gains.col.date': 'Data',
+  'taxPrep.gains.col.account': 'Rachunek',
+  'taxPrep.gains.col.symbol': 'Papier',
+  'taxPrep.gains.col.units': 'Jednostki',
+  'taxPrep.gains.col.proceeds': 'Przychód ze zbycia',
+  'taxPrep.gains.col.cost': 'Koszt nabycia',
+  'taxPrep.gains.col.gain': 'Zysk',
 
   'taxPrep.noWithdrawalDetected':
     'Nie zaimportowano żadnej wypłaty za ten rok. Zyski pozostają wewnątrz koperty i nie są opodatkowane, dopóki w niej pozostają.',
   'taxPrep.withdrawalDetected':
     'Wykryto wypłatę na kwotę {amount}. Obowiązujące zasady podatkowe (wiek planu, warunki wyjścia) nie są obliczane automatycznie przez to narzędzie — sprawdź je samodzielnie lub z doradcą podatkowym.',
-  'taxPrep.unmatchedSales': '{count} sprzedaż(y) bez obliczonego zysku (uzgodnienie partii niedostępne).',
+  'taxPrep.unmatchedSales': '{count} sprzedaż(y) bez możliwego do obliczenia zysku (brak zakupu w zaimportowanych wyciągach, zob. IFU).',
   'taxPrep.notApplicable': 'Nie wykryto żadnej istotnej podatkowo operacji w tej kopercie w tym roku.',
 
   // --- Ryzyko portfela (DEVLOG "Decision 3u.67") ------------------------------

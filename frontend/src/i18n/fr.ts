@@ -1012,14 +1012,40 @@ export const fr: Catalogue = {
   'taxPrep.deposits': 'Versements',
   'taxPrep.withdrawals': 'Retraits',
   'taxPrep.otherFlows': 'Autres flux (informatifs)',
+  'taxPrep.pmpGains': 'Plus-values (prix moyen pondéré)',
+  'taxPrep.pmpLosses': 'Moins-values (prix moyen pondéré)',
   'taxPrep.unmatchedSalesLine':
-    '{count} vente(s) détectée(s) pour {amount} — plus-value non calculée : rapprochement des lots (FIFO) non disponible.',
+    '{count} vente(s) pour {amount} sans plus-value calculable : l\'achat n\'est pas dans les relevés importés. Le montant est sur l\'IFU du courtier.',
+  'taxPrep.unmatchedReason.no_purchase': 'achat antérieur aux relevés : {count}',
+  'taxPrep.unmatchedReason.incomplete_history': 'historique d\'achats incomplet : {count}',
+  'taxPrep.unmatchedReason.no_units': 'nombre de parts inconnu : {count}',
+  'taxPrep.unmatchedReason.no_instrument': 'titre non identifié : {count}',
+  'taxPrep.gains.title': 'Plus-values sur titres {year} (compte-titres ordinaire)',
+  'taxPrep.gains.hint':
+    'Calculées au prix moyen pondéré d\'acquisition, frais inclus, sur tous les comptes-titres qui détiennent le même titre. PEA, épargne salariale et P2P ne sont pas comptés.',
+  'taxPrep.gains.gains': 'Plus-values',
+  'taxPrep.gains.losses': 'Moins-values',
+  'taxPrep.gains.net': 'Solde de l\'année',
+  'taxPrep.gains.carriedIn': 'Moins-values reportées (année d\'origine)',
+  'taxPrep.gains.used': 'Moins-values imputées',
+  'taxPrep.gains.taxable': 'Plus-value nette après report',
+  'taxPrep.gains.carriedOut': 'Moins-values restant à reporter',
+  'taxPrep.gains.unmatched':
+    '{count} vente(s) de l\'année ne sont pas dans ce total : leur achat n\'est pas dans les relevés importés. Importez un relevé plus ancien ou reportez-vous à l\'IFU.',
+  'taxPrep.gains.sales': 'Détail des {count} vente(s)',
+  'taxPrep.gains.col.date': 'Date',
+  'taxPrep.gains.col.account': 'Compte',
+  'taxPrep.gains.col.symbol': 'Titre',
+  'taxPrep.gains.col.units': 'Parts',
+  'taxPrep.gains.col.proceeds': 'Cession',
+  'taxPrep.gains.col.cost': 'Prix de revient',
+  'taxPrep.gains.col.gain': 'Plus-value',
 
   'taxPrep.noWithdrawalDetected':
     "Aucun retrait n'a été importé pour cette année. Les gains restent à l'intérieur de l'enveloppe et ne sont pas imposables tant qu'ils y demeurent.",
   'taxPrep.withdrawalDetected':
     'Un retrait de {amount} a été détecté. La fiscalité applicable dépend de règles (ancienneté du plan, conditions de sortie) que cet outil ne calcule pas automatiquement — à vérifier vous-même ou avec un conseil fiscal.',
-  'taxPrep.unmatchedSales': '{count} vente(s) sans plus-value calculée (rapprochement des lots non disponible).',
+  'taxPrep.unmatchedSales': '{count} vente(s) sans plus-value calculable (achat absent des relevés importés, voir l\'IFU).',
   'taxPrep.notApplicable': "Aucune opération fiscalement pertinente détectée dans cette enveloppe pour cette année.",
 
   // --- Risques du portefeuille (DEVLOG "Decision 3u.67") --------------------
