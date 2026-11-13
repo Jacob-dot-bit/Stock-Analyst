@@ -9837,3 +9837,51 @@ that way and stay as they are.
 
 Verification: backend suite green, new tests on `target_flag`; `tsc -b`
 clean.
+
+## Step 3u.101 — Allocation targets are policy limits (2026-11-13)
+
+An asset-class target range ("ETF between 20 and 30 %") and a policy limit
+with `dimension="category"` were the same rule in two tables, each with its
+own form, and both could be set for the same category with different
+numbers.
+
+- Migration `c4d8e2a7f190` copies every `allocation_targets` row into
+  `personal_policy_limits` and drops the old table. Where a category limit
+  already existed, its own bounds are kept and only a missing bound is
+  filled from the target. The downgrade recreates the table from the
+  category limits.
+- `/allocation` (GET/PUT/DELETE) keeps its shape and now reads and writes
+  those limits (`_category_limits`). Attention, position signals, onboarding
+  and the weekly summary follow, since they all go through it.
+- A limit may set one bound only; `_allocation_row` ignores the missing one,
+  and the allocation table shows "≤ 60 %" / "≥ 20 %".
+- The weekly summary drops category rows from `policy_gaps`: they are
+  already in `allocation_gaps`, with the amount to reach the minimum.
+
+The Hermes gate shows and writes category ranges once, under `targets`
+(Hermes PR on the same day), so replacing its `limits` never wipes them.
+
+Verification: backend suite green, with tests on the migration and on
+targets seen from the policy side; `tsc -b` clean.
+
+## Step 3u.102 — One hook for fetch-on-mount views (2026-11-13)
+
+Read-only panels each wrote the same lines: `data`/`error` state, a
+`useEffect` that fetches, and (in about half of them) a `cancelled` flag so
+a late response does not land after unmount. The other half had no such
+guard, so on Dividends a slow answer for an older year filter could
+overwrite the newer one.
+
+- `hooks/useApiResource.ts`: `useApiResource(fetcher, deps)` returns
+  `{ data, error, reload }`, refetches when `deps` change and drops any
+  response that is no longer the latest. `errorMessage(err)` is the
+  `err instanceof Error ? … : String(err)` line.
+- Used by Attention, Data health, Drawdown, Concentration, Liquidity, the
+  weekly summary, Dividends (summary and filtered detail) and the Tax prep
+  summary.
+
+Forms and panels with their own polling (refresh, backfills) keep their
+code: they do more than read once.
+
+Verification: `tsc -b` and oxlint clean; the converted pages load in the
+browser on demo data with no console errors.
