@@ -198,7 +198,7 @@ export default function Settings() {
           <h2>{t('settings.groupPortfolioData.title')}</h2>
           <p className="muted">{t('settings.groupPortfolioData.subtitle')}</p>
 
-          <ImportPanel kind="auto" onImported={() => {}} />
+          <ImportPanel onImported={() => {}} />
           <FundamentalsRefreshButton onRefreshed={() => {}} />
           <ManualPositionForm onCreated={() => {}} />
         </section>

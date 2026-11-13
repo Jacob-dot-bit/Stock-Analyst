@@ -71,7 +71,7 @@ def daily_bars(count: int = 30) -> list[Bar]:
 
 def import_statement(client, content, name="EUR_1234567.xlsx"):
     return client.post(
-        "/api/imports/xtb", files={"file": (name, content, "application/octet-stream")}
+        "/api/imports/auto", files={"file": (name, content, "application/octet-stream")}
     )
 
 
