@@ -52,6 +52,7 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from app.ingest.cells import parse_datetime, parse_number
 from app.messages import Message, MessageCode, SectionKind, SectionSummary
 from app.models import TxType
 
@@ -126,103 +127,6 @@ for _canonical, _aliases in COLUMN_ALIASES.items():
 
 def _match_column(header: Any) -> str | None:
     return _ALIAS_LOOKUP.get(_normalize(header))
-
-
-# --- Value conversion --------------------------------------------------------
-
-#: Isolates the first number in a string, thousands separators included.
-#: Extracting beats character filtering: otherwise "1 234,56 EUR" leaves the "E"
-#: of the currency behind and the conversion fails.
-_NUMBER_TOKEN = re.compile(r"[-+]?\d[\d\s.,]*")
-
-
-def parse_number(value: Any) -> float | None:
-    """Parse a number tolerating both English and French conventions.
-
-    Handles "1 234,56", "1,234.56", non-breaking spaces, trailing currency codes and
-    accounting parentheses. Returns ``None`` rather than raising: one unreadable cell
-    must not fail the whole import.
-
-    Scientific notation is deliberately unsupported — absent from broker exports, it
-    would make trailing-currency detection ambiguous.
-    """
-    if value is None or value == "":
-        return None
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-
-    text = str(value).replace("\xa0", " ").replace(" ", " ").strip()
-    if not text:
-        return None
-
-    # Accounting notation: "(1 234,56)" means -1234.56
-    negated = text.startswith("(") and text.endswith(")")
-    if negated:
-        text = text[1:-1].strip()
-
-    match = _NUMBER_TOKEN.search(text)
-    if match is None:
-        return None
-
-    text = match.group(0).replace(" ", "").rstrip(".,")
-    if not text or text in {"-", "+"}:
-        return None
-
-    has_comma, has_dot = "," in text, "." in text
-    if has_comma and has_dot:
-        # The decimal separator is whichever appears last.
-        if text.rfind(",") > text.rfind("."):
-            text = text.replace(".", "").replace(",", ".")
-        else:
-            text = text.replace(",", "")
-    elif has_comma:
-        # Comma alone: decimal ("12,5") or thousands separator ("1,234")?
-        if re.fullmatch(r"-?\d{1,3}(,\d{3})+", text):
-            text = text.replace(",", "")
-        else:
-            text = text.replace(",", ".")
-
-    try:
-        number = float(text)
-    except ValueError:
-        return None
-
-    return -number if negated else number
-
-
-_DATE_FORMATS = (
-    "%Y-%m-%d %H:%M:%S.%f",
-    "%Y-%m-%d %H:%M:%S",
-    "%Y-%m-%d %H:%M",
-    "%Y-%m-%d",
-    "%d.%m.%Y %H:%M:%S",
-    "%d.%m.%Y %H:%M",
-    "%d.%m.%Y",
-    "%d/%m/%Y %H:%M:%S",
-    "%d/%m/%Y %H:%M",
-    "%d/%m/%Y",
-    "%m/%d/%Y %H:%M:%S",
-    "%m/%d/%Y",
-)
-
-
-def parse_datetime(value: Any) -> datetime | None:
-    if value is None or value == "":
-        return None
-    if isinstance(value, datetime):
-        return value
-
-    text = str(value).strip()
-    if not text:
-        return None
-    for fmt in _DATE_FORMATS:
-        try:
-            return datetime.strptime(text, fmt)
-        except ValueError:
-            continue
-    return None
 
 
 # --- Cash operation classification -------------------------------------------

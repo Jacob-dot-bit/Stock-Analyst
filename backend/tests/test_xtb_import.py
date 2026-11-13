@@ -6,11 +6,10 @@ from datetime import datetime
 
 import pytest
 
+from app.ingest.cells import parse_datetime, parse_number
 from app.ingest.xtb_import import (
     classify_cash_type,
     is_total_row,
-    parse_datetime,
-    parse_number,
     parse_xtb_export,
 )
 from app.messages import MessageCode, SectionKind

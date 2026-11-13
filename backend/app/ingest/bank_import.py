@@ -34,10 +34,11 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date
 
 import openpyxl
 
+from app.ingest.cells import cell_date, parse_number
 from app.messages import Message, MessageCode, SectionKind, SectionSummary
 
 SUMMARY_SHEET = "Vos comptes"
@@ -192,27 +193,15 @@ def _product(label: str) -> str:
 
 
 def _parse_date(value: object) -> date | None:
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    if isinstance(value, str):
+    """A date cell, or the date inside the summary title
+    ("Votre situation financière au 13/11/2026")."""
+    parsed = cell_date(value)
+    if parsed is None and isinstance(value, str):
         match = _DATE_RE.search(value)
         if match:
             day, month, year = (int(part) for part in match.groups())
-            return date(year, month, day)
-    return None
-
-
-def _number(value: object) -> float | None:
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str) and value.strip():
-        try:
-            return float(value.replace(" ", "").replace(" ", "").replace(",", "."))
-        except ValueError:
-            return None
-    return None
+            parsed = date(year, month, day)
+    return parsed
 
 
 def _read_accounts(rows: list[tuple], result: ParsedBankExport) -> None:
@@ -230,7 +219,7 @@ def _read_accounts(rows: list[tuple], result: ParsedBankExport) -> None:
         if not row or not row[0]:
             break
         rib = str(row[col_rib] or "").split()
-        balance = _number(row[col_balance])
+        balance = parse_number(row[col_balance])
         if len(rib) < 3 or balance is None:
             continue
         bank_code, branch, number = rib[0], rib[1], rib[2]
@@ -269,8 +258,8 @@ def _read_operations(rows: list[tuple], account: BankAccount, result: ParsedBank
         if account.first_operation is None or executed_on < account.first_operation:
             account.first_operation = executed_on
         label = str(row[col["Libellé"]] or "").strip()
-        debit = _number(row[col["Débit"]]) if "Débit" in col else None
-        credit = _number(row[col["Crédit"]]) if "Crédit" in col else None
+        debit = parse_number(row[col["Débit"]]) if "Débit" in col else None
+        credit = parse_number(row[col["Crédit"]]) if "Crédit" in col else None
         amount = round((credit or 0.0) - abs(debit or 0.0), 2)
         if not amount:
             continue

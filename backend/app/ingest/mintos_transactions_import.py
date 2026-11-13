@@ -41,10 +41,11 @@ import csv
 import io
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date
 
 import openpyxl
 
+from app.ingest.cells import cell_date, parse_number
 from app.messages import Message, MessageCode
 
 #: Real income credited to the lender, regardless of principal churn —
@@ -113,34 +114,6 @@ def _csv_rows(content: bytes) -> Iterator[list[object]]:
     yield from csv.reader(io.StringIO(content.decode("utf-8-sig")))
 
 
-def _cell_date(value: object) -> date | None:
-    """The .csv gives ``2025-01-01 10:00:00`` as text; the .xlsx export of the
-    same statement may hand back a real datetime cell instead."""
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    if isinstance(value, str):
-        try:
-            return datetime.strptime(value.strip()[:10], "%Y-%m-%d").date()
-        except ValueError:
-            return None
-    return None
-
-
-def _cell_amount(value: object) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
-        try:
-            return float(value.strip())
-        except ValueError:
-            return None
-    return None
-
-
 def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMintosTransactionsExport:
     """Reads the account statement in either format Mintos offers it in:
     .csv (what this was first built against) or .xlsx (same columns, same
@@ -172,8 +145,8 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     for row in reader:
         if len(row) <= max(idx_date, idx_amount, idx_type):
             continue
-        when = _cell_date(row[idx_date])
-        amount = _cell_amount(row[idx_amount])
+        when = cell_date(row[idx_date])
+        amount = parse_number(row[idx_amount])
         if when is None or amount is None:
             continue
         payment_type = str(row[idx_type] or "").strip()
