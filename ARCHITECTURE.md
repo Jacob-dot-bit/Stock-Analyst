@@ -13,7 +13,7 @@ backend/app/
                  totals of held positions, shared by every router;
                  review.py: allocation vs targets, policy gaps, attention
                  list and position signals (portfolio routes + weekly)
-  ingest/        XTB file parsing + get_or_create_instrument
+  ingest/        export parsing (one module per format, shared file readers in readers.py) + get_or_create_instrument
   prices/        Daily-bar history, live quotes, FX, provider-quota tracking
   fundamentals/  SEC EDGAR + ESEF fetch/cache
   scoring/       Composite score computation (config, metrics, service)
@@ -860,7 +860,7 @@ inside its own consolidated `PositionDetailRow` instead of using the `Row`
 wrappers — see "Per-position detail panel" below. `AlertsBell` (top-nav
 badge, polls `GET /api/watchlist/signals` every 60s, counts items whose
 `target_flag` is `target_reached` — the same server-side rule,
-`routers/watchlist.py::target_flag`, that the weekly summary lists).
+`tracking.py::target_flag`, that the weekly summary lists).
 
 **Per-position detail panel** (`PositionDetailRow.tsx`, `PositionsTable.tsx`
 only — DEVLOG "Decision 3u.31"). Before this, understanding one held

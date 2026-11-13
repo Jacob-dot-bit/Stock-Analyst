@@ -31,14 +31,12 @@ to tell two accounts apart. See DEVLOG "Step 3u.91".
 
 from __future__ import annotations
 
-import io
 import re
 from dataclasses import dataclass, field
 from datetime import date
 
-import openpyxl
-
 from app.ingest.cells import cell_date, parse_number
+from app.ingest.readers import xlsx_sheets
 from app.messages import Message, MessageCode, SectionKind, SectionSummary
 
 SUMMARY_SHEET = "Vos comptes"
@@ -294,46 +292,43 @@ def _read_operations(rows: list[tuple], account: BankAccount, result: ParsedBank
 def parse_bank_export(content: bytes, filename: str) -> ParsedBankExport:
     result = ParsedBankExport()
     try:
-        workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        sheets = xlsx_sheets(content)
     except Exception as exc:  # noqa: BLE001 - surfaced as a warning, not a crash
         result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": str(exc)}))
         return result
-    try:
-        if SUMMARY_SHEET not in workbook.sheetnames:
-            result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
-            return result
-        summary = list(workbook[SUMMARY_SHEET].iter_rows(max_row=50, values_only=True))
-        if not summary or not looks_like_bank_export(summary[0][0] if summary[0] else None):
-            result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
-            return result
-        result.as_of = _parse_date(summary[0][0])
-        _read_accounts(summary, result)
+    if SUMMARY_SHEET not in sheets:
+        result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
+        return result
+    summary = sheets[SUMMARY_SHEET][:50]
+    if not summary or not looks_like_bank_export(summary[0][0] if summary[0] else None):
+        result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
+        return result
+    result.as_of = _parse_date(summary[0][0])
+    _read_accounts(summary, result)
+    result.sections.append(
+        SectionSummary(
+            sheet=SUMMARY_SHEET,
+            kind=SectionKind.OPEN_POSITIONS,
+            count=len(result.accounts),
+            source_rows=len(result.accounts),
+        )
+    )
+
+    for account in result.accounts:
+        if account.sheet not in sheets:
+            continue
+        rows = sheets[account.sheet]
+        before = len(result.transfers)
+        read = _read_operations(rows, account, result)
+        result.operations_read += read
         result.sections.append(
             SectionSummary(
-                sheet=SUMMARY_SHEET,
-                kind=SectionKind.OPEN_POSITIONS,
-                count=len(result.accounts),
-                source_rows=len(result.accounts),
+                sheet=account.sheet,
+                kind=SectionKind.CASH_OPERATIONS,
+                count=len(result.transfers) - before,
+                source_rows=read,
             )
         )
-
-        for account in result.accounts:
-            if account.sheet not in workbook.sheetnames:
-                continue
-            rows = list(workbook[account.sheet].iter_rows(values_only=True))
-            before = len(result.transfers)
-            read = _read_operations(rows, account, result)
-            result.operations_read += read
-            result.sections.append(
-                SectionSummary(
-                    sheet=account.sheet,
-                    kind=SectionKind.CASH_OPERATIONS,
-                    count=len(result.transfers) - before,
-                    source_rows=read,
-                )
-            )
-    finally:
-        workbook.close()
 
     if result.as_of is None and result.accounts:
         result.as_of = date.today()

@@ -24,13 +24,11 @@ See DEVLOG "Decision 3u.43".
 
 from __future__ import annotations
 
-import io
 import re
 from dataclasses import dataclass, field
 from datetime import date
 
-import openpyxl
-
+from app.ingest.readers import header_cells, xlsx_first_sheet
 from app.messages import Message, MessageCode
 
 #: ``Investments-08-09-2026.xlsx`` (day-month-year, the 2026-09 naming).
@@ -87,15 +85,12 @@ def parse_mintos_investments_export(content: bytes, filename: str) -> ParsedMint
     result = ParsedMintosInvestmentsSnapshot()
 
     try:
-        workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-        sheet = workbook.worksheets[0]
-        rows = sheet.iter_rows(values_only=True)
-        header = next(rows)
+        header, *rows = xlsx_first_sheet(content)
     except Exception as exc:  # noqa: BLE001 - surfaced as a warning, not a crash
         result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": str(exc)}))
         return result
 
-    header = tuple(str(cell).strip() if cell is not None else "" for cell in (header or ()))
+    header = header_cells(header)
     if _VALUE_COLUMN not in header:
         if _ACCOUNT_STATEMENT_COLUMNS & set(header):
             result.warnings.append(Message(MessageCode.MINTOS_ACCOUNT_STATEMENT_NOT_INVESTMENTS, {"filename": filename}))

@@ -470,7 +470,7 @@ class WatchlistSignalOut(BaseModel):
     score_band: str
     distance_to_target_pct: float | None
     #: "target_reached" | "near_target_high_score" | None — see
-    #: `routers/watchlist.py::target_flag`.
+    #: `tracking.py::target_flag`.
     target_flag: str | None = None
 
 

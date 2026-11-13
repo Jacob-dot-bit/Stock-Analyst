@@ -40,9 +40,7 @@ rendered by the client in the user's language.
 
 from __future__ import annotations
 
-import csv
 import hashlib
-import io
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -50,9 +48,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from openpyxl import load_workbook
-
 from app.ingest.cells import parse_datetime, parse_number
+from app.ingest.readers import text_rows, xlsx_sheets
 from app.messages import Message, MessageCode, SectionKind, SectionSummary
 from app.models import TxType
 
@@ -232,30 +229,6 @@ def _resolve_ambiguous_columns(columns: dict[int, str], raw_headers: dict[int, s
 # --- File reading ------------------------------------------------------------
 
 
-def _rows_from_xlsx(content: bytes) -> list[tuple[str, list[list[Any]]]]:
-    # read_only=False on purpose: XTB exports declare a wrong "A1:A1" dimension,
-    # which read-only mode trusts, making the workbook look empty.
-    workbook = load_workbook(io.BytesIO(content), data_only=True)
-    sheets = [
-        (worksheet.title, [list(row) for row in worksheet.iter_rows(values_only=True)])
-        for worksheet in workbook.worksheets
-    ]
-    workbook.close()
-    return sheets
-
-
-def _rows_from_csv(content: bytes) -> list[tuple[str, list[list[Any]]]]:
-    text = content.decode("utf-8-sig", errors="replace")
-    sample = text[:4096]
-    try:
-        delimiter = csv.Sniffer().sniff(sample, delimiters=";,\t|").delimiter
-    except csv.Error:
-        delimiter = ";" if sample.count(";") >= sample.count(",") else ","
-
-    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
-    return [("csv", [list(row) for row in reader])]
-
-
 def _is_blank(row: list[Any]) -> bool:
     return all(cell is None or str(cell).strip() == "" for cell in row)
 
@@ -337,9 +310,10 @@ def parse_xtb_export(content: bytes, filename: str) -> ParsedExport:
 
     try:
         if suffix in {".xlsx", ".xlsm"}:
-            sheets = _rows_from_xlsx(content)
+            # XTB exports declare a wrong "A1:A1" dimension: read in full mode.
+            sheets = list(xlsx_sheets(content, trust_dimensions=False).items())
         elif suffix in {".csv", ".txt"}:
-            sheets = _rows_from_csv(content)
+            sheets = [("csv", text_rows(content, sniff_delimiter=True, errors="replace"))]
         else:
             result.warnings.append(
                 Message(MessageCode.UNSUPPORTED_FILE_TYPE, {"extension": suffix or "?"})

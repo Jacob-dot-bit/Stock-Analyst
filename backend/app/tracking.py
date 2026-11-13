@@ -4,7 +4,8 @@ instrument off a list once it is held (or, for the gems, once watched).
 
 Both lists keep their own table and router (`routers/watchlist.py`,
 `routers/screener.py`); only the mechanics live here, along with the two
-lists of instruments that prices and scoring also read. See DEVLOG "Step 3u.98".
+lists of instruments that prices and scoring also read, and the watchlist
+signals the weekly summary reads (DEVLOG "Step 3u.104"). See DEVLOG "Step 3u.98".
 """
 
 from __future__ import annotations
@@ -15,8 +16,12 @@ from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from app.ingest.service import get_or_create_instrument
 from app.models import Instrument, Position, ScreenerCandidate, WatchlistItem
+from app.portfolio.valuation import resolve_current_price
 from app.prices.service import is_permanently_unresolvable, latest_bar_date, refresh_instrument
 from app.providers.registry import get_provider_chain
+from app.schemas import WatchlistSignalOut
+from app.scoring.config import get_scoring_config
+from app.scoring.service import compute_scores, score_band
 from app.symbols.mapping import looks_like_equity
 
 HELD_DETAIL = "This instrument is currently a live position — track it from the Portfolio page instead."
@@ -90,3 +95,77 @@ def instrument_to_follow(
             "symbol format, or use the search suggestions instead of typing it by hand.",
         )
     return instrument
+
+
+#: A high-score item this close above its target entry price (in percent) is
+#: flagged alongside the ones already at/below target.
+NEAR_TARGET_PCT = 5.0
+
+
+def distance_to_target(price: float | None, target: float | None) -> float | None:
+    """Percent above (+) or below (-) the target entry price; None when
+    either side is missing, never guessed."""
+    if price is None or not target:
+        return None
+    return (price - target) / target * 100
+
+
+def target_flag(distance: float | None, band: str) -> str | None:
+    """The one definition of "worth a look" for a watched item, read by the
+    weekly summary and the nav bell alike: "target_reached" (at or below
+    target, any score) or "near_target_high_score" (within `NEAR_TARGET_PCT`
+    above, with a high score). None otherwise."""
+    if distance is None:
+        return None
+    if distance <= 0:
+        return "target_reached"
+    if distance <= NEAR_TARGET_PCT and band == "high":
+        return "near_target_high_score"
+    return None
+
+
+def unheld_watchlist_items(db: Session) -> list[WatchlistItem]:
+    """Watchlist rows whose instrument is not currently held."""
+    return list(db.execute(select(WatchlistItem).where(not_held(WatchlistItem.instrument_id))).scalars())
+
+
+def watchlist_signals(db: Session) -> list[WatchlistSignalOut]:
+    """One signal per watched instrument, derived from its own composite
+    score and its distance to the target entry price — same transparent,
+    rule-based combination as `portfolio/review.py::position_signal`
+    (see its docstring). Only ever "reinforce" | "hold" | "not_applicable":
+    nothing here is held, so "reduce" never applies.
+    """
+    items = unheld_watchlist_items(db)
+    instruments = [item.instrument for item in items]
+    config = get_scoring_config()
+    scores = {s.instrument_id: s for s in compute_scores(db, instruments, config)}
+
+    out = []
+    for item in items:
+        instrument = item.instrument
+        price, _source = resolve_current_price(db, instrument, {})
+        distance = distance_to_target(price, item.target_entry_price)
+
+        score_result = scores.get(instrument.id)
+        composite = score_result.composite if score_result else None
+        band = score_band(composite)
+
+        if distance is None or band == "none":
+            signal = "not_applicable"
+        elif distance <= 0 and band == "high":
+            signal = "reinforce"
+        else:
+            signal = "hold"
+
+        out.append(
+            WatchlistSignalOut(
+                instrument_id=instrument.id,
+                signal=signal,
+                composite_score=composite,
+                score_band=band,
+                distance_to_target_pct=distance,
+                target_flag=target_flag(distance, band),
+            )
+        )
+    return out
