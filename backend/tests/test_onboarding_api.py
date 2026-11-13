@@ -19,12 +19,12 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app
 from app.models import (
-    AllocationTarget,
     AppMetadata,
     Fundamental,
     ImportBatch,
     Instrument,
     MappingStatus,
+    PersonalPolicyLimit,
     WatchlistItem,
 )
 
@@ -111,7 +111,7 @@ class TestOnboardingSteps:
         assert client.get("/api/portfolio/onboarding").json() == {**BASELINE, "fundamentals_fetched": True}
 
     def test_allocation_target_flips_allocation_target_set(self, client):
-        _seed([AllocationTarget(category="ETF", min_pct=20.0, max_pct=30.0)])
+        _seed([PersonalPolicyLimit(dimension="category", target="ETF", min_pct=20.0, max_pct=30.0)])
         assert client.get("/api/portfolio/onboarding").json() == {**BASELINE, "allocation_target_set": True}
 
     def test_watchlist_item_flips_watchlist_started(self, client):

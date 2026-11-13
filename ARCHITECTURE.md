@@ -46,7 +46,6 @@ frontend/src/
 | `ScreenerCandidate` | `screener_candidates` | A hand-picked candidate to screen for hidden gems — held out of the ranking once bought or watchlisted. `instrument_id` is UNIQUE. |
 | `DiscoveryCandidate` | `discovery_candidates` | A candidate surfaced automatically — the static S&P 500 universe, or a whitelisted Finviz preset scan. A much larger, uncurated pool than `ScreenerCandidate`; never shown directly, only the ranked top few. `instrument_id` is UNIQUE. |
 | `SymbolOverride` | `symbol_overrides` | Manual broker-symbol → provider-symbol correction. |
-| `AllocationTarget` | `allocation_targets` | User-configured target min/max % range for one asset class. `category` is UNIQUE. Descriptive only — never read by anything that suggests a trade. |
 | `PriceBar` | `price_bars` | One cached daily candle. |
 | `LastQuote` | `last_quotes` | Most recent live (intraday) quote per instrument — one row, no history. |
 | `AppMetadata` | `app_metadata` | Singleton row: last price-refresh timestamp, etc. |
@@ -57,7 +56,7 @@ frontend/src/
 | `FactorReturn` | `factor_returns` | One day's Carhart four-factor return series (Mkt-RF/SMB/HML/Mom/RF), fetched from Kenneth French's Data Library. `region` ("US"/"EUROPE") + date is UNIQUE. Decimal returns (source is percent). |
 | `CorporateAction` | `corporate_actions` | A confirmed stock split or reverse split. Never mutates `PriceBar`/`Lot` — read-time adjustment only, see "Stock splits" below. |
 | `PersonalPolicy` | `personal_policy` | Singleton: the user's own, self-declared objective/horizon/liquidity/risk-tolerance — every field optional, never inferred or scored. See "Personal policy" below. |
-| `PersonalPolicyLimit` | `personal_policy_limits` | One personal concentration rule (dimension + target + min/max %). `(dimension, target)` UNIQUE. |
+| `PersonalPolicyLimit` | `personal_policy_limits` | One personal concentration rule (dimension + target + min/max %). `(dimension, target)` UNIQUE. The `dimension="category"` rows are the asset-class target ranges read by `/allocation` (the old `allocation_targets` table was folded in, DEVLOG "Step 3u.101"). |
 | `JournalEntry` | `journal_entries` | A user-written decision — `thesis`, optional `instrument_id` (nullable, no cascade delete), `entry_date` (set once, never edited), optional `review_date`/`outcome_note`. See "Decision journal" below. |
 
 ## API endpoints
@@ -66,7 +65,7 @@ frontend/src/
 - `GET  ""` — current portfolio state, cache-only, no provider calls.
 - `GET  /breakdown?by=` — totals grouped by category/currency/country/sector.
 - `GET  /allocation` — current allocation by asset class vs. a user-configured target range (descriptive only — never a buy/sell suggestion). Union of held categories and targeted-but-unheld ones.
-- `PUT  /allocation/{category}` — set (or replace) the target min/max range for one asset class.
+- `PUT  /allocation/{category}` — set (or replace) the target min/max range for one asset class (stored as the policy's `category` limit).
 - `DELETE /allocation/{category}` — remove a configured target.
 - `GET/PUT /policy` — the user's own, self-declared investment policy (objective/horizon/liquidity/risk tolerance) — every field optional, never inferred or scored. See "Personal policy" below.
 - `GET/POST /policy/limits`, `DELETE /policy/limits/{id}` — personal concentration rules (per line/sector/country/currency/category/declared-valuation).
