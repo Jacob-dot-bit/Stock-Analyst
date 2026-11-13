@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { Score, ScreenerCandidate } from '../api/types'
 import { AddToScreenerForm } from '../components/AddToScreenerForm'
-import { BackfillFigisButton } from '../components/BackfillFigisButton'
-import { BackfillIsinsButton } from '../components/BackfillIsinsButton'
 import { DiscoveryPanel } from '../components/DiscoveryPanel'
 import { ScoreTrackRecordPanel } from '../components/ScoreTrackRecordPanel'
 import { ScreenerTable } from '../components/ScreenerTable'
@@ -70,10 +68,6 @@ export function Screener() {
       <div className="page-header">
         <h1>{t('gems.title')}</h1>
         <p>{t('gems.description')}</p>
-        <div className="page-header-actions">
-          <BackfillIsinsButton onDone={() => void load()} />
-          <BackfillFigisButton onDone={() => void load()} />
-        </div>
       </div>
 
       {error && <div className="notice error">{error}</div>}

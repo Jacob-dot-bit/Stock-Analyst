@@ -3,7 +3,7 @@ import { api } from '../api/client'
 import type { DiscoveryCandidate } from '../api/types'
 import { useI18n } from '../i18n'
 import { BacktestPanel } from './BacktestPanel'
-import { PredictionBackfillButton } from './PredictionBackfillButton'
+import { MaintenanceLink } from './MaintenanceLink'
 import { RecommendationBadge } from './RecommendationBadge'
 
 interface Props {
@@ -72,8 +72,6 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
   // Same local scope as the other three — `dividend_yield_estimate` also
   // only exists on `DiscoveryCandidate`. See DEVLOG "Decision 3u.73".
   const [dividendMin, setDividendMin] = useState('')
-  const [dividendBackfillNotice, setDividendBackfillNotice] = useState<string | null>(null)
-  const [dividendBackfillBusy, setDividendBackfillBusy] = useState(false)
   // `composite_score` already exists (Decision 3u.20) — this is a plain
   // threshold on it, no new field needed. See DEVLOG "Decision 3u.75".
   const [scoreMin, setScoreMin] = useState('')
@@ -257,23 +255,6 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
     // filter here, not shown as if it cleared the bar.
     if (c.composite_score === null) return false
     return c.composite_score >= minScore
-  }
-
-  async function handleDividendBackfill() {
-    setDividendBackfillBusy(true)
-    setError(null)
-    try {
-      const result = await api.backfillDiscoveryDividends()
-      setDividendBackfillNotice(
-        result.remaining > 0
-          ? t('discovery.refreshResultMore', { evaluated: result.evaluated, remaining: result.remaining })
-          : t('discovery.refreshResultDone', { evaluated: result.evaluated }),
-      )
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setDividendBackfillBusy(false)
-    }
   }
 
   // Option lists reflect what's actually loaded right now (S&P 500 +
@@ -465,9 +446,6 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
           <button onClick={() => void handleRefresh()} disabled={busy}>
             {busy ? t('common.saving') : t('discovery.sp500.refresh')}
           </button>
-          <button onClick={() => void handleDividendBackfill()} disabled={dividendBackfillBusy}>
-            {dividendBackfillBusy ? t('common.saving') : t('discovery.backfillDividends')}
-          </button>
           <div className="segmented" role="group">
             <button type="button" aria-pressed={rankBy === 'value'} onClick={() => void handleRankByChange('value')}>
               {t('discovery.rankByValue')}
@@ -485,11 +463,6 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
         {refreshNotice && (
           <div className="muted" style={{ fontSize: '0.82rem' }}>
             {refreshNotice}
-          </div>
-        )}
-        {dividendBackfillNotice && (
-          <div className="muted" style={{ fontSize: '0.82rem' }}>
-            {dividendBackfillNotice}
           </div>
         )}
 
@@ -610,9 +583,9 @@ export function DiscoveryPanel({ onAdded, priceMin, priceMax }: Props) {
         })}
       </div>
 
-      <div style={{ marginTop: '1.2rem' }}>
-        <PredictionBackfillButton />
-      </div>
+      <p className="muted" style={{ marginTop: '1.2rem' }}>
+        {t('maintenance.discoveryHint')} <MaintenanceLink />
+      </p>
 
       <div style={{ marginTop: '1.2rem' }}>
         <BacktestPanel />
