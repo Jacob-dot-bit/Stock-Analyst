@@ -9815,24 +9815,25 @@ No API change.
 Verification: `tsc -b` and oxlint clean; tab checked in the browser at
 desktop and phone width, no console errors.
 
-## Step 3u.102 — One hook for fetch-on-mount views (2026-11-13)
+## Step 3u.100 — The nav bell and the weekly summary read one rule (2026-11-13)
 
-Read-only panels each wrote the same lines: `data`/`error` state, a
-`useEffect` that fetches, and (in about half of them) a `cancelled` flag so
-a late response does not land after unmount. The other half had no such
-guard, so on Dividends a slow answer for an older year filter could
-overwrite the newer one.
+"Target reached" was decided in two places: the nav bell filtered
+`GET /api/watchlist` in the browser (`distance_to_target_pct <= 0`), while
+the weekly summary classified `GET /api/watchlist/signals` on the server
+with its own `NEAR_TARGET_PCT`. Same answer today, but nothing kept them
+together.
 
-- `hooks/useApiResource.ts`: `useApiResource(fetcher, deps)` returns
-  `{ data, error, reload }`, refetches when `deps` change and drops any
-  response that is no longer the latest. `errorMessage(err)` is the
-  `err instanceof Error ? … : String(err)` line.
-- Used by Attention, Data health, Drawdown, Concentration, Liquidity, the
-  weekly summary, Dividends (summary and filtered detail) and the Tax prep
-  summary.
+- `routers/watchlist.py` now holds the rule: `distance_to_target(price,
+  target)` (was written twice) and `target_flag(distance, band)` →
+  `"target_reached"` | `"near_target_high_score"` | `None`.
+  `NEAR_TARGET_PCT` moves there from `weekly.py`.
+- `WatchlistSignalOut` gains `target_flag`. The weekly summary keeps the
+  flagged rows; the bell polls `/signals` and counts `target_reached`.
+- The unheld-items query, repeated in two routes, is `_unheld_items(db)`
+  (on top of `tracking.not_held`).
 
-Forms and panels with their own polling (refresh, backfills) keep their
-code: they do more than read once.
+Attention (portfolio summary) and Data health (detail) were already split
+that way and stay as they are.
 
-Verification: `tsc -b` and oxlint clean; the converted pages load in the
-browser on demo data with no console errors.
+Verification: backend suite green, new tests on `target_flag`; `tsc -b`
+clean.

@@ -694,6 +694,8 @@ export interface WatchlistSignal {
   composite_score: number | null
   score_band: ScoreBand
   distance_to_target_pct: number | null
+  /** Server-side "worth a look" rule, shared with the weekly summary. */
+  target_flag: 'target_reached' | 'near_target_high_score' | null
 }
 
 export interface WatchlistItem {
