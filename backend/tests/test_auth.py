@@ -194,6 +194,11 @@ class TestRequiredMode:
     def test_no_account_yet(self, client, auth_on):
         assert _login(client).status_code == 503
 
+    def test_status_is_readable_before_login(self, client, account, auth_on):
+        response = client.get("/api/auth/status")
+        assert response.status_code == 200
+        assert response.json() == {"required": True, "configured": True}
+
 
 class TestTotpLogin:
     @pytest.fixture
@@ -284,6 +289,9 @@ class TestJournalOnlyMode:
     def test_me_still_says_not_logged_in(self, client, account):
         assert client.get("/api/auth/me").status_code == 401
 
+    def test_status_says_not_required(self, client):
+        assert client.get("/api/auth/status").json() == {"required": False, "configured": False}
+
 
 class TestStillLoopbackOnly:
     def test_a_valid_token_from_outside_is_still_refused(self, db_factory, account, auth_on):
@@ -307,3 +315,23 @@ class TestStillLoopbackOnly:
             assert asyncio.run(call()).status_code == 403
         finally:
             app.dependency_overrides.clear()
+
+
+class TestCliQr:
+    def test_no_qrencode_no_qr(self, monkeypatch):
+        from app.auth import __main__ as cli
+
+        monkeypatch.setenv("PATH", "")
+        assert cli._print_qr("otpauth://totp/x?secret=ABC") is False
+
+    def test_link_goes_through_stdin(self, monkeypatch, tmp_path):
+        from app.auth import __main__ as cli
+
+        seen = tmp_path / "seen"
+        fake = tmp_path / "qrencode"
+        fake.write_text(f'#!/bin/sh\necho "$@" > {seen}.args\ncat > {seen}\n')
+        fake.chmod(0o755)
+        monkeypatch.setenv("PATH", f"{tmp_path}:/usr/bin:/bin")
+        assert cli._print_qr("otpauth://totp/x?secret=ABC") is True
+        assert seen.read_text() == "otpauth://totp/x?secret=ABC"
+        assert "secret" not in (tmp_path / "seen.args").read_text()
