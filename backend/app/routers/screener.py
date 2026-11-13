@@ -15,11 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Instrument, ScreenerCandidate, WatchlistItem
+from app.models import ScreenerCandidate, WatchlistItem
 from app.portfolio.valuation import resolve_current_price
 from app.prices.sparklines import sparklines
 from app.prices.service import price_status as _price_status
-from app.routers.scoring import scores_for
 from app.schemas import (
     InstrumentOut,
     ScreenerCandidateIn,
@@ -28,25 +27,11 @@ from app.schemas import (
     ScoreOut,
     SparklineOut,
 )
+from app.scoring.results import scores_for
 from app.symbols.duplicates import check_for_duplicate
-from app.tracking import instrument_to_follow, not_held, not_watched
+from app.tracking import gem_instruments, instrument_to_follow, not_held, not_watched
 
 router = APIRouter(prefix="/api/screener", tags=["screener"])
-
-
-def _screener_instruments(db: Session) -> list[Instrument]:
-    """Candidates, excluding anything currently held or already watchlisted —
-    see module docstring. Same anti-join used by every endpoint below."""
-    query = (
-        select(Instrument)
-        .join(ScreenerCandidate, ScreenerCandidate.instrument_id == Instrument.id)
-        .where(
-            not_held(Instrument.id),
-            not_watched(Instrument.id),
-        )
-        .distinct()
-    )
-    return list(db.execute(query).scalars())
 
 
 def _screener_candidate_out(db: Session, item: ScreenerCandidate) -> ScreenerCandidateOut:
@@ -140,7 +125,7 @@ def get_screener_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
     not fetched yet) sorts last rather than being dropped, so it's still
     visible as "needs a fundamentals refresh" instead of silently vanishing.
     """
-    scores = scores_for(db, _screener_instruments(db))
+    scores = scores_for(db, gem_instruments(db))
     scores.sort(key=lambda s: (s.composite is None, -(s.composite or 0)))
     return scores
 
