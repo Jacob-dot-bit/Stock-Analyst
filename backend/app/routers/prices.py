@@ -16,14 +16,13 @@ from app.prices.history_service import get_or_create_benchmark_instrument
 from app.prices.service import get_refresh_progress, refresh_many
 from app.prices.sparklines import sparklines
 from app.providers.registry import get_provider_chain
-from app.routers.screener import _screener_instruments
-from app.routers.watchlist import _watchlist_instruments
 from app.schemas import (
     PriceHistoryOut,
     RefreshReportOut,
     RefreshStatusOut,
     SparklineOut,
 )
+from app.tracking import gem_instruments, watched_instruments
 
 router = APIRouter(prefix="/api/prices", tags=["prices"])
 
@@ -81,14 +80,14 @@ def refresh_prices(
         # — without this, the watchlist's prices would only ever update from
         # the one-off fetch on `POST /api/watchlist`, never from this button.
         seen = {i.id for i in instruments}
-        instruments.extend(w for w in _watchlist_instruments(db) if w.id not in seen)
+        instruments.extend(w for w in watched_instruments(db) if w.id not in seen)
 
         # Same reasoning again for screener candidates: they're never held or
         # watchlisted either (see `routers/screener.py`'s module docstring),
         # so without this a candidate's price would only ever update from the
         # one-off fetch on `POST /api/screener`, never from this button.
         seen = {i.id for i in instruments}
-        instruments.extend(c for c in _screener_instruments(db) if c.id not in seen)
+        instruments.extend(c for c in gem_instruments(db) if c.id not in seen)
 
     report = refresh_many(
         db,

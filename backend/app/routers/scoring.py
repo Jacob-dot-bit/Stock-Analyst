@@ -17,15 +17,14 @@ from app.providers.registry import get_edgar_provider, get_esef_provider
 from app.schemas import (
     FundamentalsRefreshReportOut,
     FundamentalsRefreshStatusOut,
-    MetricScoreOut,
-    PillarScoreOut,
     ScoreBacktestBucketOut,
     ScoreBacktestOut,
     ScoreBacktestPeriodOut,
     ScoreOut,
 )
 from app.scoring.config import get_scoring_config
-from app.scoring.service import InstrumentScore, compute_scores
+from app.scoring.results import scores_for
+from app.tracking import gem_instruments, watched_instruments
 
 router = APIRouter(prefix="/api/scoring", tags=["scoring"])
 
@@ -33,39 +32,6 @@ router = APIRouter(prefix="/api/scoring", tags=["scoring"])
 def _held_instruments(db: Session) -> list[Instrument]:
     query = select(Instrument).join(Position, Position.instrument_id == Instrument.id).distinct()
     return list(db.execute(query).scalars())
-
-
-def scores_for(db: Session, instruments: list[Instrument]) -> list[ScoreOut]:
-    """Composite scores of `instruments` with the current `scoring.yaml`, in
-    API shape — behind the `/scores` of the portfolio, watchlist and
-    screener."""
-    return [score_to_out(result) for result in compute_scores(db, instruments, get_scoring_config())]
-
-
-def score_to_out(result: InstrumentScore) -> ScoreOut:
-    """One `compute_scores` result in API shape."""
-    return ScoreOut(
-        instrument_id=result.instrument_id,
-        composite=result.composite,
-        pillars=[
-            PillarScoreOut(
-                name=pillar.name,
-                score=pillar.score,
-                weight_used=pillar.weight_used,
-                metrics=[
-                    MetricScoreOut(
-                        name=metric.name,
-                        weight=metric.weight,
-                        score=metric.score,
-                        value=metric.value,
-                        dropped_reason=metric.dropped_reason,
-                    )
-                    for metric in pillar.metrics
-                ],
-            )
-            for pillar in result.pillars
-        ],
-    )
 
 
 @router.post("/fundamentals/refresh", response_model=FundamentalsRefreshReportOut)
@@ -87,18 +53,11 @@ def refresh_fundamentals(
     `GET /fundamentals/refresh/status` below for a real progress bar polled
     from a separate request while this one is still working.
     """
-    # Deferred import: `routers/watchlist.py` and `routers/screener.py` both
-    # import `score_to_out` from this module, so importing them back at
-    # module load time would be circular. By call time both are already
-    # fully loaded, so a local import here is safe.
-    from app.routers.screener import _screener_instruments
-    from app.routers.watchlist import _watchlist_instruments
-
     instruments = _held_instruments(db)
     seen = {i.id for i in instruments}
-    instruments.extend(w for w in _watchlist_instruments(db) if w.id not in seen)
+    instruments.extend(w for w in watched_instruments(db) if w.id not in seen)
     seen = {i.id for i in instruments}
-    instruments.extend(c for c in _screener_instruments(db) if c.id not in seen)
+    instruments.extend(c for c in gem_instruments(db) if c.id not in seen)
 
     report = fetch_fundamentals(db, instruments, get_edgar_provider(), get_esef_provider(), force=force)
     return FundamentalsRefreshReportOut(**report.as_dict())

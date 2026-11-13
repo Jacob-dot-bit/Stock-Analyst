@@ -3,7 +3,8 @@ the user follows without holding it, and the anti-joins that keep a followed
 instrument off a list once it is held (or, for the gems, once watched).
 
 Both lists keep their own table and router (`routers/watchlist.py`,
-`routers/screener.py`); only the mechanics live here. See DEVLOG "Step 3u.98".
+`routers/screener.py`); only the mechanics live here, along with the two
+lists of instruments that prices and scoring also read. See DEVLOG "Step 3u.98".
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from app.ingest.service import get_or_create_instrument
-from app.models import Instrument, Position, WatchlistItem
+from app.models import Instrument, Position, ScreenerCandidate, WatchlistItem
 from app.prices.service import is_permanently_unresolvable, latest_bar_date, refresh_instrument
 from app.providers.registry import get_provider_chain
 from app.symbols.mapping import looks_like_equity
@@ -29,6 +30,28 @@ def not_held(instrument_id: InstrumentedAttribute) -> ColumnElement[bool]:
 
 def not_watched(instrument_id: InstrumentedAttribute) -> ColumnElement[bool]:
     return ~select(WatchlistItem.id).where(WatchlistItem.instrument_id == instrument_id).exists()
+
+
+def watched_instruments(db: Session) -> list[Instrument]:
+    """Instruments on the watchlist and not held."""
+    query = (
+        select(Instrument)
+        .join(WatchlistItem, WatchlistItem.instrument_id == Instrument.id)
+        .where(not_held(Instrument.id))
+        .distinct()
+    )
+    return list(db.execute(query).scalars())
+
+
+def gem_instruments(db: Session) -> list[Instrument]:
+    """Instruments on the gems list, neither held nor watched."""
+    query = (
+        select(Instrument)
+        .join(ScreenerCandidate, ScreenerCandidate.instrument_id == Instrument.id)
+        .where(not_held(Instrument.id), not_watched(Instrument.id))
+        .distinct()
+    )
+    return list(db.execute(query).scalars())
 
 
 def instrument_to_follow(
