@@ -191,3 +191,35 @@ class TestWatchlistSignals:
         row = client.get("/api/watchlist/signals").json()[0]
 
         assert row["signal"] != "reduce"
+
+
+class TestWatchlistTargetFlag:
+    """`target_flag` is the one "worth a look" rule shared by the weekly
+    summary and the nav bell."""
+
+    _watch = TestWatchlistSignals._watch
+
+    @pytest.mark.parametrize(
+        ("price", "composite", "expected"),
+        [
+            (90.0, 10.0, "target_reached"),  # at/below target, any score
+            (104.0, 80.0, "near_target_high_score"),  # within 5 % above, high score
+            (104.0, 10.0, None),  # near but not a high score
+            (110.0, 80.0, None),  # too far above
+        ],
+    )
+    def test_flag(self, client, monkeypatch, price, composite, expected):
+        instrument = self._watch("AAA.FR", price=price, target_entry_price=100.0)
+        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: composite}))
+
+        row = client.get("/api/watchlist/signals").json()[0]
+
+        assert row["target_flag"] == expected
+
+    def test_no_flag_without_a_target_price(self, client, monkeypatch):
+        instrument = self._watch("AAA.FR", price=90.0, target_entry_price=None)
+        monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores({instrument.id: 80.0}))
+
+        row = client.get("/api/watchlist/signals").json()[0]
+
+        assert row["target_flag"] is None

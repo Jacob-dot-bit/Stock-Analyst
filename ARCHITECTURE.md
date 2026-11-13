@@ -855,9 +855,9 @@ state, so Score and Insights can be open at once. `PositionsTable` is the
 one exception: it embeds `ScoreBreakdown`/`InsightsSection` directly
 inside its own consolidated `PositionDetailRow` instead of using the `Row`
 wrappers — see "Per-position detail panel" below. `AlertsBell` (top-nav
-badge, polls `GET /api/watchlist` every 60s, counts items with
-`distance_to_target_pct <= 0` — no backend endpoint of its own, reuses data
-the Watchlist page already computes).
+badge, polls `GET /api/watchlist/signals` every 60s, counts items whose
+`target_flag` is `target_reached` — the same server-side rule,
+`routers/watchlist.py::target_flag`, that the weekly summary lists).
 
 **Per-position detail panel** (`PositionDetailRow.tsx`, `PositionsTable.tsx`
 only — DEVLOG "Decision 3u.31"). Before this, understanding one held
