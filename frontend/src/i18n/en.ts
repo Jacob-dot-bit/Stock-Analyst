@@ -1008,12 +1008,11 @@ export const en: Catalogue = {
   'taxPrep.otherFlows': 'Other flows (informational)',
   'taxPrep.pmpGains': 'Gains (weighted average price)',
   'taxPrep.pmpLosses': 'Losses (weighted average price)',
-  'taxPrep.unmatchedSalesLine':
-    '{count} sale(s) for {amount} with no computable gain: the purchase is not in the imported statements. The broker\'s tax summary (IFU) has it.',
-  'taxPrep.unmatchedReason.no_purchase': 'bought before the statements: {count}',
-  'taxPrep.unmatchedReason.incomplete_history': 'purchase history incomplete: {count}',
-  'taxPrep.unmatchedReason.no_units': 'unit count unknown: {count}',
-  'taxPrep.unmatchedReason.no_instrument': 'security not identified: {count}',
+  'taxPrep.unmatchedSalesLine': '{count} sale(s) for {amount} with no computable gain. Reason:',
+  'taxPrep.unmatchedReason.no_purchase': 'bought before the oldest imported statement ({count})',
+  'taxPrep.unmatchedReason.incomplete_history': 'more units sold than purchases imported, or a purchase with no unit count ({count})',
+  'taxPrep.unmatchedReason.no_units': 'units sold unknown ({count})',
+  'taxPrep.unmatchedReason.no_instrument': 'security not identified ({count})',
   'taxPrep.gains.title': 'Gains on securities {year} (ordinary brokerage account)',
   'taxPrep.gains.hint':
     'Worked out by the weighted average acquisition price, fees included, over every brokerage account holding the same security. PEA, employee savings and P2P are not counted.',
@@ -1024,8 +1023,7 @@ export const en: Catalogue = {
   'taxPrep.gains.used': 'Losses set off',
   'taxPrep.gains.taxable': 'Net gain after carried losses',
   'taxPrep.gains.carriedOut': 'Losses still to carry forward',
-  'taxPrep.gains.unmatched':
-    '{count} sale(s) of the year are not in this total: their purchase is not in the imported statements. Import an older statement or check the IFU.',
+  'taxPrep.gains.unmatched': '{count} sale(s) of the year are not in this total (reason in the detail below). Import an older statement from the broker or check its IFU.',
   'taxPrep.gains.sales': 'The {count} sale(s) in detail',
   'taxPrep.gains.col.date': 'Date',
   'taxPrep.gains.col.account': 'Account',

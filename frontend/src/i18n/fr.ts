@@ -1014,12 +1014,11 @@ export const fr: Catalogue = {
   'taxPrep.otherFlows': 'Autres flux (informatifs)',
   'taxPrep.pmpGains': 'Plus-values (prix moyen pondéré)',
   'taxPrep.pmpLosses': 'Moins-values (prix moyen pondéré)',
-  'taxPrep.unmatchedSalesLine':
-    '{count} vente(s) pour {amount} sans plus-value calculable : l\'achat n\'est pas dans les relevés importés. Le montant est sur l\'IFU du courtier.',
-  'taxPrep.unmatchedReason.no_purchase': 'achat antérieur aux relevés : {count}',
-  'taxPrep.unmatchedReason.incomplete_history': 'historique d\'achats incomplet : {count}',
-  'taxPrep.unmatchedReason.no_units': 'nombre de parts inconnu : {count}',
-  'taxPrep.unmatchedReason.no_instrument': 'titre non identifié : {count}',
+  'taxPrep.unmatchedSalesLine': '{count} vente(s) pour {amount} sans plus-value calculable. Raison :',
+  'taxPrep.unmatchedReason.no_purchase': 'achat antérieur au plus ancien relevé importé ({count})',
+  'taxPrep.unmatchedReason.incomplete_history': 'plus de parts vendues que d\'achats importés, ou un achat sans nombre de parts ({count})',
+  'taxPrep.unmatchedReason.no_units': 'nombre de parts vendues inconnu ({count})',
+  'taxPrep.unmatchedReason.no_instrument': 'titre non identifié ({count})',
   'taxPrep.gains.title': 'Plus-values sur titres {year} (compte-titres ordinaire)',
   'taxPrep.gains.hint':
     'Calculées au prix moyen pondéré d\'acquisition, frais inclus, sur tous les comptes-titres qui détiennent le même titre. PEA, épargne salariale et P2P ne sont pas comptés.',
@@ -1030,8 +1029,7 @@ export const fr: Catalogue = {
   'taxPrep.gains.used': 'Moins-values imputées',
   'taxPrep.gains.taxable': 'Plus-value nette après report',
   'taxPrep.gains.carriedOut': 'Moins-values restant à reporter',
-  'taxPrep.gains.unmatched':
-    '{count} vente(s) de l\'année ne sont pas dans ce total : leur achat n\'est pas dans les relevés importés. Importez un relevé plus ancien ou reportez-vous à l\'IFU.',
+  'taxPrep.gains.unmatched': '{count} vente(s) de l\'année ne sont pas dans ce total (raison dans le détail ci-dessous). Importez un relevé plus ancien du courtier ou reportez-vous à son IFU.',
   'taxPrep.gains.sales': 'Détail des {count} vente(s)',
   'taxPrep.gains.col.date': 'Date',
   'taxPrep.gains.col.account': 'Compte',
