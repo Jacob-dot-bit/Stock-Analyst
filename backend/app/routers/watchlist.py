@@ -29,45 +29,18 @@ from app.schemas import (
     WatchlistItemUpdateIn,
     WatchlistSignalOut,
 )
-from app.scoring.config import get_scoring_config
 from app.scoring.results import scores_for
-from app.scoring.service import compute_scores, score_band
 from app.symbols.duplicates import check_for_duplicate
-from app.tracking import instrument_to_follow, not_held, watched_instruments
+from app.tracking import (
+    distance_to_target,
+    instrument_to_follow,
+    not_held,
+    unheld_watchlist_items,
+    watched_instruments,
+    watchlist_signals,
+)
 
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
-
-#: A high-score item this close above its target entry price (in percent) is
-#: flagged alongside the ones already at/below target.
-NEAR_TARGET_PCT = 5.0
-
-
-def distance_to_target(price: float | None, target: float | None) -> float | None:
-    """Percent above (+) or below (-) the target entry price; None when
-    either side is missing, never guessed."""
-    if price is None or not target:
-        return None
-    return (price - target) / target * 100
-
-
-def target_flag(distance: float | None, band: str) -> str | None:
-    """The one definition of "worth a look" for a watched item, read by the
-    weekly summary and the nav bell alike: "target_reached" (at or below
-    target, any score) or "near_target_high_score" (within `NEAR_TARGET_PCT`
-    above, with a high score). None otherwise."""
-    if distance is None:
-        return None
-    if distance <= 0:
-        return "target_reached"
-    if distance <= NEAR_TARGET_PCT and band == "high":
-        return "near_target_high_score"
-    return None
-
-
-def _unheld_items(db: Session) -> list[WatchlistItem]:
-    """Watchlist rows whose instrument is not currently held."""
-    return list(db.execute(select(WatchlistItem).where(not_held(WatchlistItem.instrument_id))).scalars())
-
 
 def _watchlist_item_out(db: Session, item: WatchlistItem) -> WatchlistItemOut:
     instrument = item.instrument
@@ -119,7 +92,7 @@ def add_watchlist_item(payload: WatchlistItemIn, db: Session = Depends(get_db)) 
 def list_watchlist(db: Session = Depends(get_db)) -> list[WatchlistItemOut]:
     """Cache-only — never triggers a fetch, same convention as
     `GET /api/prices/{id}/history`."""
-    items = _unheld_items(db)
+    items = unheld_watchlist_items(db)
     return [_watchlist_item_out(db, item) for item in items]
 
 
@@ -159,45 +132,7 @@ def get_watchlist_scores(db: Session = Depends(get_db)) -> list[ScoreOut]:
 
 @router.get("/signals", response_model=list[WatchlistSignalOut])
 def get_watchlist_signals(db: Session = Depends(get_db)) -> list[WatchlistSignalOut]:
-    """One signal per watched instrument, derived from its own composite
-    score and its distance to the target entry price — same transparent,
-    rule-based combination as `portfolio/review.py::position_signal`
-    (see its docstring). Only ever "reinforce" | "hold" | "not_applicable":
-    nothing here is held, so "reduce" never applies.
-    """
-    items = _unheld_items(db)
-    instruments = [item.instrument for item in items]
-    config = get_scoring_config()
-    scores = {s.instrument_id: s for s in compute_scores(db, instruments, config)}
-
-    out = []
-    for item in items:
-        instrument = item.instrument
-        price, _source = resolve_current_price(db, instrument, {})
-        distance = distance_to_target(price, item.target_entry_price)
-
-        score_result = scores.get(instrument.id)
-        composite = score_result.composite if score_result else None
-        band = score_band(composite)
-
-        if distance is None or band == "none":
-            signal = "not_applicable"
-        elif distance <= 0 and band == "high":
-            signal = "reinforce"
-        else:
-            signal = "hold"
-
-        out.append(
-            WatchlistSignalOut(
-                instrument_id=instrument.id,
-                signal=signal,
-                composite_score=composite,
-                score_band=band,
-                distance_to_target_pct=distance,
-                target_flag=target_flag(distance, band),
-            )
-        )
-    return out
+    return watchlist_signals(db)
 
 
 @router.get("/sparklines", response_model=list[SparklineOut])

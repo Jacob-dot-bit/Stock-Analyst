@@ -24,13 +24,13 @@ from app.db import get_db
 from app.models import Instrument, JournalEntry, WatchlistItem
 from app.portfolio.review import allocation_rows, attention_items, policy_gaps, position_signals
 from app.portfolio.valuation import FIGURES_SNAPSHOT_KEY, positions_figures_and_total
-from app.routers.watchlist import get_watchlist_signals
 from app.schemas import (
     WeeklyJournalDueOut,
     WeeklyPositionFlagOut,
     WeeklySummaryOut,
     WeeklyWatchlistFlagOut,
 )
+from app.tracking import watchlist_signals
 
 router = APIRouter(prefix="/api/weekly-summary", tags=["weekly-summary"])
 
@@ -104,7 +104,7 @@ def _build_summary(db: Session) -> WeeklySummaryOut:
         for item in db.execute(select(WatchlistItem).options(joinedload(WatchlistItem.instrument))).scalars()
     }
     watchlist_flags = []
-    for s in get_watchlist_signals(db):
+    for s in watchlist_signals(db):
         if s.target_flag is None or s.distance_to_target_pct is None:
             continue
         distance = s.distance_to_target_pct

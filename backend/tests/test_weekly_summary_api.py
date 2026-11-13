@@ -86,7 +86,7 @@ def fake_scores(composites: dict[int, float | None]):
 
 def patch_scores(monkeypatch, composites):
     monkeypatch.setattr("app.portfolio.review.compute_scores", fake_scores(composites))
-    monkeypatch.setattr("app.routers.watchlist.compute_scores", fake_scores(composites))
+    monkeypatch.setattr("app.tracking.compute_scores", fake_scores(composites))
 
 
 def test_empty_database_returns_every_section_empty(client):
