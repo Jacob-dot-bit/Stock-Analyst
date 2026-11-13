@@ -119,6 +119,7 @@ class TestCategorize:
             ("PAIEMENT CB 0101 VILLE CROUSABCDEF CARTE 1234", -3.3, "restaurants", "spending"),
             ("PAIEMENT CB 0101 VILLE DAFY MOTO CARTE 1234", -90, "vehicle", "spending"),
             ("PAIEMENT CB 0101 VILLE EXEMPLE CENTRE AUTO CARTE 1234", -80, "vehicle", "spending"),
+            ("PRLV SEPA ECOLE EXEMPLE FRAIS DE SCOLARITE", -600, "education", "spending"),
             # Benefits paid back: negative income, not spending.
             ("PAIEMENT CB 0101 VILLE CAF VILLE CARTE 1234", -500, "benefits", "income"),
             # A PayPal transfer in is money received, not a negative purchase.

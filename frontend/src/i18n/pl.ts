@@ -1296,6 +1296,7 @@ export const pl: Catalogue = {
   'budget.category.cash': 'Wypłaty gotówki',
   'budget.category.loan': 'Kredyty',
   'budget.category.vehicle': 'Pojazd',
+  'budget.category.education': 'Edukacja',
   'budget.category.transfers_out': 'Przelewy wysłane',
   'budget.category.other': 'Inne wydatki',
   'budget.category.investment': 'Inwestycje',

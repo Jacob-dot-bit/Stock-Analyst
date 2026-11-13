@@ -52,6 +52,7 @@ CATEGORY_KIND: dict[str, str] = {
     "cash": SPENDING,
     "loan": SPENDING,
     "vehicle": SPENDING,
+    "education": SPENDING,
     "transfers_out": SPENDING,
     "other": SPENDING,
     "investment": INVESTMENT,
@@ -77,6 +78,7 @@ _BENEFITS_RE = dict(_CREDIT_RULES)["benefits"]
 
 _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("cash", _rx(r"RETRAIT", r"RETRAIT DAB", r"DAB")),
+    ("education", _rx(r"SCOLARITE", r"FRAIS DE SCOLARITE", r"UNIVERSITE", r"ECOLE SUP", r"CVEC", r"LIBRAIRIE UNIVERSITAIRE")),
     ("bank_fees", _rx(r"COTISATION", r"FRAIS", r"COMMISSION", r"AGIOS", r"COMMISSIONS", r"OFFRE GROUPEE")),
     ("taxes", _rx(r"DGFIP", r"IMPOTS?", r"TRESOR PUBLIC", r"FINANCES PUBLIQUES", r"AMENDE", r"ANTAI", r"TAXE")),
     ("loan", _rx(r"ECHEANCE PRET", r"ECH PRET", r"CREDIT IMMOBILIER", r"REMBOURSEMENT PRET", r"COFIDIS", r"CETELEM", r"SOFINCO", r"ONEY")),
