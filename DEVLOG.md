@@ -9790,6 +9790,31 @@ signal), the gems list for ranking candidates by score.
 Verification: backend suite green; `tsc -b` clean; both pages checked in a
 browser on demo data, at desktop and phone width.
 
+## Step 3u.99 — All data catch-up actions in one tab (2026-11-13)
+
+Seven catch-up actions were spread over six places: the ISIN and FIGI
+lookups twice (Watchlist and Hidden gems headers), sector enrichment in the
+sector breakdown, the factor import in the factor table, the dividend
+backfill and the price-history backfill in the Discovery panel, and the
+fundamentals fetch under "Portfolio data". They are all the same kind of
+action — fill in what is missing, safe to run again — and none of them is
+needed to read the view they sat in.
+
+- New Settings tab "Data updates" (`#mise-a-jour`) with
+  `DataMaintenancePanel`: fundamentals, then "Instrument identity" (ISIN,
+  FIGI, sectors) and "Analysis data" (factors, dividends, price history).
+- `MaintenanceAction` renders one row: what it does, a Run button, the
+  one-line result. `BackfillIsinsButton` and `BackfillFigisButton` are gone.
+- Where a button used to be, `MaintenanceLink` points to the tab, so the
+  action stays one click away.
+- The daily price refresh stays on the Portfolio page: it is part of
+  reading the portfolio, not maintenance.
+
+No API change.
+
+Verification: `tsc -b` and oxlint clean; tab checked in the browser at
+desktop and phone width, no console errors.
+
 ## Step 3u.102 — One hook for fetch-on-mount views (2026-11-13)
 
 Read-only panels each wrote the same lines: `data`/`error` state, a

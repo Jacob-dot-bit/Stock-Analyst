@@ -36,6 +36,7 @@ export const pl: Catalogue = {
   'common.cancel': 'Anuluj',
   'common.save': 'Zapisz',
   'common.saving': 'Zapisywanie…',
+  'common.running': 'W toku…',
   'common.add': 'Dodaj',
   'common.delete': 'Usuń',
   'common.edit': 'Edytuj',
@@ -238,7 +239,6 @@ export const pl: Catalogue = {
   'breakdown.dimension.country': 'Kraj',
   'breakdown.dimension.sector': 'Sektor',
   'breakdown.enrichSectors': 'Pobierz sektory (FMP + Wikidata)',
-  'breakdown.enriching': 'Pobieranie sektorów…',
   'breakdown.enrichResult': '{enriched} wzbogaconych, {skipped} bez sektora, {failed} nieudanych.',
   'breakdown.empty': 'Za mało wycenionych pozycji, aby obliczyć podział.',
   'breakdown.unknown': 'Nieznane',
@@ -246,7 +246,6 @@ export const pl: Catalogue = {
 
   // --- Wykrywanie duplikatów po ISIN (watchlist/kandydaci) -------------------
   'duplicates.backfillIsins': 'Wyszukaj brakujące identyfikatory spółek',
-  'duplicates.backfilling': 'Wyszukiwanie…',
   'duplicates.backfillResult': '{checked} sprawdzonych, {updated} zaktualizowanych.',
   'duplicates.backfillFigis': 'Wyszukaj brakującą tożsamość OpenFIGI',
   'duplicates.backfillFigisResultMore': '{checked} sprawdzonych, {remaining} pozostało — kliknij ponownie, aby kontynuować.',
@@ -607,6 +606,19 @@ export const pl: Catalogue = {
   'settings.groupIntegrity.title': 'Spójność i korekty',
   'settings.groupIntegrity.subtitle':
     'Popraw symbole lub zarejestruj operacje kapitałowe wpływające na historię.',
+  'settings.groupMaintenance.title': 'Aktualizacja danych',
+  'settings.groupMaintenance.subtitle':
+    'Działania uzupełniające brakujące identyfikatory, sektory i historię. Każde można bezpiecznie uruchomić ponownie: uzupełnia tylko to, czego brakuje.',
+  'maintenance.run': 'Uruchom',
+  'maintenance.link': 'Zaktualizuj w Ustawieniach → Aktualizacja danych',
+  'maintenance.discoveryHint': 'Kilka lat historii cen sprawia, że poniższy backtest ma sens.',
+  'maintenance.identity.title': 'Tożsamość instrumentów',
+  'maintenance.analysis.title': 'Dane do analiz',
+  'maintenance.isins.description': 'Wyszukuje ISIN posiadanych, obserwowanych i wyszukanych instrumentów, które go jeszcze nie mają. Służy do wykrywania duplikatów między brokerami.',
+  'maintenance.figis.description': 'Pyta OpenFIGI o tożsamość instrumentów, które jej jeszcze nie mają. Działa partiami: uruchom ponownie, dopóki coś zostało.',
+  'maintenance.sectors.description': 'Uzupełnia sektor posiadanych akcji (FMP, potem Wikidata) na potrzeby podziału według sektorów.',
+  'maintenance.factors.description': 'Pobiera serie czynników Kennetha Frencha używane w tabeli ekspozycji na czynniki.',
+  'maintenance.dividends.description': 'Uzupełnia historię dywidend uniwersum Odkrywania. Działa partiami: uruchom ponownie, dopóki coś zostało.',
   'settings.groupBackup.title': 'Kopia zapasowa',
   'settings.groupDataSources.title': 'Źródła danych',
   'settings.groupDataSources.subtitle':
@@ -763,7 +775,7 @@ export const pl: Catalogue = {
 
   'prediction.title': 'Historia cen',
   'prediction.description':
-    'Prawdziwy model predykcyjny potrzebuje rzetelnego backtestu, a ten potrzebuje głębszej historii cen niż ta aplikacja normalnie przechowuje. Ten krok pobiera kilka lat dziennych świec dla instrumentów już wycenionych — tylko cena, ponieważ fundamenty nie są jeszcze przechowywane z datą złożenia, a użycie dzisiejszego wyniku do „przewidywania" przeszłego zwrotu byłoby błędem antycypacji. Zobacz „Backtest" poniżej, co model robi z tymi danymi.',
+    'Prawdziwy model predykcyjny potrzebuje rzetelnego backtestu, a ten potrzebuje głębszej historii cen niż ta aplikacja normalnie przechowuje. Ten krok pobiera kilka lat dziennych świec dla instrumentów już wycenionych — tylko cena, ponieważ fundamenty nie są jeszcze przechowywane z datą złożenia, a użycie dzisiejszego wyniku do „przewidywania" przeszłego zwrotu byłoby błędem antycypacji. Zobacz „Backtest" na stronie Perełki, co model robi z tymi danymi.',
   'prediction.backfill': 'Pobierz historię cen',
   'prediction.running': 'Pobieranie…',
   'prediction.alreadyRunning': 'Pobieranie jest już w toku.',

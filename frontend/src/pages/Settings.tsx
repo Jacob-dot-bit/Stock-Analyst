@@ -5,7 +5,7 @@ import type { Instrument, ProviderAvailability, ProviderStatus } from '../api/ty
 import { BackupPanel } from '../components/BackupPanel'
 import { CorporateActionsPanel } from '../components/CorporateActionsPanel'
 import { DataHealthPanel } from '../components/DataHealthPanel'
-import { FundamentalsRefreshButton } from '../components/FundamentalsRefreshButton'
+import { DataMaintenancePanel } from '../components/DataMaintenancePanel'
 import { ImportPanel } from '../components/ImportPanel'
 import { ManualPositionForm } from '../components/ManualPositionForm'
 import { UnresolvedPanel } from '../components/UnresolvedPanel'
@@ -24,6 +24,7 @@ type TestResult = 'testing' | { valid: boolean; message: string }
 // (AttentionCard.tsx) open the right tab directly.
 const SECTIONS = [
   { id: 'donnees-portefeuille', title: 'settings.groupPortfolioData.title' },
+  { id: 'mise-a-jour', title: 'settings.groupMaintenance.title' },
   { id: 'integrite-corrections', title: 'settings.groupIntegrity.title' },
   { id: 'sauvegarde', title: 'settings.groupBackup.title' },
   { id: 'sources-donnees', title: 'settings.groupDataSources.title' },
@@ -160,7 +161,7 @@ export default function Settings() {
         <p>{t('settings.subtitle')}</p>
       </div>
 
-      {/* A long page of four unrelated groups, split into tabs; each tab is a
+      {/* A long page of five unrelated groups, split into tabs; each tab is a
           plain link to its hash, so it can be bookmarked and the browser's
           back button moves between them. */}
       <nav className="page-tabs" aria-label={t('settings.title')}>
@@ -182,8 +183,16 @@ export default function Settings() {
           <p className="muted">{t('settings.groupPortfolioData.subtitle')}</p>
 
           <ImportPanel onImported={() => {}} />
-          <FundamentalsRefreshButton onRefreshed={() => {}} />
           <ManualPositionForm onCreated={() => {}} />
+        </section>
+      )}
+
+      {activeSection === 'mise-a-jour' && (
+        <section className="settings-group" id="mise-a-jour">
+          <h2>{t('settings.groupMaintenance.title')}</h2>
+          <p className="muted">{t('settings.groupMaintenance.subtitle')}</p>
+
+          <DataMaintenancePanel />
         </section>
       )}
 
