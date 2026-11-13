@@ -100,42 +100,6 @@ export const en: Catalogue = {
   'import.auto.multiAccount':
     'A file already imported never creates duplicates. For the same value (Mintos loans, Amundi funds), the most recent export always wins. An XTB export covers one account only: import each one separately.',
   'import.auto.dropzone': 'Drop the file here, or pick it manually (.xlsx, .csv, .pdf, .xlsb)',
-  'import.xtb.title': 'Import an XTB statement',
-  'import.xtb.instructions':
-    'In xStation: Account history → Export → period "All", Excel format. XTB shut down its API on 14 March 2025, so exporting a file is the only reliable way to retrieve your positions. No credentials are asked for or stored.',
-  'import.xtb.multiAccount':
-    'One export covers a single account. If you hold several (brokerage and PEA, for instance), export them separately and import both files: they coexist without overwriting each other.',
-  'import.xtb.dropzone': 'Drop the file here, or pick it manually (.xlsx or .csv)',
-  'import.mintos.title': 'Import a Mintos statement',
-  'import.mintos.instructions':
-    "Portfolio → Account Statement, one PDF per calendar quarter. No cumulative export exists: import every quarterly statement separately (order doesn't matter).",
-  'import.mintos.multiAccount':
-    'The statement covers two distinct portfolios: "Core ETF 90" ETFs become regular positions, and the "Mintos Core" loan portfolio becomes a single aggregate valued by Mintos itself.',
-  'import.mintos.dropzone': 'Drop the file here, or pick it manually (.pdf)',
-  'import.mintos-investments.title': 'Update the Mintos value (Investments export)',
-  'import.mintos-investments.instructions':
-    "On Mintos: My investments → Export (.xlsx). Unlike the quarterly PDF statement, this export gives the loan portfolio's real value as of the export date — useful for refreshing the amount without waiting for the next quarter.",
-  'import.mintos-investments.multiAccount':
-    'A more recent export always wins the displayed value, whether it comes from this file or the quarterly PDF statement — whichever of the two is newer is always the one shown.',
-  'import.mintos-investments.dropzone': 'Drop the file here, or pick it manually (.xlsx)',
-  'import.mintos-transactions.title': 'Mintos gains (account statement)',
-  'import.mintos-transactions.instructions':
-    "On Mintos: Account statement → Export, as .xlsx or .csv. This file lists every interest payment, bonus, fee and tax withheld: it is used to compute the loan portfolio's real gain. It does not change its value — use the My investments export above for that.",
-  'import.mintos-transactions.multiAccount':
-    'Re-importing the same statement never creates duplicates. A statement covering a longer period completes the earlier ones.',
-  'import.mintos-transactions.dropzone': 'Drop the file here, or pick it manually (.xlsx, .csv)',
-  'import.amundi.title': 'Import an Amundi ESR statement',
-  'import.amundi.instructions':
-    'Your amundi-ee.com account → annual statement (PDF). Each statement is a yearly snapshot, not a dated transaction history — import each year separately.',
-  'import.amundi.multiAccount':
-    "An older statement imported after a newer one never overwrites your current positions — it stays browsable in the import history below.",
-  'import.amundi.dropzone': 'Drop the file here, or pick it manually (.pdf)',
-  'import.amundi-synthese.title': 'Update the Amundi value (Synthese export)',
-  'import.amundi-synthese.instructions':
-    "On your amundi-ee.com account: 'Synthese' export (.xlsb). Unlike the annual PDF statement, this export gives each fund's real value as of the export date — useful for refreshing the amount without waiting for the next annual statement.",
-  'import.amundi-synthese.multiAccount':
-    'A more recent export always wins the displayed value, whether it comes from this file or the annual PDF statement — whichever of the two is newer is always the one shown.',
-  'import.amundi-synthese.dropzone': 'Drop the file here, or pick it manually (.xlsb)',
   'import.chooseFile': 'Choose a file',
   'import.importing': 'Importing…',
   'import.failed': 'Import failed: {error}',

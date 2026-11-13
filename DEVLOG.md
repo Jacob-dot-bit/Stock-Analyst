@@ -9681,6 +9681,26 @@ read time:
   those names say where I live. One `category: KEYWORD, KEYWORD` line each,
   checked before the generic rules, re-read when the file changes.
 
+## Step 3u.93 — One upload route, the per-broker ones go (2026-11-13)
+
+Since 3u.87 the Settings page has a single upload slot that posts to
+`/api/imports/auto`, and Hermes only ever reads `GET /api/imports`. The
+fourteen per-broker routes (`/xtb`, `/mintos`, `/mintos-investments`,
+`/mintos-transactions`, `/amundi`, `/amundi-synthese`, each with its
+`/preview`) were only called by the tests any more.
+
+- `routers/imports.py` keeps `/auto`, `/auto/preview`, the history and
+  undo. The importers themselves are untouched, `_IMPORTERS` still maps
+  each detected file to one.
+- The tests that went through `/xtb` now go through `/auto`. A file that is
+  not a broker export is refused (400) there instead of reaching the XTB
+  parser and coming back as an "unsupported file type" warning; that
+  warning is still covered by the parser's own tests.
+- Front: `ImportPanel` loses its `kind` prop and its per-broker accept
+  lists; the 24 per-broker `import.<kind>.*` strings go from each catalogue.
+- The "file too large" message said 25 MB while the limit is 50 MB (3u.47);
+  it now reads the limit itself.
+
 ## Step 3u.95 — One provider listing for the Settings page (2026-11-13)
 
 The Settings page called two routes for the same list of providers —

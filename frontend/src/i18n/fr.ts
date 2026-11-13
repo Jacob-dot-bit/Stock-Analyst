@@ -94,42 +94,6 @@ export const fr: Catalogue = {
   'import.auto.multiAccount':
     "Un fichier déjà importé ne crée pas de doublons. Pour une même valeur (prêts Mintos, fonds Amundi), l'export le plus récent l'emporte toujours. Un export XTB ne couvre qu'un compte : importez chacun séparément.",
   'import.auto.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx, .csv, .pdf, .xlsb)',
-  'import.xtb.title': 'Importer un relevé XTB',
-  'import.xtb.instructions':
-    "Dans xStation : Account history → Export → période « All », format Excel. XTB a fermé son API le 14 mars 2025 : l'export de fichier est le seul moyen fiable de récupérer vos positions. Aucun identifiant n'est demandé ni stocké.",
-  'import.xtb.multiAccount':
-    "Un export ne couvre qu'un seul compte. Si vous en avez plusieurs (compte titres et PEA par exemple), exportez-les séparément et importez les deux fichiers : ils cohabitent sans s'écraser.",
-  'import.xtb.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx ou .csv)',
-  'import.mintos.title': 'Importer un relevé Mintos',
-  'import.mintos.instructions':
-    "Portfolio → Account Statement, un fichier PDF par trimestre. Aucun export cumulatif n'existe : importez chaque relevé trimestriel séparément (l'ordre n'a pas d'importance).",
-  'import.mintos.multiAccount':
-    "Le relevé couvre deux portefeuilles distincts : les ETF « Core ETF 90 » deviennent des positions normales, et le portefeuille de prêts « Mintos Core » devient un agrégat unique valorisé par Mintos.",
-  'import.mintos.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.pdf)',
-  'import.mintos-investments.title': 'Mettre à jour la valeur Mintos (export Investments)',
-  'import.mintos-investments.instructions':
-    "Sur Mintos : My investments → Export (.xlsx). Contrairement au relevé trimestriel PDF, cet export donne la valeur réelle du portefeuille de prêts au jour de l'export — utile pour rafraîchir le montant sans attendre le prochain trimestre.",
-  'import.mintos-investments.multiAccount':
-    "Un export plus récent remplace toujours l'affichage, qu'il vienne de ce fichier ou du relevé PDF trimestriel — le plus récent des deux est toujours celui montré.",
-  'import.mintos-investments.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx)',
-  'import.mintos-transactions.title': 'Gains Mintos (relevé de compte)',
-  'import.mintos-transactions.instructions':
-    "Sur Mintos : Relevé de compte (Account statement) → Export, en .xlsx ou .csv. Ce fichier liste chaque intérêt, bonus, frais et retenue d'impôt : il sert à calculer le gain réel du portefeuille de prêts. Il ne change pas sa valeur — pour ça, utilisez l'export My investments ci-dessus.",
-  'import.mintos-transactions.multiAccount':
-    'Réimporter le même relevé ne crée pas de doublons. Un relevé couvrant une période plus longue complète les précédents.',
-  'import.mintos-transactions.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsx, .csv)',
-  'import.amundi.title': 'Importer un relevé Amundi ESR',
-  'import.amundi.instructions':
-    "Votre espace amundi-ee.com → Relevé annuel de situation (PDF). Chaque relevé est une photo annuelle, pas un historique de transactions daté — importez chaque année séparément.",
-  'import.amundi.multiAccount':
-    "Un relevé plus ancien importé après un plus récent n'écrase jamais vos positions actuelles — il reste consultable dans l'historique des imports ci-dessous.",
-  'import.amundi.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.pdf)',
-  'import.amundi-synthese.title': 'Mettre à jour la valeur Amundi (export Synthèse)',
-  'import.amundi-synthese.instructions':
-    "Sur votre espace amundi-ee.com : export « Synthèse » (.xlsb). Contrairement au relevé annuel PDF, cet export donne la valeur réelle de chaque fonds au jour de l'export — utile pour rafraîchir le montant sans attendre le prochain relevé annuel.",
-  'import.amundi-synthese.multiAccount':
-    "Un export plus récent remplace toujours l'affichage, qu'il vienne de ce fichier ou du relevé PDF annuel — le plus récent des deux est toujours celui montré.",
-  'import.amundi-synthese.dropzone': 'Glissez le fichier ici, ou choisissez-le manuellement (.xlsb)',
   'import.chooseFile': 'Choisir un fichier',
   'import.importing': 'Import en cours…',
   'import.failed': "Échec de l'import : {error}",
