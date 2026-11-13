@@ -35,6 +35,7 @@ export const en: Catalogue = {
   'common.cancel': 'Cancel',
   'common.save': 'Save',
   'common.saving': 'Saving…',
+  'common.running': 'Running…',
   'common.add': 'Add',
   'common.delete': 'Delete',
   'common.edit': 'Edit',
@@ -233,7 +234,6 @@ export const en: Catalogue = {
   'breakdown.dimension.country': 'Country',
   'breakdown.dimension.sector': 'Sector',
   'breakdown.enrichSectors': 'Fetch sector data (FMP + Wikidata)',
-  'breakdown.enriching': 'Fetching sectors…',
   'breakdown.enrichResult': '{enriched} enriched, {skipped} had no sector, {failed} failed.',
   'breakdown.empty': 'Not enough valued positions to compute a breakdown.',
   'breakdown.unknown': 'Unknown',
@@ -241,7 +241,6 @@ export const en: Catalogue = {
 
   // --- ISIN duplicate detection (watchlist/screener) ------------------------
   'duplicates.backfillIsins': 'Look up missing company IDs',
-  'duplicates.backfilling': 'Looking up…',
   'duplicates.backfillResult': '{checked} checked, {updated} updated.',
   'duplicates.backfillFigis': 'Look up missing OpenFIGI identity',
   'duplicates.backfillFigisResultMore': '{checked} checked, {remaining} remaining — click again to continue.',
@@ -596,6 +595,19 @@ export const en: Catalogue = {
   'settings.groupIntegrity.title': 'Integrity and corrections',
   'settings.groupIntegrity.subtitle':
     'Correct symbols or record corporate actions that affect the historical record.',
+  'settings.groupMaintenance.title': 'Data updates',
+  'settings.groupMaintenance.subtitle':
+    'Catch-up actions that fill in missing identifiers, sectors and history. Each one is safe to run again: it only completes what is missing.',
+  'maintenance.run': 'Run',
+  'maintenance.link': 'Update in Settings → Data updates',
+  'maintenance.discoveryHint': 'Several years of price history make the backtest below meaningful.',
+  'maintenance.identity.title': 'Instrument identity',
+  'maintenance.analysis.title': 'Analysis data',
+  'maintenance.isins.description': 'Looks up the ISIN of held, watched and gem instruments that do not have one yet. Used to spot duplicates across brokers.',
+  'maintenance.figis.description': 'Asks OpenFIGI for the identity of instruments that are still missing one. Works in batches: run it again while some remain.',
+  'maintenance.sectors.description': 'Fills in the sector of held stocks (FMP, then Wikidata) for the sector breakdown.',
+  'maintenance.factors.description': 'Downloads the Kenneth French factor series used by the factor exposure table.',
+  'maintenance.dividends.description': 'Completes the dividend history of the Discovery universe. Works in batches: run it again while some remain.',
   'settings.groupBackup.title': 'Backup',
   'settings.groupDataSources.title': 'Data sources',
   'settings.groupDataSources.subtitle':
@@ -751,7 +763,7 @@ export const en: Catalogue = {
 
   'prediction.title': 'Price history',
   'prediction.description':
-    'A real predictive model needs a proper backtest, which needs deeper price history than this app normally keeps. This step pulls several years of daily bars for the instruments already priced — price only, since fundamentals aren\'t stored with a dated history yet and using today\'s score to "predict" a past return would be lookahead bias. See "Backtest" below for what the model does with this data.',
+    'A real predictive model needs a proper backtest, which needs deeper price history than this app normally keeps. This step pulls several years of daily bars for the instruments already priced — price only, since fundamentals aren\'t stored with a dated history yet and using today\'s score to "predict" a past return would be lookahead bias. See "Backtest" on the Hidden gems page for what the model does with this data.',
   'prediction.backfill': 'Backfill price history',
   'prediction.running': 'Backfilling…',
   'prediction.alreadyRunning': 'A backfill is already running.',
