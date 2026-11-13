@@ -1746,11 +1746,55 @@ tr.budget-muted td {
   gap: 0.45rem;
 }
 
-.budget-bar-row {
+/* Each category is a button: hover or focus shows its detail under the
+   bars and lights it up while the others step back; a click lists its
+   operations for that month. */
+button.budget-bar-row {
   display: grid;
   grid-template-columns: minmax(8rem, 12rem) 1fr 6rem 7rem;
   align-items: center;
   gap: var(--space-3);
+  width: 100%;
+  min-height: 0;
+  padding: 0.3rem 0.5rem;
+  margin: 0 -0.5rem;
+  box-sizing: content-box;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font-weight: inherit;
+  text-align: left;
+  white-space: normal;
+  transition: background 0.12s, opacity 0.12s;
+}
+
+button.budget-bar-row:hover:not(:disabled),
+button.budget-bar-row.is-active {
+  background: var(--surface-alt);
+}
+
+.budget-bars:hover .budget-bar-row:not(.is-active) {
+  opacity: 0.5;
+}
+
+.budget-bar-row.is-active .budget-bar-label {
+  font-weight: 600;
+}
+
+.budget-bar-row.is-active .budget-bar-fill {
+  background: var(--accent-strong);
+}
+
+.budget-bar-detail {
+  min-height: 1.4em;
+  margin-top: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.budget-bar-detail strong {
+  color: var(--text);
 }
 
 .budget-bar-label,
@@ -1759,10 +1803,25 @@ tr.budget-muted td {
 }
 
 .budget-bar-track {
+  position: relative;
   height: 10px;
   border-radius: 5px;
   background: var(--surface-alt);
   overflow: hidden;
+}
+
+.budget-bar-row.is-active .budget-bar-track {
+  background: var(--surface);
+}
+
+/* The category's monthly average, as a tick on its track. */
+.budget-bar-avg-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-muted);
 }
 
 .budget-bar-fill {
@@ -1782,7 +1841,7 @@ tr.budget-muted td {
 }
 
 @media (max-width: 640px) {
-  .budget-bar-row {
+  button.budget-bar-row {
     grid-template-columns: 1fr 5.5rem;
   }
   .budget-bar-track {
