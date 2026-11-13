@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { useApiResource } from '../hooks/useApiResource'
 import type { AttentionItem } from '../api/types'
 import { useI18n, type TranslateParams } from '../i18n'
 
@@ -45,15 +45,7 @@ function itemText(
  */
 export function AttentionCard() {
   const { t, formatNumber } = useI18n()
-  const [items, setItems] = useState<AttentionItem[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    api
-      .getAttention()
-      .then(setItems)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [])
+  const { data: items, error } = useApiResource(() => api.getAttention(), [])
 
   if (error || items === null) return null
 

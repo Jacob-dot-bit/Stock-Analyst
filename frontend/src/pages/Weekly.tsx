@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type { AttentionItem, WeeklySummary } from '../api/types'
+import { useApiResource } from '../hooks/useApiResource'
+import type { AttentionItem } from '../api/types'
 import { rangeLabel } from '../format'
 import { useI18n } from '../i18n'
 import { SkeletonCards } from '../components/Skeleton'
@@ -36,15 +37,7 @@ function Empty({ text }: { text: string }) {
  */
 export function Weekly() {
   const { t, formatNumber, formatSignedPercent, formatDate } = useI18n()
-  const [summary, setSummary] = useState<WeeklySummary | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    api
-      .getWeeklySummary()
-      .then(setSummary)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-  }, [])
+  const { data: summary, error } = useApiResource(() => api.getWeeklySummary(), [])
 
   const categoryLabel = (category: string | null) => {
     if (!category || category === 'UNKNOWN') return t('breakdown.unknown')

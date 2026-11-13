@@ -9789,3 +9789,25 @@ signal), the gems list for ranking candidates by score.
 
 Verification: backend suite green; `tsc -b` clean; both pages checked in a
 browser on demo data, at desktop and phone width.
+
+## Step 3u.102 — One hook for fetch-on-mount views (2026-11-13)
+
+Read-only panels each wrote the same lines: `data`/`error` state, a
+`useEffect` that fetches, and (in about half of them) a `cancelled` flag so
+a late response does not land after unmount. The other half had no such
+guard, so on Dividends a slow answer for an older year filter could
+overwrite the newer one.
+
+- `hooks/useApiResource.ts`: `useApiResource(fetcher, deps)` returns
+  `{ data, error, reload }`, refetches when `deps` change and drops any
+  response that is no longer the latest. `errorMessage(err)` is the
+  `err instanceof Error ? … : String(err)` line.
+- Used by Attention, Data health, Drawdown, Concentration, Liquidity, the
+  weekly summary, Dividends (summary and filtered detail) and the Tax prep
+  summary.
+
+Forms and panels with their own polling (refresh, backfills) keep their
+code: they do more than read once.
+
+Verification: `tsc -b` and oxlint clean; the converted pages load in the
+browser on demo data with no console errors.
