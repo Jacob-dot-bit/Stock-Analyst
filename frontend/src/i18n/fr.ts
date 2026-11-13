@@ -13,6 +13,25 @@ export const fr: Catalogue = {
   'nav.budget': 'Budget',
   'nav.journal': 'Journal',
   'nav.menu': 'Menu',
+
+  // --- Login ---------------------------------------------------------------
+  'auth.title': 'Connexion',
+  'auth.subtitle': 'Connecte-toi pour voir ton portefeuille.',
+  'auth.username': 'Identifiant',
+  'auth.password': 'Mot de passe',
+  'auth.code': 'Code à 6 chiffres',
+  'auth.codeHint': 'Le code affiché par ton appli d\'authentification.',
+  'auth.signIn': 'Se connecter',
+  'auth.signingIn': 'Connexion…',
+  'auth.back': 'Recommencer',
+  'auth.signOut': 'Se déconnecter',
+  'auth.invalidCredentials': 'Identifiant, mot de passe ou code incorrect.',
+  'auth.locked': {
+    one: 'Trop de tentatives ratées. Réessaie dans {count} minute.',
+    other: 'Trop de tentatives ratées. Réessaie dans {count} minutes.',
+  },
+  'auth.notConfigured': 'Aucun compte pour l\'instant. Sur la machine du backend : python -m app.auth set-password',
+  'auth.unreachable': 'Connexion impossible ({detail}).',
   'alerts.tooltip': {
     one: '{count} élément de la watchlist a atteint son prix cible',
     other: '{count} éléments de la watchlist ont atteint leur prix cible',

@@ -20,6 +20,25 @@ export const en: Catalogue = {
   'nav.budget': 'Budget',
   'nav.journal': 'Journal',
   'nav.menu': 'Menu',
+
+  // --- Login ---------------------------------------------------------------
+  'auth.title': 'Sign in',
+  'auth.subtitle': 'Sign in to see your portfolio.',
+  'auth.username': 'Username',
+  'auth.password': 'Password',
+  'auth.code': '6-digit code',
+  'auth.codeHint': 'The code shown by your authenticator app.',
+  'auth.signIn': 'Sign in',
+  'auth.signingIn': 'Signing in…',
+  'auth.back': 'Start again',
+  'auth.signOut': 'Sign out',
+  'auth.invalidCredentials': 'Wrong username, password or code.',
+  'auth.locked': {
+    one: 'Too many failed attempts. Try again in {count} minute.',
+    other: 'Too many failed attempts. Try again in {count} minutes.',
+  },
+  'auth.notConfigured': 'No account yet. On the machine running the backend: python -m app.auth set-password',
+  'auth.unreachable': 'Sign-in failed ({detail}).',
   'alerts.tooltip': {
     one: '{count} watchlist item at or below its target price',
     other: '{count} watchlist items at or below their target price',

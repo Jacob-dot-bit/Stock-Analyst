@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import shutil
+import subprocess
 import sys
 
 from app.auth import service
@@ -44,6 +46,17 @@ def _set_password(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_qr(uri: str) -> bool:
+    """Draw ``uri`` as a QR code in the terminal, if qrencode is installed.
+
+    The link goes through stdin, not argv, so the secret never shows in ``ps``.
+    """
+    if shutil.which("qrencode") is None:
+        return False
+    result = subprocess.run(["qrencode", "-t", "ansiutf8"], input=uri.encode(), check=False)
+    return result.returncode == 0
+
+
 def _enable_totp(_: argparse.Namespace) -> int:
     from app.auth import totp
 
@@ -55,9 +68,10 @@ def _enable_totp(_: argparse.Namespace) -> int:
         secret = service.start_totp(db)
         uri = totp.provisioning_uri(secret, account.username)
         print("Ajoute ce compte dans ton appli d'authentification.")
+        if not _print_qr(uri):
+            print("  (installe qrencode pour avoir le QR ici : sudo apt install qrencode)")
         print(f"  Clé à saisir : {secret}")
-        print(f"  Ou lien à scanner : {uri}")
-        print("  (QR dans le terminal : qrencode -t ansiutf8 '<le lien>')")
+        print(f"  Ou lien : {uri}")
         for _attempt in range(3):
             code = getpass.getpass("Code à 6 chiffres affiché par l'appli : ")
             if service.confirm_totp(db, code):

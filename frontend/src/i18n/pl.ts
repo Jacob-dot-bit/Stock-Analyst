@@ -20,6 +20,27 @@ export const pl: Catalogue = {
   'nav.budget': 'Budżet',
   'nav.journal': 'Dziennik',
   'nav.menu': 'Menu',
+
+  // --- Login ---------------------------------------------------------------
+  'auth.title': 'Logowanie',
+  'auth.subtitle': 'Zaloguj się, aby zobaczyć swój portfel.',
+  'auth.username': 'Login',
+  'auth.password': 'Hasło',
+  'auth.code': 'Kod 6-cyfrowy',
+  'auth.codeHint': 'Kod z aplikacji uwierzytelniającej.',
+  'auth.signIn': 'Zaloguj się',
+  'auth.signingIn': 'Logowanie…',
+  'auth.back': 'Zacznij od nowa',
+  'auth.signOut': 'Wyloguj się',
+  'auth.invalidCredentials': 'Błędny login, hasło lub kod.',
+  'auth.locked': {
+    one: 'Zbyt wiele nieudanych prób. Spróbuj ponownie za {count} minutę.',
+    few: 'Zbyt wiele nieudanych prób. Spróbuj ponownie za {count} minuty.',
+    many: 'Zbyt wiele nieudanych prób. Spróbuj ponownie za {count} minut.',
+    other: 'Zbyt wiele nieudanych prób. Spróbuj ponownie za {count} minuty.',
+  },
+  'auth.notConfigured': 'Brak konta. Na maszynie z backendem: python -m app.auth set-password',
+  'auth.unreachable': 'Logowanie nie powiodło się ({detail}).',
   'alerts.tooltip': {
     one: '{count} pozycja z watchlisty osiągnęła cenę docelową',
     few: '{count} pozycje z watchlisty osiągnęły cenę docelową',
