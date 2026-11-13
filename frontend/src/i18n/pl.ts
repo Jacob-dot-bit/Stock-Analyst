@@ -157,6 +157,10 @@ export const pl: Catalogue = {
   'import.detected.amundi_synthese': 'Rozpoznano: eksport Synthèse Amundi lub dziennik operacji Amundi (.xlsb), eksport rachunków Monabanq (.xlsx).',
   'import.detected.amundi_operations': 'Rozpoznano: dziennik operacji Amundi (.xlsb).',
   'import.detected.bank_statement': 'Rozpoznano: eksport rachunków bankowych (Monabanq, Crédit Mutuel, CIC).',
+  'import.detected.tax_notice': 'Rozpoznany plik: francuska decyzja podatkowa (avis d\'impôt, PDF).',
+  'import.taxNoticeKept': 'Zachowano decyzję podatkową za dochody {year} ({lines} wierszy z kwotami). Imię i adres nie są zapisywane.',
+  'import.taxNoticeReplaced': 'Decyzja podatkowa za dochody {year} zastąpiona tą ({lines} wierszy z kwotami).',
+  'import.taxNoticeUnreadable': 'Wygląda na decyzję podatkową, ale nie udało się odczytać roku ani kwot.',
   'import.bankBrokerTransfers':
     'Przelewy między bankiem a brokerami (wysłane, zwrócone = netto, w €): {totals}. Udział w zyskach wypłacony przez Amundi na konto nie jest liczony.',
   'import.bankBalanceKept':
@@ -979,6 +983,18 @@ export const pl: Catalogue = {
   'dividends.exportDetailCsv': 'Eksportuj (CSV, szczegóły transakcji)',
 
   // --- Przygotowanie podatkowe ---------------------------------------------
+  'taxPrep.notice.title': 'Decyzja podatkowa za dochody {year}',
+  'taxPrep.notice.none': 'Brak decyzji podatkowej za {year}. Zaimportuj PDF z impots.gouv.fr razem z innymi plikami, aby porównać go z tymi liczbami.',
+  'taxPrep.notice.grossIncome': 'Dochód brutto',
+  'taxPrep.notice.taxableIncome': 'Dochód do opodatkowania',
+  'taxPrep.notice.referenceIncome': 'Dochód referencyjny (RFR)',
+  'taxPrep.notice.scaleTax': 'Podatek według skali',
+  'taxPrep.notice.netTax': 'Podatek netto',
+  'taxPrep.notice.taxDue': 'Należny po poborze u źródła',
+  'taxPrep.notice.balance': 'Do zapłaty',
+  'taxPrep.notice.rate': 'Stawka poboru u źródła',
+  'taxPrep.notice.ceiling': 'Limit oszczędności emerytalnych',
+  'taxPrep.notice.lines': 'Wszystkie wiersze decyzji',
   'taxPrep.title': 'Roczne przygotowanie podatkowe',
   'taxPrep.subtitle':
     'Zaimportowane przepływy do uzgodnienia z Twoimi dokumentami podatkowymi, wg konta i roku — nigdy obliczenie podatku.',

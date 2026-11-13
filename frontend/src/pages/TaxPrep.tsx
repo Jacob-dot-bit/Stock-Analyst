@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { errorMessage, useApiResource } from '../hooks/useApiResource'
-import type { TaxEnvelopeSummary, TaxYearSummary } from '../api/types'
+import type { TaxEnvelopeSummary, TaxNotice, TaxYearSummary } from '../api/types'
 import { signClass } from '../format'
 import { useI18n } from '../i18n'
 
@@ -87,6 +87,55 @@ function EnvelopeCard({ envelope }: { envelope: TaxEnvelopeSummary }) {
   )
 }
 
+/** What the tax office worked out for the year (Step 3u.109): the named
+ * figures, then every amount line of the notice, folded away. */
+function TaxNoticeCard({ notice }: { notice: TaxNotice }) {
+  const { t, formatNumber } = useI18n()
+  const f = notice.figures
+  return (
+    <div className="card">
+      <h2 className="compact">{t('taxPrep.notice.title', { year: notice.income_year })}</h2>
+      <dl className="position-detail-facts" style={{ marginTop: '0.8rem' }}>
+        <Fact label={t('taxPrep.notice.grossIncome')} value={f.gross_income} />
+        <Fact label={t('taxPrep.notice.taxableIncome')} value={f.taxable_income} />
+        <Fact label={t('taxPrep.notice.referenceIncome')} value={f.reference_income} />
+        <Fact label={t('taxPrep.notice.scaleTax')} value={f.scale_tax} />
+        <Fact label={t('taxPrep.notice.netTax')} value={f.net_tax} />
+        <Fact label={t('taxPrep.notice.taxDue')} value={f.tax_due} />
+        <Fact label={t('taxPrep.notice.balance')} value={f.balance} />
+        {f.withholding_rate !== null && (
+          <div>
+            <dt>{t('taxPrep.notice.rate')}</dt>
+            <dd>{formatNumber(f.withholding_rate)} %</dd>
+          </div>
+        )}
+        {f.retirement_ceiling.length > 0 && (
+          <div>
+            <dt>{t('taxPrep.notice.ceiling')}</dt>
+            <dd>{f.retirement_ceiling.map((v) => formatNumber(v, 0)).join(' · ')}</dd>
+          </div>
+        )}
+      </dl>
+      <details style={{ marginTop: '0.8rem' }}>
+        <summary>{t('taxPrep.notice.lines')}</summary>
+        <div className="table-wrap">
+          <table>
+            <tbody>
+              {notice.lines.map((line, i) => (
+                <tr key={i}>
+                  <td className="muted">{line.section}</td>
+                  <td>{line.label}</td>
+                  <td className="num">{line.values.map((v) => formatNumber(v, 0)).join(' · ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  )
+}
+
 /**
  * Annual tax-year reconciliation summary, by account/envelope — a
  * reconciliation aid, never a tax calculation. Every figure here is a plain
@@ -99,16 +148,21 @@ export function TaxPrep() {
   const [years, setYears] = useState<number[] | null>(null)
   const [year, setYear] = useState<number | null>(null)
   const [yearsError, setYearsError] = useState<string | null>(null)
+  const [notices, setNotices] = useState<TaxNotice[]>([])
 
   useEffect(() => {
-    api
-      .getTaxYears()
-      .then((res) => {
-        setYears(res.years)
-        setYear(res.years[0] ?? new Date().getFullYear())
+    // A notice can cover a year with no imported transaction: its year is
+    // offered too.
+    Promise.all([api.getTaxYears(), api.getTaxNotices().catch(() => [] as TaxNotice[])])
+      .then(([res, found]) => {
+        const all = [...new Set([...res.years, ...found.map((n) => n.income_year)])].sort((a, b) => b - a)
+        setNotices(found)
+        setYears(all)
+        setYear(all[0] ?? new Date().getFullYear())
       })
       .catch((err) => setYearsError(errorMessage(err)))
   }, [])
+  const notice = notices.find((n) => n.income_year === year)
 
   const summaryResource = useApiResource<TaxYearSummary | null>(
     () => (year === null ? Promise.resolve(null) : api.getTaxSummary(year)),
@@ -154,6 +208,11 @@ export function TaxPrep() {
             )}
           </div>
         </div>
+      )}
+
+      {notice && <TaxNoticeCard notice={notice} />}
+      {!notice && year !== null && years && years.length > 0 && (
+        <p className="budget-hint">{t('taxPrep.notice.none', { year })}</p>
       )}
 
       {summary && summary.envelopes.length === 0 && <div className="empty">{t('taxPrep.emptyYear')}</div>}

@@ -148,6 +148,10 @@ export const fr: Catalogue = {
   'import.detected.amundi_synthese': 'Fichier reconnu : export Synthèse Amundi ou journal des opérations Amundi (.xlsb), export de comptes Monabanq (.xlsx).',
   'import.detected.amundi_operations': 'Fichier reconnu : journal des opérations Amundi (.xlsb).',
   'import.detected.bank_statement': 'Fichier reconnu : export de comptes bancaires (Monabanq, Crédit Mutuel, CIC).',
+  'import.detected.tax_notice': 'Fichier reconnu : avis d\'impôt sur les revenus (PDF).',
+  'import.taxNoticeKept': 'Avis d\'impôt des revenus {year} gardé ({lines} lignes de montants). Le nom et l\'adresse ne sont pas gardés.',
+  'import.taxNoticeReplaced': 'Avis d\'impôt des revenus {year} remplacé par celui-ci ({lines} lignes de montants).',
+  'import.taxNoticeUnreadable': 'Cela ressemble à un avis d\'impôt, mais ni l\'année ni les montants n\'ont pu être lus.',
   'import.bankBrokerTransfers':
     'Virements entre la banque et les courtiers (envoyé, revenu = net, en €) : {totals}. La participation versée par Amundi sur le compte n\'est pas comptée.',
   'import.bankBalanceKept':
@@ -969,6 +973,18 @@ export const fr: Catalogue = {
   'dividends.exportDetailCsv': 'Exporter (CSV, détail des transactions)',
 
   // --- Préparation fiscale ---------------------------------------------------
+  'taxPrep.notice.title': 'Avis d\'impôt des revenus {year}',
+  'taxPrep.notice.none': 'Pas encore d\'avis d\'impôt pour {year}. Importez le PDF d\'impots.gouv.fr avec les autres fichiers pour le comparer à ces chiffres.',
+  'taxPrep.notice.grossIncome': 'Revenu brut global',
+  'taxPrep.notice.taxableIncome': 'Revenu imposable',
+  'taxPrep.notice.referenceIncome': 'Revenu fiscal de référence',
+  'taxPrep.notice.scaleTax': 'Impôt au barème',
+  'taxPrep.notice.netTax': 'Impôt net',
+  'taxPrep.notice.taxDue': 'Dû après prélèvement à la source',
+  'taxPrep.notice.balance': 'Reste à payer',
+  'taxPrep.notice.rate': 'Taux de prélèvement',
+  'taxPrep.notice.ceiling': 'Plafond épargne retraite',
+  'taxPrep.notice.lines': 'Toutes les lignes de l\'avis',
   'taxPrep.title': 'Préparation fiscale annuelle',
   'taxPrep.subtitle':
     "Les flux importés à rapprocher de vos documents fiscaux, par compte et par année — jamais un calcul d'impôt.",

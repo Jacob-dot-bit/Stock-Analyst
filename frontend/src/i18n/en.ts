@@ -155,6 +155,10 @@ export const en: Catalogue = {
   'import.detected.amundi_synthese': 'Recognised: Amundi Synthèse export (.xlsb).',
   'import.detected.amundi_operations': 'Recognised: Amundi operations journal (.xlsb).',
   'import.detected.bank_statement': 'Recognised: bank accounts export (Monabanq, Crédit Mutuel, CIC).',
+  'import.detected.tax_notice': 'File recognised: income tax notice (PDF).',
+  'import.taxNoticeKept': 'Tax notice for {year} income kept ({lines} amount lines). Name and address are not kept.',
+  'import.taxNoticeReplaced': 'Tax notice for {year} income replaced by this one ({lines} amount lines).',
+  'import.taxNoticeUnreadable': 'This looks like a tax notice, but no year or amount could be read from it.',
   'import.bankBrokerTransfers':
     'Transfers between the bank and the brokers (sent, back = net, in €): {totals}. Profit-sharing Amundi paid into the account is not counted.',
   'import.bankBalanceKept':
@@ -964,6 +968,18 @@ export const en: Catalogue = {
   'dividends.exportDetailCsv': 'Export (CSV, transaction detail)',
 
   // --- Tax prep ---------------------------------------------------------
+  'taxPrep.notice.title': 'Tax notice for {year} income',
+  'taxPrep.notice.none': 'No tax notice for {year} yet. Import the PDF from impots.gouv.fr with the other files to set it against these figures.',
+  'taxPrep.notice.grossIncome': 'Gross income',
+  'taxPrep.notice.taxableIncome': 'Taxable income',
+  'taxPrep.notice.referenceIncome': 'Reference income (RFR)',
+  'taxPrep.notice.scaleTax': 'Tax from the scale',
+  'taxPrep.notice.netTax': 'Net income tax',
+  'taxPrep.notice.taxDue': 'Due after withholding',
+  'taxPrep.notice.balance': 'Left to pay',
+  'taxPrep.notice.rate': 'Withholding rate',
+  'taxPrep.notice.ceiling': 'Retirement savings ceiling',
+  'taxPrep.notice.lines': 'Every line of the notice',
   'taxPrep.title': 'Annual tax preparation',
   'taxPrep.subtitle': 'Imported flows to reconcile against your own tax documents, by account and year — never a tax calculation.',
   'taxPrep.disclaimer':
