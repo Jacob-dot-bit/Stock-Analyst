@@ -48,11 +48,11 @@ def no_real_network_by_default(monkeypatch):
     """`POST /api/screener` best-effort-fetches a price on every add — without
     this, that fetch would fall through to the real, no-key-required
     Boursorama provider and hit the actual network on every test."""
-    monkeypatch.setattr("app.routers.screener.get_provider_chain", lambda: ProviderChain([]))
+    monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([]))
 
 
 def use_provider(monkeypatch, provider):
-    monkeypatch.setattr("app.routers.screener.get_provider_chain", lambda: ProviderChain([provider]))
+    monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([provider]))
 
 
 def daily_bars(close: float = 100.0, count: int = 30) -> list[Bar]:

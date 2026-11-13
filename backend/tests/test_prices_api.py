@@ -162,7 +162,7 @@ class TestRefreshEndpoint:
         # The watchlist add flow best-effort-fetches on its own -- pin it to
         # no providers so that fetch is a no-op and doesn't consume the
         # FakeProvider's call count set up below for the refresh under test.
-        monkeypatch.setattr("app.routers.watchlist.get_provider_chain", lambda: ProviderChain([]))
+        monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([]))
         client.post("/api/watchlist", json={"broker_symbol": "MC.FR"})
 
         provider = FakeProvider("yahoo", bars=daily_bars())
@@ -174,7 +174,7 @@ class TestRefreshEndpoint:
         assert watched[0]["current_price"] is not None
 
     def test_a_watchlisted_instrument_is_excluded_from_a_targeted_retry(self, client, monkeypatch):
-        monkeypatch.setattr("app.routers.watchlist.get_provider_chain", lambda: ProviderChain([]))
+        monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([]))
         client.post(
             "/api/portfolio/positions", json={"broker_symbol": "AAPL.US", "quantity": 1, "avg_price": 100.0}
         )
@@ -189,7 +189,7 @@ class TestRefreshEndpoint:
         assert watched[0]["current_price"] is None
 
     def test_a_screener_candidate_is_included_in_a_general_refresh(self, client, monkeypatch):
-        monkeypatch.setattr("app.routers.screener.get_provider_chain", lambda: ProviderChain([]))
+        monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([]))
         client.post("/api/screener", json={"broker_symbol": "MC.FR"})
 
         provider = FakeProvider("yahoo", bars=daily_bars())
@@ -201,7 +201,7 @@ class TestRefreshEndpoint:
         assert candidates[0]["current_price"] is not None
 
     def test_a_screener_candidate_is_excluded_from_a_targeted_retry(self, client, monkeypatch):
-        monkeypatch.setattr("app.routers.screener.get_provider_chain", lambda: ProviderChain([]))
+        monkeypatch.setattr("app.tracking.get_provider_chain", lambda: ProviderChain([]))
         client.post(
             "/api/portfolio/positions", json={"broker_symbol": "AAPL.US", "quantity": 1, "avg_price": 100.0}
         )

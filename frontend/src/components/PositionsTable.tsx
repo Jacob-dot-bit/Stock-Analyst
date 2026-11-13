@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react'
 import type { Position, PositionSignal, Score } from '../api/types'
-import { signClass } from '../format'
+import { matchesInstrument, signClass } from '../format'
 import { useI18n } from '../i18n'
 import { useHiddenColumns } from '../hooks/useHiddenColumns'
 import { ColumnPicker } from './ColumnPicker'
@@ -10,7 +10,7 @@ import { PositionDetailRow } from './PositionDetailRow'
 import { PriceStatusBadge } from './PriceStatusBadge'
 import { ScoreBadge } from './ScoreBadge'
 import { SignalBadge } from './SignalBadge'
-import { SortableHeader } from './SortableHeader'
+import { SortableHeader, sortRows, useSort } from './SortableHeader'
 import { Sparkline } from './Sparkline'
 
 interface Props {
@@ -42,11 +42,6 @@ type SortableKey =
   | 'score'
   | 'since'
   | 'account'
-
-interface SortState {
-  key: SortableKey
-  direction: 'asc' | 'desc'
-}
 
 function sortValue(
   position: Position,
@@ -83,7 +78,7 @@ function sortValue(
 
 export function PositionsTable({ positions, baseCurrency, sparklines, scores, signals, onDelete, onUpdated }: Props) {
   const { t, formatNumber, formatSignedPercent, formatDate } = useI18n()
-  const [sort, setSort] = useState<SortState>({ key: 'value', direction: 'desc' })
+  const [sort, handleSort] = useSort<SortableKey>({ key: 'value', direction: 'desc' })
   const [account, setAccount] = useState<string>('all')
   const [search, setSearch] = useState('')
   // One consolidated "Détails" panel per position, replacing the separate
@@ -95,9 +90,6 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
   const [expandedDetailId, setExpandedDetailId] = useState<number | null>(null)
   const { hidden, toggle } = useHiddenColumns('stock-analyst.positions.columns')
 
-  function handleSort(key: SortableKey) {
-    setSort((prev) => (prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }))
-  }
 
   const columns = [
     { key: 'type', label: t('table.type') },
@@ -127,28 +119,13 @@ export function PositionsTable({ positions, baseCurrency, sparklines, scores, si
   const accounts = [...new Set(positions.map((p) => p.account).filter(Boolean))] as string[]
   const query = search.trim().toLowerCase()
 
-  const visible = positions
-    .filter((p) => account === 'all' || p.account === account)
-    .filter(
-      (p) =>
-        !query ||
-        p.instrument.broker_symbol.toLowerCase().includes(query) ||
-        (p.instrument.name?.toLowerCase().includes(query) ?? false),
-    )
-    .slice()
-    .sort((a, b) => {
-      const av = sortValue(a, sort.key, scores)
-      const bv = sortValue(b, sort.key, scores)
-      // Missing values always sort last, regardless of direction — the same
-      // "never guess" convention this app applies everywhere else: a blank
-      // isn't the lowest or highest value, it's unknown.
-      if (av === null || av === undefined) return bv === null || bv === undefined ? 0 : 1
-      if (bv === null || bv === undefined) return -1
-
-      const dir = sort.direction === 'asc' ? 1 : -1
-      if (typeof av === 'string' && typeof bv === 'string') return av.localeCompare(bv) * dir
-      return ((av as number) - (bv as number)) * dir
-    })
+  const visible = sortRows(
+    positions
+      .filter((p) => account === 'all' || p.account === account)
+      .filter((p) => matchesInstrument(p.instrument, query)),
+    sort,
+    (row, key) => sortValue(row, key, scores),
+  )
 
   return (
     <>

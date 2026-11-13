@@ -1,16 +1,17 @@
 import { Fragment, useState } from 'react'
 import type { Score, WatchlistItem, WatchlistSignal } from '../api/types'
-import { signClass } from '../format'
+import { matchesInstrument, signClass } from '../format'
 import { useI18n } from '../i18n'
 import { useHiddenColumns } from '../hooks/useHiddenColumns'
 import { ColumnPicker } from './ColumnPicker'
 import { InsightsBadge } from './InsightsBadge'
 import { InsightsDetailRow } from './InsightsDetailRow'
 import { PriceStatusBadge } from './PriceStatusBadge'
+import { RowActions } from './RowActions'
 import { ScoreBadge } from './ScoreBadge'
 import { ScoreDetailRow } from './ScoreDetailRow'
 import { SignalBadge } from './SignalBadge'
-import { SortableHeader, type SortState } from './SortableHeader'
+import { SortableHeader, sortRows, useSort } from './SortableHeader'
 import { Sparkline } from './Sparkline'
 
 interface Props {
@@ -51,7 +52,7 @@ function sortValue(item: WatchlistItem, key: SortableKey, scores: Record<number,
 
 export function WatchlistTable({ items, sparklines, scores, signals, onDelete, onUpdate }: Props) {
   const { t, formatNumber, formatSignedPercent, formatDate } = useI18n()
-  const [sort, setSort] = useState<SortState<SortableKey>>({ key: 'added', direction: 'desc' })
+  const [sort, handleSort] = useSort<SortableKey>({ key: 'added', direction: 'desc' })
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [expandedInsightsId, setExpandedInsightsId] = useState<number | null>(null)
@@ -62,9 +63,6 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
   const [rowWarning, setRowWarning] = useState<string | null>(null)
   const { hidden, toggle } = useHiddenColumns('stock-analyst.watchlist.columns')
 
-  function handleSort(key: SortableKey) {
-    setSort((prev) => (prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }))
-  }
 
   function startEdit(item: WatchlistItem) {
     setEditingId(item.id)
@@ -129,24 +127,11 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
   }
 
   const query = search.trim().toLowerCase()
-  const visible = items
-    .filter(
-      (i) =>
-        !query ||
-        i.instrument.broker_symbol.toLowerCase().includes(query) ||
-        (i.instrument.name?.toLowerCase().includes(query) ?? false),
-    )
-    .slice()
-    .sort((a, b) => {
-      const av = sortValue(a, sort.key, scores)
-      const bv = sortValue(b, sort.key, scores)
-      if (av === null || av === undefined) return bv === null || bv === undefined ? 0 : 1
-      if (bv === null || bv === undefined) return -1
-
-      const dir = sort.direction === 'asc' ? 1 : -1
-      if (typeof av === 'string' && typeof bv === 'string') return av.localeCompare(bv) * dir
-      return ((av as number) - (bv as number)) * dir
-    })
+  const visible = sortRows(
+    items.filter((i) => matchesInstrument(i.instrument, query)),
+    sort,
+    (row, key) => sortValue(row, key, scores),
+  )
 
   return (
     <>
@@ -347,25 +332,14 @@ export function WatchlistTable({ items, sparklines, scores, signals, onDelete, o
                       </td>
                     )}
                     <td className="cell-actions" style={{ whiteSpace: 'nowrap' }}>
-                      {editingId === item.id ? (
-                        <>
-                          <button className="link" disabled={rowBusy} onClick={() => void saveEdit(item.id)}>
-                            {rowBusy ? t('common.saving') : t('common.save')}
-                          </button>{' '}
-                          <button className="link" disabled={rowBusy} onClick={cancelEdit}>
-                            {t('common.cancel')}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button className="link" onClick={() => startEdit(item)}>
-                            {t('common.edit')}
-                          </button>{' '}
-                          <button className="link" onClick={() => onDelete(item.id)}>
-                            {t('common.delete')}
-                          </button>
-                        </>
-                      )}
+                      <RowActions
+                        editing={editingId === item.id}
+                        busy={rowBusy}
+                        onEdit={() => startEdit(item)}
+                        onDelete={() => onDelete(item.id)}
+                        onSave={() => void saveEdit(item.id)}
+                        onCancel={cancelEdit}
+                      />
                     </td>
                   </tr>
                   {expandedId === item.instrument.id && score && (

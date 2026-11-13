@@ -15,11 +15,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.ingest.service import get_or_create_instrument
-from app.models import Instrument, Position, ScreenerCandidate, WatchlistItem
+from app.models import Instrument, ScreenerCandidate, WatchlistItem
 from app.prices.sparklines import sparklines
-from app.prices.service import is_permanently_unresolvable, latest_bar_date, price_status as _price_status, refresh_instrument
-from app.providers.registry import get_provider_chain
+from app.prices.service import price_status as _price_status
 from app.routers.portfolio import _resolve_current_price
 from app.routers.scoring import scores_for
 from app.schemas import (
@@ -31,7 +29,7 @@ from app.schemas import (
     SparklineOut,
 )
 from app.symbols.duplicates import check_for_duplicate
-from app.symbols.mapping import looks_like_equity
+from app.tracking import instrument_to_follow, not_held, not_watched
 
 router = APIRouter(prefix="/api/screener", tags=["screener"])
 
@@ -43,8 +41,8 @@ def _screener_instruments(db: Session) -> list[Instrument]:
         select(Instrument)
         .join(ScreenerCandidate, ScreenerCandidate.instrument_id == Instrument.id)
         .where(
-            ~select(Position.id).where(Position.instrument_id == Instrument.id).exists(),
-            ~select(WatchlistItem.id).where(WatchlistItem.instrument_id == Instrument.id).exists(),
+            not_held(Instrument.id),
+            not_watched(Instrument.id),
         )
         .distinct()
     )
@@ -69,50 +67,17 @@ def _screener_candidate_out(db: Session, item: ScreenerCandidate) -> ScreenerCan
 
 @router.post("", response_model=ScreenerCandidateOut, status_code=status.HTTP_201_CREATED)
 def add_screener_candidate(payload: ScreenerCandidateIn, db: Session = Depends(get_db)) -> ScreenerCandidateOut:
-    """Add a symbol to the screener candidate list.
-
-    Best-effort fetches this one instrument's price history right away, same
-    reasoning as `add_watchlist_item` (`routers/watchlist.py`).
-    """
-    category = "STOCK" if looks_like_equity(payload.broker_symbol) else None
-    instrument = get_or_create_instrument(db, payload.broker_symbol, currency=payload.currency, category=category)
-
-    already_held = db.execute(
-        select(Position.id).where(Position.instrument_id == instrument.id).limit(1)
-    ).first()
-    if already_held:
-        raise HTTPException(
-            status_code=400,
-            detail="This instrument is currently a live position — track it from the "
-            "Portfolio page instead.",
-        )
-
-    already_watched = db.execute(
-        select(WatchlistItem.id).where(WatchlistItem.instrument_id == instrument.id).limit(1)
-    ).first()
-    if already_watched:
-        raise HTTPException(
-            status_code=400,
-            detail="Already on your watchlist — it's already known, not hidden.",
-        )
-
-    already_candidate = db.execute(
-        select(ScreenerCandidate.id).where(ScreenerCandidate.instrument_id == instrument.id).limit(1)
-    ).first()
-    if already_candidate:
-        raise HTTPException(status_code=400, detail="Already on your screener list.")
-
-    # Checked before the row exists, not after — see `add_watchlist_item`
-    # (`routers/watchlist.py`) for why: a symbol no provider recognizes must
-    # never be persisted, or it silently re-fails on every future refresh.
-    message = refresh_instrument(db, instrument, get_provider_chain(), force=False)
-    db.commit()
-    if is_permanently_unresolvable(message) and latest_bar_date(db, instrument.id) is None:
-        raise HTTPException(
-            status_code=422,
-            detail=f"No price provider recognizes '{payload.broker_symbol}' — check the "
-            "symbol format, or use the search suggestions instead of typing it by hand.",
-        )
+    """Add a symbol to the screener candidate list — refusals and the
+    immediate price fetch are `tracking.instrument_to_follow`'s."""
+    instrument = instrument_to_follow(
+        db,
+        payload.broker_symbol,
+        payload.currency,
+        [
+            (WatchlistItem, "Already on your watchlist — it's already known, not hidden."),
+            (ScreenerCandidate, "Already on your screener list."),
+        ],
+    )
 
     item = ScreenerCandidate(instrument_id=instrument.id)
     db.add(item)
@@ -132,8 +97,8 @@ def list_screener_candidates(db: Session = Depends(get_db)) -> list[ScreenerCand
     items = list(
         db.execute(
             select(ScreenerCandidate).where(
-                ~select(Position.id).where(Position.instrument_id == ScreenerCandidate.instrument_id).exists(),
-                ~select(WatchlistItem.id).where(WatchlistItem.instrument_id == ScreenerCandidate.instrument_id).exists(),
+                not_held(ScreenerCandidate.instrument_id),
+                not_watched(ScreenerCandidate.instrument_id),
             )
         ).scalars()
     )
@@ -187,7 +152,7 @@ def get_screener_sparklines(db: Session = Depends(get_db)) -> list[SparklineOut]
     return sparklines(
         db,
         select(ScreenerCandidate.instrument_id).where(
-            ~select(Position.id).where(Position.instrument_id == ScreenerCandidate.instrument_id).exists(),
-            ~select(WatchlistItem.id).where(WatchlistItem.instrument_id == ScreenerCandidate.instrument_id).exists(),
+            not_held(ScreenerCandidate.instrument_id),
+            not_watched(ScreenerCandidate.instrument_id),
         ),
     )
