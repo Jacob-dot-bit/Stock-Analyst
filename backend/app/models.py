@@ -546,23 +546,6 @@ class SymbolOverride(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
-class AllocationTarget(Base):
-    """A user-configured target allocation range for one asset class.
-
-    Descriptive only — the app never suggests buying or selling a specific
-    security to close a gap, only shows the gap itself (DEVLOG "Decision
-    0.3"'s "comments on the score, does not give a second opinion", extended
-    to this feature too).
-    """
-
-    __tablename__ = "allocation_targets"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    category: Mapped[str] = mapped_column(String(20), unique=True, index=True)
-    min_pct: Mapped[float] = mapped_column(Float)
-    max_pct: Mapped[float] = mapped_column(Float)
-
-
 class PriceBar(Base):
     """A daily candle cached locally.
 

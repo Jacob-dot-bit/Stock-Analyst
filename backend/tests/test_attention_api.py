@@ -20,7 +20,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db import Base, get_db
 from app.main import app
-from app.models import AllocationTarget, Instrument, MappingStatus, Position, PriceBar
+from app.models import Instrument, MappingStatus, PersonalPolicyLimit, Position, PriceBar
 
 
 @pytest.fixture
@@ -160,7 +160,7 @@ class TestUnresolvedInstrumentItem:
 class TestAllocationItems:
     def test_under_target_reports_warning_item_with_category_and_gap(self, client):
         held_instrument("AAA.FR", "STOCK", quantity=10, price=100.0)  # 1000 EUR, 100% STOCK
-        _seed([AllocationTarget(category="ETF", min_pct=20.0, max_pct=30.0)])
+        _seed([PersonalPolicyLimit(dimension="category", target="ETF", min_pct=20.0, max_pct=30.0)])
 
         items = client.get("/api/portfolio/attention").json()
         assert items == [
@@ -169,7 +169,7 @@ class TestAllocationItems:
 
     def test_over_target_reports_warning_item(self, client):
         held_instrument("AAA.FR", "STOCK", quantity=10, price=100.0)  # 100% STOCK
-        _seed([AllocationTarget(category="STOCK", min_pct=10.0, max_pct=50.0)])
+        _seed([PersonalPolicyLimit(dimension="category", target="STOCK", min_pct=10.0, max_pct=50.0)])
 
         items = client.get("/api/portfolio/attention").json()
         assert items == [
@@ -178,7 +178,7 @@ class TestAllocationItems:
 
     def test_within_target_reports_nothing(self, client):
         held_instrument("AAA.FR", "STOCK", quantity=10, price=100.0)
-        _seed([AllocationTarget(category="STOCK", min_pct=50.0, max_pct=100.0)])
+        _seed([PersonalPolicyLimit(dimension="category", target="STOCK", min_pct=50.0, max_pct=100.0)])
         assert client.get("/api/portfolio/attention").json() == []
 
     def test_no_target_reports_nothing(self, client):
@@ -189,7 +189,7 @@ class TestAllocationItems:
 class TestAttentionOrdering:
     def test_missing_items_sort_before_warning_items(self, client):
         held_instrument("AAA.FR", "STOCK", quantity=10, price=100.0, verified_at=None)  # price_error -> missing
-        _seed([AllocationTarget(category="ETF", min_pct=20.0, max_pct=30.0)])  # allocation_under -> warning
+        _seed([PersonalPolicyLimit(dimension="category", target="ETF", min_pct=20.0, max_pct=30.0)])  # allocation_under -> warning
 
         items = client.get("/api/portfolio/attention").json()
         assert [item["severity"] for item in items] == ["missing", "warning"]

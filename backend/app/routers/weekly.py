@@ -156,7 +156,9 @@ def _build_summary(db: Session) -> WeeklySummaryOut:
     return WeeklySummaryOut(
         as_of=today,
         window_end=window_end,
-        policy_gaps=get_personal_policy_gaps(db),
+        # Category limits are the allocation targets, already listed in
+        # `allocation_gaps` with their amounts — not repeated here.
+        policy_gaps=[gap for gap in get_personal_policy_gaps(db) if gap.dimension != "category"],
         allocation_gaps=allocation_gaps,
         position_flags=position_flags,
         watchlist_flags=watchlist_flags,

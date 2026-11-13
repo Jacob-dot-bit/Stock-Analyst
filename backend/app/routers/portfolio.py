@@ -15,7 +15,6 @@ from app.db import get_db
 from app.ingest.service import get_or_create_instrument
 from app.messages import Message, PerformanceNote, ValuationNote
 from app.models import (
-    AllocationTarget,
     AppMetadata,
     CorporateAction,
     CorporateActionConfidence,
@@ -602,8 +601,22 @@ def _current_allocation_values(db: Session) -> tuple[dict[str, float], float]:
     return _weight_buckets(positions, figures, "category"), total_value
 
 
+def _category_limits(db: Session) -> dict[str, PersonalPolicyLimit]:
+    """Asset-class target ranges, keyed by category. They are the policy's
+    `dimension="category"` limits — one table for every rule (DEVLOG
+    "Step 3u.101")."""
+    return {
+        limit.target: limit
+        for limit in db.execute(
+            select(PersonalPolicyLimit).where(
+                PersonalPolicyLimit.dimension == "category", PersonalPolicyLimit.target.is_not(None)
+            )
+        ).scalars()
+    }
+
+
 def _allocation_row(
-    category: str, current_value: float, total_value: float, target: AllocationTarget | None
+    category: str, current_value: float, total_value: float, target: PersonalPolicyLimit | None
 ) -> AllocationRowOut:
     current_pct = round(current_value / total_value * 100, 2) if total_value else 0.0
 
@@ -619,7 +632,9 @@ def _allocation_row(
             amount_to_reach_min=None,
         )
 
-    if current_pct < target.min_pct:
+    # A policy limit may set only one bound ("at most 30 %"); the missing one
+    # never triggers.
+    if target.min_pct is not None and current_pct < target.min_pct:
         state = "under"
         gap_pct = round(target.min_pct - current_pct, 2)
         # Deliberately not solving for the new (larger) total after adding
@@ -627,7 +642,7 @@ def _allocation_row(
         # (this category alone reaching min_pct of the CURRENT total) beats
         # a "more exact" number that reads as more precise than it is.
         amount_to_reach_min = round(max(0.0, target.min_pct / 100 * total_value - current_value), 2)
-    elif current_pct > target.max_pct:
+    elif target.max_pct is not None and current_pct > target.max_pct:
         state = "over"
         gap_pct = round(current_pct - target.max_pct, 2)
         amount_to_reach_min = None  # never a sell suggestion
@@ -657,7 +672,7 @@ def get_allocation(db: Session = Depends(get_db)) -> list[AllocationRowOut]:
     """
     buckets, total_value = _current_allocation_values(db)
 
-    targets = {t.category: t for t in db.execute(select(AllocationTarget)).scalars()}
+    targets = _category_limits(db)
 
     # Union of categories actually held and categories with a configured
     # target: a target for a category currently held at 0% must still
@@ -684,11 +699,11 @@ def set_allocation_target(
     """Set (or replace) the target range for one asset class."""
     category = category.strip().upper()
 
-    target = db.execute(
-        select(AllocationTarget).where(AllocationTarget.category == category)
-    ).scalar_one_or_none()
+    target = _category_limits(db).get(category)
     if target is None:
-        target = AllocationTarget(category=category, min_pct=payload.min_pct, max_pct=payload.max_pct)
+        target = PersonalPolicyLimit(
+            dimension="category", target=category, min_pct=payload.min_pct, max_pct=payload.max_pct
+        )
         db.add(target)
     else:
         target.min_pct = payload.min_pct
@@ -703,7 +718,11 @@ def set_allocation_target(
 def delete_allocation_target(category: str, db: Session = Depends(get_db)) -> Response:
     """Remove a configured target — the category reverts to "no_target" (or
     disappears from `GET /allocation` entirely if also currently unheld)."""
-    db.execute(delete(AllocationTarget).where(AllocationTarget.category == category.strip().upper()))
+    db.execute(
+        delete(PersonalPolicyLimit).where(
+            PersonalPolicyLimit.dimension == "category", PersonalPolicyLimit.target == category.strip().upper()
+        )
+    )
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -998,7 +1017,7 @@ def get_attention(db: Session = Depends(get_db)) -> list[AttentionItemOut]:
 
     buckets, total_value = _current_allocation_values(db)
     if total_value:
-        targets = {t.category: t for t in db.execute(select(AllocationTarget)).scalars()}
+        targets = _category_limits(db)
         for category, target in targets.items():
             row = _allocation_row(category, buckets.get(category, 0.0), total_value, target)
             if row.state in ("under", "over"):
@@ -1241,7 +1260,10 @@ def get_onboarding_status(db: Session = Depends(get_db)) -> OnboardingStatusOut:
     imported = db.execute(select(ImportBatch.id).limit(1)).first() is not None
     metadata = db.execute(select(AppMetadata)).scalar_one_or_none()
     fundamentals_fetched = db.execute(select(Fundamental.id).limit(1)).first() is not None
-    allocation_target_set = db.execute(select(AllocationTarget.id).limit(1)).first() is not None
+    allocation_target_set = (
+        db.execute(select(PersonalPolicyLimit.id).where(PersonalPolicyLimit.dimension == "category").limit(1)).first()
+        is not None
+    )
     watchlist_started = db.execute(select(WatchlistItem.id).limit(1)).first() is not None
 
     return OnboardingStatusOut(
@@ -1293,7 +1315,7 @@ def get_position_signals(db: Session = Depends(get_db)) -> list[PositionSignalOu
     scores = {s.instrument_id: s for s in compute_scores(db, list(instruments), config)}
 
     buckets, total_value = _current_allocation_values(db)
-    targets = {t.category: t for t in db.execute(select(AllocationTarget)).scalars()}
+    targets = _category_limits(db)
     categories = set(buckets) | set(targets)
     allocation_by_category = {
         category: _allocation_row(category, buckets.get(category, 0.0), total_value, targets.get(category))

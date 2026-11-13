@@ -132,6 +132,11 @@ export function AllocationTargets() {
                       </span>
                     ) : row.min_pct !== null && row.max_pct !== null ? (
                       `${formatNumber(row.min_pct, 1)}–${formatNumber(row.max_pct, 1)}%`
+                    ) : row.max_pct !== null ? (
+                      // A one-sided rule set from the personal policy (DEVLOG "Step 3u.101").
+                      `≤ ${formatNumber(row.max_pct, 1)}%`
+                    ) : row.min_pct !== null ? (
+                      `≥ ${formatNumber(row.min_pct, 1)}%`
                     ) : (
                       '—'
                     )}

@@ -190,3 +190,28 @@ class TestDeleteAllocationTarget:
 
     def test_delete_unknown_category_is_a_no_op(self, client):
         assert client.delete("/api/portfolio/allocation/BONDS").status_code == 204
+
+
+class TestTargetsAreCategoryPolicyLimits:
+    """An asset-class target is the policy's `dimension="category"` limit —
+    one rule, visible from both sides (DEVLOG "Step 3u.101")."""
+
+    def test_target_set_here_is_a_policy_limit(self, client):
+        client.put("/api/portfolio/allocation/ETF", json={"min_pct": 20, "max_pct": 30})
+
+        limits = client.get("/api/portfolio/policy/limits").json()
+
+        assert [(l["dimension"], l["target"], l["min_pct"], l["max_pct"]) for l in limits] == [
+            ("category", "ETF", 20.0, 30.0)
+        ]
+
+    def test_policy_limit_with_one_bound_shows_as_a_target(self, client):
+        held_instrument(client, "AAA.FR", "STOCK", quantity=10, price=100.0)
+        client.post("/api/portfolio/policy/limits", json={"dimension": "category", "target": "STOCK", "max_pct": 60})
+
+        row = client.get("/api/portfolio/allocation").json()[0]
+
+        assert row["min_pct"] is None
+        assert row["max_pct"] == pytest.approx(60.0)
+        assert row["state"] == "over"
+        assert row["gap_pct"] == pytest.approx(40.0)
