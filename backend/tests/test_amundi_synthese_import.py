@@ -22,7 +22,7 @@ file format at all.
 from __future__ import annotations
 
 from datetime import date, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine, select
@@ -67,14 +67,6 @@ class TestAccountForDispositif:
         assert _account_for_dispositif("Plan Epargne Groupe 5 ans") == "Amundi PEG"
 
 
-def _fake_sheet(rows: list[list[object]]) -> MagicMock:
-    sheet = MagicMock()
-    sheet.rows.return_value = [[MagicMock(v=v) for v in row] for row in rows]
-    sheet.__enter__ = MagicMock(return_value=sheet)
-    sheet.__exit__ = MagicMock(return_value=False)
-    return sheet
-
-
 _HEADER = [
     None, "Libellé dispositif", None, "Libellé FCPE", "Échéance", "nombre de parts", "VL", "Montant évalué",
     "Montant Total de l'échéance",
@@ -103,13 +95,7 @@ class TestParseAmundiSyntheseExport:
             _fund_row("Plan Epargne Groupe 5 ans", "FONDS ACTIONNARIAT SALARIE", "01/06/2030", 145.0000, 56.0000, 9800.00),
             _total_row("01/06/2030", 9800.00),
         ]
-        with patch("app.ingest.amundi_synthese_import.open_workbook") as mock_open:
-            mock_wb = MagicMock()
-            mock_wb.sheets = ["Donnees", "Mes avoirs par échéance"]
-            mock_wb.get_sheet.return_value = _fake_sheet(rows)
-            mock_wb.__enter__ = MagicMock(return_value=mock_wb)
-            mock_wb.__exit__ = MagicMock(return_value=False)
-            mock_open.return_value = mock_wb
+        with patch("app.ingest.amundi_synthese_import.xlsb_sheet", return_value=rows):
 
             result = parse_amundi_synthese_export(b"fake", "Synthese_20260908_104534.xlsb")
 
@@ -131,13 +117,7 @@ class TestParseAmundiSyntheseExport:
             _fund_row("Plan Epargne Groupe 5 ans", "FONDS MONETAIRE PEG", "01/06/2028", 18.5000, 10.75000, 310.00),
             _total_row("01/06/2028", 310.00),
         ]
-        with patch("app.ingest.amundi_synthese_import.open_workbook") as mock_open:
-            mock_wb = MagicMock()
-            mock_wb.sheets = ["Donnees", "Mes avoirs par échéance"]
-            mock_wb.get_sheet.return_value = _fake_sheet(rows)
-            mock_wb.__enter__ = MagicMock(return_value=mock_wb)
-            mock_wb.__exit__ = MagicMock(return_value=False)
-            mock_open.return_value = mock_wb
+        with patch("app.ingest.amundi_synthese_import.xlsb_sheet", return_value=rows):
 
             result = parse_amundi_synthese_export(b"fake", "Synthese_20260908_104534.xlsb")
 
@@ -151,13 +131,7 @@ class TestParseAmundiSyntheseExport:
             _fund_row("Plan Epargne Groupe 5 ans", "FONDS MONETAIRE PEG", "01/06/2028", 20.0, 10.90, 240.0),
             _total_row("01/06/2028", 240.0),
         ]
-        with patch("app.ingest.amundi_synthese_import.open_workbook") as mock_open:
-            mock_wb = MagicMock()
-            mock_wb.sheets = ["Donnees", "Mes avoirs par échéance"]
-            mock_wb.get_sheet.return_value = _fake_sheet(rows)
-            mock_wb.__enter__ = MagicMock(return_value=mock_wb)
-            mock_wb.__exit__ = MagicMock(return_value=False)
-            mock_open.return_value = mock_wb
+        with patch("app.ingest.amundi_synthese_import.xlsb_sheet", return_value=rows):
 
             result = parse_amundi_synthese_export(b"fake", "Synthese_20260908_104534.xlsb")
 
@@ -171,12 +145,7 @@ class TestParseAmundiSyntheseExport:
         assert result.warnings
 
     def test_missing_sheet_is_a_warning(self):
-        with patch("app.ingest.amundi_synthese_import.open_workbook") as mock_open:
-            mock_wb = MagicMock()
-            mock_wb.sheets = ["Donnees"]
-            mock_wb.__enter__ = MagicMock(return_value=mock_wb)
-            mock_wb.__exit__ = MagicMock(return_value=False)
-            mock_open.return_value = mock_wb
+        with patch("app.ingest.amundi_synthese_import.xlsb_sheet", return_value=None):
 
             result = parse_amundi_synthese_export(b"fake", "Synthese_20260908_104534.xlsb")
 
@@ -184,7 +153,7 @@ class TestParseAmundiSyntheseExport:
         assert result.warnings
 
     def test_unreadable_content_is_a_warning_not_a_crash(self):
-        with patch("app.ingest.amundi_synthese_import.open_workbook", side_effect=ValueError("bad file")):
+        with patch("app.ingest.amundi_synthese_import.xlsb_sheet", side_effect=ValueError("bad file")):
             result = parse_amundi_synthese_export(b"not really an xlsb", "Synthese_20260908_104534.xlsb")
 
         assert result.is_empty

@@ -37,14 +37,10 @@ only.
 
 from __future__ import annotations
 
-import csv
-import io
-from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
-import openpyxl
-
+from app.ingest.readers import header_cells, looks_like_xlsx, text_rows, xlsx_first_sheet
 from app.messages import Message, MessageCode
 
 #: Real income credited to the lender, regardless of principal churn —
@@ -97,22 +93,6 @@ class ParsedMintosTransactionsExport:
         return round(self.income_total + self.cost_total, 2)
 
 
-def _is_xlsx(content: bytes, filename: str) -> bool:
-    # An .xlsx is a zip archive; checking the magic bytes too covers a file
-    # renamed (or saved by a browser) without its extension.
-    return filename.lower().endswith((".xlsx", ".xlsm")) or content[:2] == b"PK"
-
-
-def _xlsx_rows(content: bytes) -> Iterator[list[object]]:
-    workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    for row in workbook.worksheets[0].iter_rows(values_only=True):
-        yield list(row)
-
-
-def _csv_rows(content: bytes) -> Iterator[list[object]]:
-    yield from csv.reader(io.StringIO(content.decode("utf-8-sig")))
-
-
 def _cell_date(value: object) -> date | None:
     """The .csv gives ``2025-01-01 10:00:00`` as text; the .xlsx export of the
     same statement may hand back a real datetime cell instead."""
@@ -148,8 +128,8 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     result = ParsedMintosTransactionsExport()
 
     try:
-        reader = _xlsx_rows(content) if _is_xlsx(content, filename) else _csv_rows(content)
-        header = [str(cell).strip() if cell is not None else "" for cell in next(reader)]
+        first, *rows = xlsx_first_sheet(content) if looks_like_xlsx(content, filename) else text_rows(content)
+        header = header_cells(first)
     except Exception as exc:  # noqa: BLE001 - surfaced as a warning, not a crash
         result.warnings.append(Message(MessageCode.FILE_UNREADABLE, {"error": str(exc)}))
         return result
@@ -169,7 +149,7 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     cost_total = 0.0
     deposits_total = 0.0
 
-    for row in reader:
+    for row in rows:
         if len(row) <= max(idx_date, idx_amount, idx_type):
             continue
         when = _cell_date(row[idx_date])

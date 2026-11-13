@@ -28,13 +28,12 @@ import io
 import zipfile
 from enum import Enum
 
-import openpyxl
 import pdfplumber
-from pyxlsb import open_workbook as open_xlsb
 
 from app.ingest.amundi_operations_import import SHEET_NAME as _AMUNDI_OPERATIONS_SHEET
 from app.ingest.amundi_synthese_import import _SHEET_NAME as _AMUNDI_SYNTHESE_SHEET
 from app.ingest.bank_import import looks_like_bank_export
+from app.ingest.readers import header_cells, xlsb_sheet_names, xlsx_first_sheet
 
 
 class FileKind(str, Enum):
@@ -79,8 +78,7 @@ def _zip_kind(content: bytes) -> FileKind | None:
     with zipfile.ZipFile(io.BytesIO(content)) as archive:
         names = set(archive.namelist())
     if "xl/workbook.bin" in names:
-        with open_xlsb(io.BytesIO(content)) as workbook:
-            sheets = set(workbook.sheets)
+        sheets = set(xlsb_sheet_names(content))
         if _AMUNDI_OPERATIONS_SHEET in sheets:
             return FileKind.AMUNDI_OPERATIONS
         if _AMUNDI_SYNTHESE_SHEET in sheets:
@@ -88,14 +86,10 @@ def _zip_kind(content: bytes) -> FileKind | None:
         return None
     if "xl/workbook.xml" not in names:
         return None
-    workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    try:
-        first = next(workbook.worksheets[0].iter_rows(max_row=1, values_only=True), ())
-    finally:
-        workbook.close()
+    first = next(iter(xlsx_first_sheet(content, max_row=1)), [])
     if first and looks_like_bank_export(first[0]):
         return FileKind.BANK_STATEMENT
-    return _classify_header([str(cell).strip() if cell is not None else "" for cell in first])
+    return _classify_header(header_cells(first))
 
 
 def _text_kind(content: bytes) -> FileKind | None:

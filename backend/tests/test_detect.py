@@ -112,7 +112,7 @@ class TestDetectFile:
             def __exit__(self, *_):
                 return False
 
-        with patch("app.ingest.detect.open_xlsb", _Workbook):
+        with patch("app.ingest.readers.open_xlsb", _Workbook):
             assert detect_file(_fake_xlsb()) is expected
 
     def test_mintos_pdf(self):
