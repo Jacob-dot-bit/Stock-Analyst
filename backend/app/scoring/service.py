@@ -336,7 +336,7 @@ def compute_scores(db: Session, instruments: list[Instrument], config: ScoringCo
     stock_ids = [i.id for i in scorable if i.category == "STOCK"]
     lots_by_instrument = _load_lots(db, stock_ids)
     # `Transaction.executed_at` is stored naive (parsed straight from the
-    # broker export, see `ingest/xtb_import.py::parse_datetime`) — strip
+    # broker export, see `ingest/cells.py::parse_datetime`) — strip
     # tzinfo so this compares correctly, same convention that column already
     # follows everywhere else.
     since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=DIVIDEND_LOOKBACK_DAYS)
