@@ -238,10 +238,10 @@ class TaxPrepNote:
     #: apply (PEA age, employee-savings blocking period) are not evaluated
     #: automatically; flagged for the user's own or an advisor's review.
     WITHDRAWAL_DETECTED = "taxPrep.withdrawalDetected"  # {amount}
-    #: Raw `SELL` transactions exist with no matching realised-gain figure
-    #: (no `CLOSED_TRADE` row) — a real gain/loss exists but computing it
-    #: needs a validated FIFO lot-matching engine this app does not have
-    #: yet. Never estimated in the meantime. See DEVLOG "Decision 3u.60".
+    #: `SELL` transactions whose gain neither the weighted average price
+    #: (purchase not on file, or no unit count) nor a `CLOSED_TRADE` row
+    #: gives. Never estimated: the broker's tax summary (IFU) has it. See
+    #: DEVLOG "Step 3u.110".
     UNMATCHED_SALES = "taxPrep.unmatchedSales"  # {count}
     #: No transaction this year gives this envelope any tax-relevant
     #: activity at all (e.g. a not-yet-funded or fully dormant account).

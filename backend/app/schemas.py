@@ -1351,20 +1351,60 @@ class TaxEnvelopeSummaryOut(BaseModel):
     fees: float | None
     deposits: float | None
     withdrawals: float | None
-    #: Real `SELL` transactions with no matching `CLOSED_TRADE` figure —
-    #: their gain/loss is never estimated (needs a validated FIFO engine
-    #: this app does not have yet).
+    #: Gains and losses of the year's sales by the weighted average price
+    #: (CTO only). See DEVLOG "Step 3u.110".
+    pmp_gains: float | None = None
+    pmp_losses: float | None = None
+    pmp_matched_sales: int = 0
+    #: `SELL` transactions whose gain neither the weighted average price nor
+    #: a `CLOSED_TRADE` row gives — never estimated.
     unmatched_sales_count: int
     unmatched_sales_amount: float | None
+    #: "no_purchase" | "incomplete_history" | "no_units" | "no_instrument" → count.
+    unmatched_reasons: dict[str, int] = {}
     other_flows: list[TaxOtherFlowOut]
     #: "to_reconcile" | "not_applicable"
     status: str
     notes: list[MessageOut]
 
 
+class TaxSaleGainOut(BaseModel):
+    """One CTO sale with its gain by the weighted average price, or the
+    reason it has none (`app/tax/gains.py`)."""
+
+    transaction_id: int
+    account: str
+    symbol: str | None
+    executed_at: datetime
+    units: float | None
+    proceeds: float
+    cost: float | None
+    gain: float | None
+    unmatched_reason: str | None
+
+
+class TaxCapitalGainsYearOut(BaseModel):
+    """The year's gains on CTO sales, with losses carried in from up to ten
+    earlier years (the oldest used first). Keys of the loss maps are the
+    years the losses come from."""
+
+    year: int
+    gains: float
+    losses: float
+    net: float
+    matched_sales: int
+    unmatched_sales: int
+    losses_carried_in: dict[int, float]
+    losses_used: float
+    taxable_net: float
+    losses_carried_out: dict[int, float]
+
+
 class TaxYearSummaryOut(BaseModel):
     tax_year: int
     envelopes: list[TaxEnvelopeSummaryOut]
+    sales: list[TaxSaleGainOut] = []
+    capital_gains: TaxCapitalGainsYearOut | None = None
     #: Always present — the permanent, non-dismissible boundary statement
     #: this feature must never let the user forget.
     disclaimer: MessageOut

@@ -24,6 +24,13 @@ FTT or UK stamp duty on a trade (which share `TxType.TAX` with genuine
 withholding but have nothing to do with a dividend). Recomputing that here
 would risk silently reintroducing the exact bug that module's own docstring
 describes having found and fixed live. `dividend_summary` is reused as-is.
+
+**Gains on sales.** A sale on an ordinary account (CTO) gets its gain by
+the weighted average acquisition price, over every ordinary account
+holding the same security (`app/tax/gains.py`, DEVLOG "Step 3u.110"). A
+sale whose purchase is not on file is never estimated: it is counted as
+unmatched, with the reason. The broker's own closed-trade figures
+(`CLOSED_TRADE`) are still shown as they are, beside it.
 """
 
 from __future__ import annotations
@@ -38,6 +45,7 @@ from sqlalchemy.orm import Session
 from app.dividends.service import dividend_summary
 from app.messages import Message, TaxPrepNote
 from app.models import Transaction, TxType
+from app.tax.gains import CapitalGainsYear, SaleGain, capital_gains_by_year, compute_sale_gains
 
 
 class TaxEnvelopeKind:
@@ -45,9 +53,8 @@ class TaxEnvelopeKind:
     PEA = "pea"
     P2P = "p2p"
     EMPLOYEE_SAVINGS = "employee_savings"
-    #: Real sales exist (`SELL`) but no `CLOSED_TRADE` row gives their
-    #: gain/loss — a validated FIFO lot-matching engine is needed before a
-    #: figure can be shown here at all. See DEVLOG "Decision 3u.60".
+    #: Real sales exist (`SELL`) whose gain neither the weighted average
+    #: price nor a `CLOSED_TRADE` row gives. See DEVLOG "Step 3u.110".
     UNMATCHED_SALE_ENVELOPE = "unmatched_sale_envelope"
 
 
@@ -98,8 +105,15 @@ class TaxEnvelopeSummary:
     fees: float | None = None
     deposits: float | None = None
     withdrawals: float | None = None
+    #: Gains and losses of this account's sales by the weighted average
+    #: price (CTO only); None when no sale of the year could be matched.
+    pmp_gains: float | None = None
+    pmp_losses: float | None = None
+    pmp_matched_sales: int = 0
     unmatched_sales_count: int = 0
     unmatched_sales_amount: float | None = None
+    #: Unmatched sales by reason (`gains.Unmatched`).
+    unmatched_reasons: dict[str, int] = field(default_factory=dict)
     other_flows: list[TaxOtherFlow] = field(default_factory=list)
     #: "to_reconcile" (some tax-relevant activity found, nothing to compare
     #: it against yet) | "not_applicable" (no tax-relevant activity this
@@ -112,6 +126,12 @@ class TaxEnvelopeSummary:
 class TaxYearSummary:
     tax_year: int
     envelopes: list[TaxEnvelopeSummary]
+    #: Every CTO sale of the year, matched or not.
+    sales: list[SaleGain] = field(default_factory=list)
+    #: The year's net gain by the weighted average price, with losses
+    #: carried in from earlier years; None when the year has no CTO sale
+    #: and no loss to carry.
+    capital_gains: CapitalGainsYear | None = None
 
 
 #: Types genuinely tax-relevant for the "does this envelope have anything
@@ -135,7 +155,10 @@ def _sum_amounts(txs: list[Transaction], *types: str) -> float | None:
 
 
 def _summarize_envelope(
-    account: str, txs: list[Transaction], dividend_rows_by_account: dict[str, tuple[float, float]]
+    account: str,
+    txs: list[Transaction],
+    dividend_rows_by_account: dict[str, tuple[float, float]],
+    sales: list[SaleGain],
 ) -> TaxEnvelopeSummary:
     kind = _classify_envelope(account)
 
@@ -160,15 +183,22 @@ def _summarize_envelope(
         if tx.type == TxType.OTHER and tx.amount is not None
     ]
 
-    sells_without_realized_trade = [
-        tx for tx in txs if tx.type == TxType.SELL and tx.amount is not None
-    ] if not realized else []
-    unmatched_sales_count = len(sells_without_realized_trade)
-    unmatched_sales_amount = (
-        round(sum(tx.amount for tx in sells_without_realized_trade), 2)
-        if sells_without_realized_trade
-        else None
-    )
+    # Gains by the weighted average price (CTO sales only, see `gains.py`).
+    matched = [sale for sale in sales if sale.matched]
+    pmp_gains_list = [sale.gain for sale in matched if sale.gain >= 0]
+    pmp_losses_list = [sale.gain for sale in matched if sale.gain < 0]
+    pmp_gains = round(sum(pmp_gains_list), 2) if pmp_gains_list else None
+    pmp_losses = round(sum(pmp_losses_list), 2) if pmp_losses_list else None
+
+    # A sale is left unmatched only when neither the average price nor the
+    # broker's own closed trade gives its gain. Sales inside PEA, employee
+    # savings or P2P are not taxed as they happen: nothing is missing there.
+    unmatched = [sale for sale in sales if not sale.matched] if not realized else []
+    unmatched_sales_count = len(unmatched)
+    unmatched_sales_amount = round(sum(sale.proceeds for sale in unmatched), 2) if unmatched else None
+    unmatched_reasons: dict[str, int] = {}
+    for sale in unmatched:
+        unmatched_reasons[sale.unmatched_reason] = unmatched_reasons.get(sale.unmatched_reason, 0) + 1
 
     notes: list[Message] = []
     if kind in (TaxEnvelopeKind.PEA, TaxEnvelopeKind.EMPLOYEE_SAVINGS):
@@ -181,7 +211,7 @@ def _summarize_envelope(
 
     has_activity = any(
         tx.type in _TAX_RELEVANT_TYPES and tx.amount is not None for tx in txs
-    ) or unmatched_sales_count > 0
+    ) or unmatched_sales_count > 0 or bool(matched)
     status = "to_reconcile" if has_activity else "not_applicable"
     # The PEA/employee-savings "no withdrawal" note above already explains
     # why nothing is taxable here — adding the generic NOT_APPLICABLE note
@@ -197,11 +227,15 @@ def _summarize_envelope(
         interest=interest,
         realized_gains=realized_gains,
         realized_losses=realized_losses,
+        pmp_gains=pmp_gains,
+        pmp_losses=pmp_losses,
+        pmp_matched_sales=len(matched),
         fees=fees,
         deposits=deposits,
         withdrawals=withdrawals,
         unmatched_sales_count=unmatched_sales_count,
         unmatched_sales_amount=unmatched_sales_amount,
+        unmatched_reasons=unmatched_reasons,
         other_flows=other_flows,
         status=status,
         notes=notes,
@@ -239,11 +273,25 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
     for account in dividend_rows_by_account:
         by_account.setdefault(account, [])
 
+    # Gains on sales need every year on file, not just this one: the
+    # average price comes from purchases made before it, and losses carry
+    # forward from earlier years.
+    all_sales = compute_sale_gains(db, include_account=lambda a: _classify_envelope(a) == TaxEnvelopeKind.CTO)
+    year_sales = [sale for sale in all_sales if sale.executed_at.year == tax_year]
+    sales_by_account: dict[str, list[SaleGain]] = defaultdict(list)
+    for sale in year_sales:
+        sales_by_account[sale.account].append(sale)
+
     envelopes = [
-        _summarize_envelope(account, txs, dividend_rows_by_account)
+        _summarize_envelope(account, txs, dividend_rows_by_account, sales_by_account.get(account, []))
         for account, txs in sorted(by_account.items())
     ]
-    return TaxYearSummary(tax_year=tax_year, envelopes=envelopes)
+    capital_gains = capital_gains_by_year(all_sales).get(tax_year)
+    if capital_gains is not None and not year_sales and not capital_gains.losses_carried_in:
+        capital_gains = None
+    return TaxYearSummary(
+        tax_year=tax_year, envelopes=envelopes, sales=year_sales, capital_gains=capital_gains
+    )
 
 
 def available_tax_years(db: Session) -> list[int]:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import io
+from dataclasses import asdict
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -19,9 +20,11 @@ from app.messages import Message, TaxPrepNote
 from app.models import TaxNotice
 from app.schemas import (
     MessageOut,
+    TaxCapitalGainsYearOut,
     TaxEnvelopeSummaryOut,
     TaxNoticeOut,
     TaxOtherFlowOut,
+    TaxSaleGainOut,
     TaxYearSummaryOut,
     TaxYearsAvailableOut,
 )
@@ -39,11 +42,15 @@ def _envelope_out(envelope: TaxEnvelopeSummary) -> TaxEnvelopeSummaryOut:
         interest=envelope.interest,
         realized_gains=envelope.realized_gains,
         realized_losses=envelope.realized_losses,
+        pmp_gains=envelope.pmp_gains,
+        pmp_losses=envelope.pmp_losses,
+        pmp_matched_sales=envelope.pmp_matched_sales,
         fees=envelope.fees,
         deposits=envelope.deposits,
         withdrawals=envelope.withdrawals,
         unmatched_sales_count=envelope.unmatched_sales_count,
         unmatched_sales_amount=envelope.unmatched_sales_amount,
+        unmatched_reasons=envelope.unmatched_reasons,
         other_flows=[TaxOtherFlowOut(label=f.label, amount=f.amount) for f in envelope.other_flows],
         status=envelope.status,
         notes=[MessageOut(**m.as_dict()) for m in envelope.notes],
@@ -84,6 +91,21 @@ def get_tax_summary(
     return TaxYearSummaryOut(
         tax_year=summary.tax_year,
         envelopes=[_envelope_out(e) for e in summary.envelopes],
+        sales=[
+            TaxSaleGainOut(
+                transaction_id=s.transaction_id,
+                account=s.account,
+                symbol=s.symbol,
+                executed_at=s.executed_at,
+                units=s.units,
+                proceeds=s.proceeds,
+                cost=s.cost,
+                gain=s.gain,
+                unmatched_reason=s.unmatched_reason,
+            )
+            for s in summary.sales
+        ],
+        capital_gains=TaxCapitalGainsYearOut(**asdict(summary.capital_gains)) if summary.capital_gains else None,
         disclaimer=MessageOut(**Message(TaxPrepNote.DISCLAIMER).as_dict()),
     )
 
@@ -106,6 +128,8 @@ def get_tax_summary_csv(
             "interest",
             "realized_gains",
             "realized_losses",
+            "pmp_gains",
+            "pmp_losses",
             "fees",
             "deposits",
             "withdrawals",
@@ -124,6 +148,8 @@ def get_tax_summary_csv(
                 e.interest if e.interest is not None else "",
                 e.realized_gains if e.realized_gains is not None else "",
                 e.realized_losses if e.realized_losses is not None else "",
+                e.pmp_gains if e.pmp_gains is not None else "",
+                e.pmp_losses if e.pmp_losses is not None else "",
                 e.fees if e.fees is not None else "",
                 e.deposits if e.deposits is not None else "",
                 e.withdrawals if e.withdrawals is not None else "",
