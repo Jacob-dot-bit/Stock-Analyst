@@ -113,6 +113,7 @@ function CapitalGainsCard({ gains, sales }: { gains: TaxCapitalGainsYear; sales:
       <dl className="position-detail-facts" style={{ marginTop: '0.8rem' }}>
         <Fact label={t('taxPrep.gains.gains')} value={gains.gains} />
         <Fact label={t('taxPrep.gains.losses')} value={gains.losses} negative />
+        {gains.derivatives !== 0 && <Fact label={t('taxPrep.gains.derivatives')} value={gains.derivatives} negative />}
         <Fact label={t('taxPrep.gains.net')} value={gains.net} negative />
         {carriedIn && (
           <div>
@@ -190,6 +191,9 @@ function TaxNoticeCard({ notice }: { notice: TaxNotice }) {
         <Fact label={t('taxPrep.notice.scaleTax')} value={f.scale_tax} />
         <Fact label={t('taxPrep.notice.netTax')} value={f.net_tax} />
         <Fact label={t('taxPrep.notice.taxDue')} value={f.tax_due} />
+        <Fact label={t('taxPrep.notice.investmentIncome')} value={f.investment_income} />
+        <Fact label={t('taxPrep.notice.capitalGains')} value={f.capital_gains} />
+        <Fact label={t('taxPrep.notice.socialLevies')} value={f.social_levies} />
         <Fact label={t('taxPrep.notice.balance')} value={f.balance} />
         {f.withholding_rate !== null && (
           <div>

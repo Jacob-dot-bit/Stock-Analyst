@@ -10077,3 +10077,36 @@ Verification: tests on made-up trades (average over two purchases, units
 from XTB comments, one ISIN at two brokers, PEA left out, every unmatched
 reason, carry-forward and its ten-year expiry, envelope figures, year
 block, endpoint); full suite; frontend build.
+
+## Step 3u.111 — Tax prep checked against a real year (2026-11-13)
+
+Setting one real year's figures against its tax notice (outside the
+repository) showed four faults.
+
+- **Dividends overwritten.** `dividend_summary` returns one row per account
+  *and currency*; the tax summary built a dict by account, so an account
+  paid in several currencies kept only its last row. Now summed.
+- **CFDs counted twice.** XTB writes a closed CFD position both in its
+  closed-positions sheet (result after swap/rollover, with a volume) and
+  as a cash operation "Profit of position #…" (before them, no volume),
+  and both land as `CLOSED_TRADE`. `gains.broker_closed_trades` keeps the
+  first only. Shares were not affected: their cash side is a SELL.
+- **CFDs missing from the year's gains.** Since 2014 a CFD's result
+  follows the regime of sales of securities and is netted with it, losses
+  carried ten years alike. `gains.derivative_gains` takes the closed
+  positions of instruments never bought or sold as units, and
+  `capital_gains_by_year` adds them (`derivatives` on the year).
+- **XTB comments with the symbol.** Newer cash operations read
+  "CLOSE BUY ABC.US 1/2 @ …": the unit regex allows the symbol, so those
+  sales are no longer "no unit count".
+- **Notice with social levies.** The newer notice is titled "Impôt et
+  prélèvements sociaux sur les revenus de …" and was read as having no
+  year; its first page gives "dd/mm/yyyy 418,00 €", read as 0. Both fixed,
+  and three more named figures: investment income declared, gains on
+  sales kept, social levies net — what the app's own figures are checked
+  against.
+
+Verification: tests on made-up data for each; full suite; frontend build;
+the real year re-run outside the repository: per security, the weighted
+average gains match the broker's own closed positions to the cent where
+only one lot was held.

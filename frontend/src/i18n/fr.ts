@@ -981,6 +981,9 @@ export const fr: Catalogue = {
   'taxPrep.notice.scaleTax': 'Impôt au barème',
   'taxPrep.notice.netTax': 'Impôt net',
   'taxPrep.notice.taxDue': 'Dû après prélèvement à la source',
+  'taxPrep.notice.investmentIncome': 'Revenus de capitaux mobiliers déclarés',
+  'taxPrep.notice.capitalGains': 'Plus-values de cession retenues',
+  'taxPrep.notice.socialLevies': 'Prélèvements sociaux nets',
   'taxPrep.notice.balance': 'Reste à payer',
   'taxPrep.notice.rate': 'Taux de prélèvement',
   'taxPrep.notice.ceiling': 'Plafond épargne retraite',
@@ -1022,6 +1025,7 @@ export const fr: Catalogue = {
   'taxPrep.gains.title': 'Plus-values sur titres {year} (compte-titres ordinaire)',
   'taxPrep.gains.hint':
     'Calculées au prix moyen pondéré d\'acquisition, frais inclus, sur tous les comptes-titres qui détiennent le même titre. PEA, épargne salariale et P2P ne sont pas comptés.',
+  'taxPrep.gains.derivatives': 'Dont CFD (positions clôturées)',
   'taxPrep.gains.gains': 'Plus-values',
   'taxPrep.gains.losses': 'Moins-values',
   'taxPrep.gains.net': 'Solde de l\'année',
