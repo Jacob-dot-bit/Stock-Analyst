@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import Base, get_db
 from app.main import app
 from app.models import Instrument, Transaction, TxType
-from app.tax.gains import Unmatched, capital_gains_by_year, compute_sale_gains, trade_units
+from app.tax.gains import Unmatched, capital_gains_by_year, compute_sale_gains, derivative_gains, trade_units
 from app.tax.service import compute_tax_year_summary
 
 
@@ -247,3 +247,66 @@ class TestSummary:
         assert body["sales"][2]["unmatched_reason"] == "no_purchase"
         broker = next(e for e in body["envelopes"] if e["account"] == "Broker A")
         assert broker["pmp_gains"] == 100.0
+
+
+class TestXtbCommentWithSymbol:
+    def test_symbol_between_side_and_units(self):
+        assert trade_units(Transaction(type=TxType.SELL, comment="CLOSE BUY ABC.US 1/2 @ 98.40")) == 1.0
+
+
+class TestDerivatives:
+    def _cfd(self, session, when, sheet, cash, account="Broker A"):
+        """One CFD position closed, the way XTB writes it: a closed-position
+        row (after swap, with a volume) and a cash row (before swap, none)."""
+        index = session.query(Instrument).filter_by(broker_symbol="IDX40").one_or_none() or _instrument(session, "IDX40")
+        _trade(session, index, TxType.CLOSED_TRADE, sheet, when, account=account, quantity=0.01)
+        _trade(session, index, TxType.CLOSED_TRADE, cash, when, account=account, comment="Profit of position #1")
+
+    def test_each_closed_position_counted_once(self, session):
+        self._cfd(session, datetime(2025, 1, 7), sheet=12.40, cash=20.90)
+
+        assert [g.gain for g in derivative_gains(session, _all_cto)] == [12.40]
+
+    def test_cfd_loss_carried_into_a_later_gain_on_shares(self, session):
+        self._cfd(session, datetime(2024, 8, 5), sheet=-300.0, cash=-280.0)
+        etf = _instrument(session, "ETF1")
+        _trade(session, etf, TxType.BUY, -1000.0, datetime(2025, 1, 1), quantity=10)
+        _trade(session, etf, TxType.SELL, 1500.0, datetime(2025, 6, 1), quantity=-10)
+
+        years = capital_gains_by_year(compute_sale_gains(session, _all_cto), derivative_gains(session, _all_cto))
+
+        assert years[2024].derivatives == -300.0
+        assert years[2024].net == -300.0
+        assert years[2025].losses_used == 300.0
+        assert years[2025].taxable_net == 200.0
+
+    def test_instrument_traded_as_units_is_not_a_derivative(self, session):
+        share = _instrument(session, "ABC.US")
+        _trade(session, share, TxType.BUY, -100.0, datetime(2025, 1, 1), quantity=1)
+        _trade(session, share, TxType.SELL, 120.0, datetime(2025, 2, 1), quantity=-1)
+        _trade(session, share, TxType.CLOSED_TRADE, 20.0, datetime(2025, 2, 1), quantity=1)
+
+        assert derivative_gains(session, _all_cto) == []
+
+    def test_envelope_realized_counts_cfd_once(self, session):
+        self._cfd(session, datetime(2025, 1, 7), sheet=12.40, cash=20.90)
+
+        envelope = compute_tax_year_summary(session, 2025).envelopes[0]
+
+        assert envelope.realized_gains == 12.40
+
+
+class TestDividendsInSeveralCurrencies:
+    def test_summed_not_overwritten(self, session):
+        usd = Instrument(broker_symbol="AAA.US", currency="USD")
+        eur = Instrument(broker_symbol="BBB.DE", currency="EUR")
+        session.add_all([usd, eur])
+        session.commit()
+        for instrument, amount in ((usd, 50.0), (eur, 20.0)):
+            session.add(Transaction(type=TxType.DIVIDEND, account="Broker A", instrument_id=instrument.id,
+                                    amount=amount, executed_at=datetime(2025, 6, 1)))
+        session.commit()
+
+        envelope = compute_tax_year_summary(session, 2025).envelopes[0]
+
+        assert envelope.dividends_gross == 70.0

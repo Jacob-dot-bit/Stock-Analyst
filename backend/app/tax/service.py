@@ -45,7 +45,15 @@ from sqlalchemy.orm import Session
 from app.dividends.service import dividend_summary
 from app.messages import Message, TaxPrepNote
 from app.models import Transaction, TxType
-from app.tax.gains import CapitalGainsYear, SaleGain, capital_gains_by_year, compute_sale_gains
+from app.tax.gains import (
+    CapitalGainsYear,
+    DerivativeGain,
+    SaleGain,
+    broker_closed_trades,
+    capital_gains_by_year,
+    compute_sale_gains,
+    derivative_gains,
+)
 
 
 class TaxEnvelopeKind:
@@ -128,6 +136,8 @@ class TaxYearSummary:
     envelopes: list[TaxEnvelopeSummary]
     #: Every CTO sale of the year, matched or not.
     sales: list[SaleGain] = field(default_factory=list)
+    #: Closed CFD positions of the year (CTO), counted in `capital_gains`.
+    derivatives: list[DerivativeGain] = field(default_factory=list)
     #: The year's net gain by the weighted average price, with losses
     #: carried in from earlier years; None when the year has no CTO sale
     #: and no loss to carry.
@@ -171,7 +181,7 @@ def _summarize_envelope(
     deposits = _sum_amounts(txs, TxType.DEPOSIT)
     withdrawals = _sum_amounts(txs, TxType.WITHDRAWAL)
 
-    realized = [tx.amount for tx in txs if tx.type == TxType.CLOSED_TRADE and tx.amount is not None]
+    realized = [tx.amount for tx in broker_closed_trades(txs)]
     gains = [a for a in realized if a > 0]
     losses = [a for a in realized if a < 0]
     realized_gains = round(sum(gains), 2) if gains else None
@@ -263,11 +273,13 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
     for tx in rows:
         by_account[tx.account].append(tx)
 
-    dividend_rows_by_account: dict[str, tuple[float, float]] = {
-        row.account: (row.gross, row.withholding_tax)
-        for row in dividend_summary(db)
-        if row.year == tax_year and row.account is not None
-    }
+    # One row per account *and currency* comes back: an account paid in
+    # several currencies is summed, not overwritten by its last row.
+    dividend_rows_by_account: dict[str, tuple[float, float]] = {}
+    for row in dividend_summary(db):
+        if row.year == tax_year and row.account is not None:
+            gross, withholding = dividend_rows_by_account.get(row.account, (0.0, 0.0))
+            dividend_rows_by_account[row.account] = (gross + row.gross, withholding + row.withholding_tax)
     # An account with dividends this year but no other transaction type
     # still needs its own envelope row.
     for account in dividend_rows_by_account:
@@ -276,7 +288,11 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
     # Gains on sales need every year on file, not just this one: the
     # average price comes from purchases made before it, and losses carry
     # forward from earlier years.
-    all_sales = compute_sale_gains(db, include_account=lambda a: _classify_envelope(a) == TaxEnvelopeKind.CTO)
+    def is_cto(account: str) -> bool:
+        return _classify_envelope(account) == TaxEnvelopeKind.CTO
+
+    all_sales = compute_sale_gains(db, include_account=is_cto)
+    all_derivatives = derivative_gains(db, include_account=is_cto)
     year_sales = [sale for sale in all_sales if sale.executed_at.year == tax_year]
     sales_by_account: dict[str, list[SaleGain]] = defaultdict(list)
     for sale in year_sales:
@@ -286,11 +302,16 @@ def compute_tax_year_summary(db: Session, tax_year: int) -> TaxYearSummary:
         _summarize_envelope(account, txs, dividend_rows_by_account, sales_by_account.get(account, []))
         for account, txs in sorted(by_account.items())
     ]
-    capital_gains = capital_gains_by_year(all_sales).get(tax_year)
-    if capital_gains is not None and not year_sales and not capital_gains.losses_carried_in:
+    year_derivatives = [d for d in all_derivatives if d.executed_at.year == tax_year]
+    capital_gains = capital_gains_by_year(all_sales, all_derivatives).get(tax_year)
+    if capital_gains is not None and not year_sales and not year_derivatives and not capital_gains.losses_carried_in:
         capital_gains = None
     return TaxYearSummary(
-        tax_year=tax_year, envelopes=envelopes, sales=year_sales, capital_gains=capital_gains
+        tax_year=tax_year,
+        envelopes=envelopes,
+        sales=year_sales,
+        derivatives=year_derivatives,
+        capital_gains=capital_gains,
     )
 
 

@@ -16,8 +16,9 @@ out: their sales are not taxed as they happen.
 Where the figures come from. Every importer that knows the units of a
 trade writes them on the BUY/SELL transaction (Mintos ETF portfolios). An
 XTB cash operation has no unit column, but its comment says
-"OPEN BUY 2 @ 175.08" / "CLOSE BUY 2/5 @ 180.00": the units are read from
-there. Amounts are the cash that moved in the account, so fees are in, and
+"OPEN BUY 2 @ 175.08" / "CLOSE BUY 2/5 @ 180.00" (lately with the symbol:
+"CLOSE BUY ABC.US 1/2 @ 98.40"): the units are read from there. Amounts
+are the cash that moved in the account, so fees are in, and
 a trade in a foreign currency is already in the account's currency on the
 day.
 
@@ -26,6 +27,16 @@ be traced to a purchase on file. A sale before the first purchase on file
 (a holding bought before the oldest export), a sale with no unit count or
 no security, or a purchase with no unit count before it leaves the sale
 unmatched, with the reason. It is then up to the broker's tax summary (IFU).
+
+Derivatives. A CFD (index, commodity, crypto, or a share traded as a
+CFD) has no purchase or sale of units: only the broker's closed position
+gives its result. Since 2014 such gains and losses follow the same regime
+as sales of securities and are netted with them, so the closed positions
+of an instrument never bought or sold as units count in the year's total
+(`derivative_gains`). XTB writes each of them twice: once in its closed
+positions sheet (result after swap and rollover, with a volume) and once
+as a cash operation "Profit of position #…" (before them, no volume).
+Only the first is kept (`broker_closed_trades`).
 
 Losses. A net loss for a year can be set against net gains of the next ten
 years (article 150-0 D, 11 du CGI); `capital_gains_by_year` carries them
@@ -45,8 +56,9 @@ from sqlalchemy.orm import Session
 
 from app.models import Transaction, TxType
 
-#: "OPEN BUY 2 @ 175.08", "CLOSE BUY 2/5 @ 180.00", "OPEN BUY 0.5 @ 1 234.5".
-_XTB_TRADE_RE = re.compile(r"\b(?:OPEN|CLOSE)\s+(?:BUY|SELL)\s+(\d+(?:[.,]\d+)?)(?:\s*/\s*\d+(?:[.,]\d+)?)?\s*@", re.IGNORECASE)
+#: "OPEN BUY 2 @ 175.08", "CLOSE BUY 2/5 @ 180.00", "OPEN BUY 0.5 @ 1 234.5",
+#: and the newer "CLOSE BUY ABC.US 1/2 @ 98.40" with the symbol in it.
+_XTB_TRADE_RE = re.compile(r"\b(?:OPEN|CLOSE)\s+(?:BUY|SELL)\s+(?:[A-Z][A-Z0-9.\-]*\s+)?(\d+(?:[.,]\d+)?)(?:\s*/\s*\d+(?:[.,]\d+)?)?\s*@", re.IGNORECASE)
 _EPS = 1e-6
 #: Years a net loss can be carried forward.
 LOSS_CARRY_YEARS = 10
@@ -176,6 +188,55 @@ def compute_sale_gains(db: Session, include_account: Callable[[str], bool]) -> l
     return out
 
 
+def broker_closed_trades(rows: list[Transaction]) -> list[Transaction]:
+    """`rows`' CLOSED_TRADE transactions, each closed position once: the
+    cash-operation copy (no volume) is dropped when the same account and
+    instrument also have closed-position rows (with a volume)."""
+    closed = [tx for tx in rows if tx.type == TxType.CLOSED_TRADE and tx.amount is not None]
+    with_volume = {(tx.account, tx.instrument_id) for tx in closed if tx.quantity is not None}
+    return [
+        tx for tx in closed
+        if tx.quantity is not None or (tx.account, tx.instrument_id) not in with_volume
+    ]
+
+
+@dataclass
+class DerivativeGain:
+    transaction_id: int
+    account: str
+    symbol: str | None
+    executed_at: datetime
+    gain: float
+
+
+def derivative_gains(db: Session, include_account: Callable[[str], bool]) -> list[DerivativeGain]:
+    """Closed positions, in accounts `include_account` accepts, of
+    instruments never bought or sold as units there: CFDs."""
+    rows = db.execute(
+        select(Transaction)
+        .where(
+            Transaction.type.in_([TxType.BUY, TxType.SELL, TxType.CLOSED_TRADE]),
+            Transaction.instrument_id.is_not(None),
+            Transaction.account.is_not(None),
+            Transaction.executed_at.is_not(None),
+        )
+        .order_by(Transaction.executed_at, Transaction.id)
+    ).scalars().all()
+    rows = [tx for tx in rows if include_account(tx.account)]
+    traded = {tx.instrument_id for tx in rows if tx.type in (TxType.BUY, TxType.SELL)}
+    return [
+        DerivativeGain(
+            transaction_id=tx.id,
+            account=tx.account,
+            symbol=tx.instrument.broker_symbol if tx.instrument else None,
+            executed_at=tx.executed_at,
+            gain=round(tx.amount, 2),
+        )
+        for tx in broker_closed_trades(rows)
+        if tx.instrument_id not in traded
+    ]
+
+
 @dataclass
 class CapitalGainsYear:
     year: int
@@ -183,6 +244,8 @@ class CapitalGainsYear:
     losses: float = 0.0
     matched_sales: int = 0
     unmatched_sales: int = 0
+    #: Net result of closed CFD positions, already in gains/losses.
+    derivatives: float = 0.0
     #: gains + losses of the year.
     net: float = 0.0
     #: Earlier losses still usable at the start of the year, by year of origin.
@@ -194,10 +257,20 @@ class CapitalGainsYear:
     losses_carried_out: dict[int, float] = field(default_factory=dict)
 
 
-def capital_gains_by_year(sales: list[SaleGain]) -> dict[int, CapitalGainsYear]:
-    """Matched sales summed per calendar year, with losses carried forward
-    up to `LOSS_CARRY_YEARS` years, the oldest used first."""
+def capital_gains_by_year(
+    sales: list[SaleGain], derivatives: list[DerivativeGain] = ()
+) -> dict[int, CapitalGainsYear]:
+    """Matched sales and closed CFD positions summed per calendar year, with
+    losses carried forward up to `LOSS_CARRY_YEARS` years, the oldest used
+    first."""
     years: dict[int, CapitalGainsYear] = {}
+    for d in derivatives:
+        year = years.setdefault(d.executed_at.year, CapitalGainsYear(year=d.executed_at.year))
+        year.derivatives += d.gain
+        if d.gain >= 0:
+            year.gains += d.gain
+        else:
+            year.losses += d.gain
     for sale in sales:
         year = years.setdefault(sale.executed_at.year, CapitalGainsYear(year=sale.executed_at.year))
         if not sale.matched:
@@ -216,6 +289,7 @@ def capital_gains_by_year(sales: list[SaleGain]) -> dict[int, CapitalGainsYear]:
         year = years.setdefault(y, CapitalGainsYear(year=y))
         pool = {origin: left for origin, left in pool.items() if y - origin <= LOSS_CARRY_YEARS and left > _EPS}
         year.gains, year.losses = round(year.gains, 2), round(year.losses, 2)
+        year.derivatives = round(year.derivatives, 2)
         year.net = round(year.gains + year.losses, 2)
         year.losses_carried_in = {k: round(v, 2) for k, v in pool.items()}
         if year.net < 0:
