@@ -200,6 +200,8 @@ export interface Health {
   status: string
   base_currency: string
   integrations: Record<string, boolean>
+  /** Commit the backend was started from; null when git could not be read. */
+  build?: { commit: string | null; committed_at: string | null }
 }
 
 

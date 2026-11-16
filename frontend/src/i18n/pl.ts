@@ -51,6 +51,10 @@ export const pl: Catalogue = {
   'theme.switchToDark': 'Przełącz na ciemny motyw',
   'app.disclaimer':
     'To narzędzie generuje wskaźniki na podstawie danych publicznych; nie jest to doradztwo inwestycyjne. Decyzje pozostają po Twojej stronie.',
+  'build.label': 'build {commit}',
+  'build.committedAt': 'commit z {date}',
+  'build.mismatch': 'Interfejs ({frontend}) i serwer ({backend}) nie działają na tym samym commicie: uruchom ponownie usługę, której nie zrestartowano po aktualizacji.',
+  'build.unknown': 'nieznany',
 
   // --- Common --------------------------------------------------------------
   'common.ok': 'OK',

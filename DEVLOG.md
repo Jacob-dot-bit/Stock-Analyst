@@ -10167,3 +10167,26 @@ year in every category, and is what a return is filled from.
 Verification: tests on made-up data (every section, replacement, an
 unreadable file, a preview, the summary for the report's year and for
 another one, the carry-forward); full suite; frontend build.
+
+## Step 3u.114 — Running commit in the footer (2026-11-16)
+
+Nothing showed which code was running: `version="0.1.0"` in the API
+metadata never moved, and the frontend's `package.json` says `0.0.0`.
+Deployment is `git pull` then a restart of two services, so the commit
+of the checkout is the build.
+
+- `app/build_info.py`: short hash and committer date of HEAD, read once
+  (a pull without a restart keeps showing the running commit), with
+  `safe.directory` so a service user other than the checkout's owner can
+  read it. `STOCK_ANALYST_COMMIT` overrides it for a copy without `.git`;
+  without git, both fields are null rather than an error.
+- `/api/health` returns it under `build`.
+- `vite.config.ts` injects the frontend's own commit (`__APP_COMMIT__`)
+  when the dev server starts or the bundle is built.
+- Footer: `build <hash> · <date>` under the disclaimer. When the two
+  commits differ, the stamp turns orange with a dot and its tooltip says
+  which service was not restarted.
+
+Verification: tests for the module (checkout, override, no git, not a
+repository) and the health shape; full suite; frontend lint and build,
+hash present in the bundle.

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth/AuthGate'
 import { AlertsBell } from './components/AlertsBell'
+import { BuildStamp } from './components/BuildStamp'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { SkeletonPage } from './components/Skeleton'
 import { ThemeToggle } from './components/ThemeToggle'
@@ -132,7 +133,10 @@ export default function App() {
         </Suspense>
       </main>
 
-      <footer className="disclaimer">{t('app.disclaimer')}</footer>
+      <footer className="disclaimer">
+        {t('app.disclaimer')}
+        <BuildStamp />
+      </footer>
     </div>
   )
 }

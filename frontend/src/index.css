@@ -1580,6 +1580,28 @@ details.raw summary {
   background: var(--surface);
 }
 
+.build-stamp {
+  display: block;
+  margin-top: var(--space-2);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.build-stamp--mismatch {
+  color: var(--warning);
+}
+
+.build-stamp__dot {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  background: var(--warning);
+  vertical-align: middle;
+}
+
 @keyframes content-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
