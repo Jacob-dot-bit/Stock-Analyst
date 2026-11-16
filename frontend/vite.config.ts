@@ -1,8 +1,25 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// The commit this frontend was started (dev server) or built from, shown in
+// the footer next to the backend's: after a `git pull`, a service that was
+// not restarted shows up as a mismatch. Same override as the backend
+// (STOCK_ANALYST_COMMIT) for a copy without its .git directory.
+function currentCommit(): string {
+  if (process.env.STOCK_ANALYST_COMMIT) return process.env.STOCK_ANALYST_COMMIT.slice(0, 12)
+  try {
+    return execSync('git log -1 --format=%h', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return ''
+  }
+}
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_COMMIT__: JSON.stringify(currentCommit()),
+  },
   server: {
     port: 5173,
     // Off (loopback-only) by default — matches the backend's own

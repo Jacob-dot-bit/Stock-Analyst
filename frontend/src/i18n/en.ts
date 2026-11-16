@@ -48,6 +48,10 @@ export const en: Catalogue = {
   'theme.switchToDark': 'Switch to dark theme',
   'app.disclaimer':
     'This tool produces indicators from public data; it is not investment advice. The decisions remain yours.',
+  'build.label': 'build {commit}',
+  'build.committedAt': 'commit of {date}',
+  'build.mismatch': 'The interface ({frontend}) and the server ({backend}) do not run the same commit: restart the service that was not restarted after the update.',
+  'build.unknown': 'unknown',
 
   // --- Common --------------------------------------------------------------
   'common.ok': 'OK',

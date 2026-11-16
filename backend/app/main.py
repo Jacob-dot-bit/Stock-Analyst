@@ -144,11 +144,14 @@ def health() -> dict:
 
     ``env_files`` reports where settings were looked for and whether each file
     exists — the quickest way to see why a key that "was added" is not being read.
+    ``build`` is the commit the backend was started from (see app/build_info.py).
     """
+    from app.build_info import build_info
     from app.config import BACKEND_DIR, PROJECT_ROOT
 
     return {
         "status": "ok",
+        "build": build_info(),
         "base_currency": settings.base_currency,
         "env_files": {
             str(path): path.exists()

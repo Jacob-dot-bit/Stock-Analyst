@@ -55,6 +55,9 @@ class TestHealth:
         # The .env locations searched are reported, so "why is my key not read" has a
         # one-request answer.
         assert body["env_files"]
+        # The tests run from a git checkout, so the commit is known.
+        assert body["build"]["commit"]
+        assert body["build"]["committed_at"]
 
 
 class TestEmptyPortfolio:
