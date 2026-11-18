@@ -175,6 +175,9 @@ export const pl: Catalogue = {
     'Saldo jest już aktualne z nowszego eksportu, pozostawione bez zmian: {accounts}.',
   'import.bankOperationsKept':
     '{count} operacji z konta zachowanych dla strony Budżet ({inserted} nowych).',
+  'import.brokerFreeCash': 'Zapisano wolne środki (niezainwestowane): {accounts}.',
+  'import.xtbFreeCashMissing':
+    'Brak kwoty wolnych środków w tabeli podsumowania tego eksportu XTB (znalezione wskaźniki: {metrics}). Wcześniej zapisane wolne środki pozostają bez zmian.',
   'import.amundiOperationsNotApplied':
     'Nie przeliczono zysku dla: {funds}. Albo fundusz nie ma jeszcze pozycji (zaimportuj Synthèse), albo dziennik nie obejmuje całej jego historii (jednostki nie zgadzają się z posiadanymi): wyeksportuj dłuższy okres.',
   'import.amundiPositionsUpdatedFromOperations':
@@ -1296,6 +1299,8 @@ export const pl: Catalogue = {
     'Agregat pożyczek P2P Mintos — dziesiątki fragmentów pożyczek bez indywidualnej wyceny, wartościowane wyłącznie jako jedno łączne saldo zadeklarowane przez Mintos.',
   'positionDetail.notPriceableReasonValue.employee_savings_fund':
     'Fundusz oszczędności pracowniczej Amundi — brak notowania rynkowego, jego wartość pochodzi wyłącznie z rocznego wyciągu Amundi.',
+  'positionDetail.notPriceableReasonValue.broker_cash':
+    'Wolne środki u brokera — niezainwestowane pieniądze bez notowania: ich wartość to kwota podana w ostatnim eksporcie.',
   // --- Ten tydzień (DEVLOG "Decision 3u.80") --------------------------------
   'weekly.title': 'Ten tydzień',
   'weekly.subtitle': 'Twoje limity, docelowa alokacja, wyniki, lista obserwowanych i dziennik w jednym miejscu, stan na {date}.',

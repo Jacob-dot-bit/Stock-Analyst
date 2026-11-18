@@ -10190,3 +10190,34 @@ of the checkout is the build.
 Verification: tests for the module (checkout, override, no git, not a
 repository) and the health shape; full suite; frontend lint and build,
 hash present in the bundle.
+
+## Step 3u.115 — Free cash at Mintos and XTB (2026-11-18)
+
+The portfolio knew what was invested at each broker, and the bank balance,
+but not the money lying uninvested on the broker accounts. Hermes, reading
+the portfolio, could not see it either.
+
+- Mintos: the account statement's running `Solde` was set aside in 3u.43
+  as "not the portfolio's value", which is right, but it is exactly the
+  free cash. The balance of the newest row, per currency, is now kept. The
+  file can be sorted either way; among rows sharing the newest second, the
+  balance after all of them is taken.
+- XTB: the small `Product | Metric | Amount | Currency` table is read on its
+  own. A free-funds metric (`Free funds`, `Free margin`, `Fonds libres`...)
+  wins; a plain `Balance` or `Cash` is the fallback. The date is the
+  report's "Data as of report generated". When no such metric is there, the
+  import says which metrics the file does carry, so the alias list can be
+  completed from a real export.
+- Both become a `CASH` position per account and currency (`MINTOS-CASH-EUR`,
+  `XTB-MY-TRADES-CASH-EUR`), not priceable with reason `broker_cash`, valued
+  at the figure, like a bank balance (3u.91): in the total and the
+  allocation, not a declared valuation. A figure from a more recent export
+  is kept. The XTB per-account replacement skips them, so an export
+  without the figure does not wipe it.
+- Cash instruments no longer count as unresolved symbols in the XTB import
+  report: there is no ticker to find for them.
+
+Verification: tests on made-up data (both sort orders, ties, currencies,
+fallback metric, a summary directly followed by the table, replacement,
+an older file, preview, XTB import leaving Mintos alone); full backend
+suite 1376 passed; `tsc -b` clean. Not yet run on the real exports.

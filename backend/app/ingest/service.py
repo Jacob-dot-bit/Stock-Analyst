@@ -278,6 +278,11 @@ def import_export_file(
             select(Position).where(Position.source == Source.IMPORT)
         ).scalars().all()
         for position in stale:
+            # Free cash at a broker has its own replacement rule (below, and
+            # for Mintos in its account statement): an export without the
+            # figure must not wipe it.
+            if position.instrument.not_priceable_reason == BROKER_CASH_REASON:
+                continue
             # With no account information we fall back to a global replacement:
             # that is the behaviour of single-account exports.
             if not accounts or position.account in accounts or position.account is None:
@@ -415,6 +420,36 @@ def import_export_file(
 
     batch.transactions_inserted = inserted
 
+    # --- Free cash, from the summary table ---
+    figures: list[tuple[str, float, str]] = []
+    kept: list[str] = []
+    as_of = parsed.report_time.date() if parsed.report_time else None
+    for item in parsed.free_cash:
+        account = item["account"] or (parsed.accounts[0] if len(parsed.accounts) == 1 else "XTB")
+        currency = item["currency"] or "EUR"
+        held = _put_broker_cash(
+            db, overrides, batch,
+            broker="XTB", label=f"XTB {account}", account=account, amount=item["amount"], currency=currency, as_of=as_of,
+        )
+        if held:
+            kept.append(held)
+        else:
+            figures.append((account, item["amount"], currency))
+    cash_messages = []
+    if figures:
+        cash_messages.append(Message(MessageCode.BROKER_FREE_CASH, {"accounts": _broker_cash_text(figures)}).as_dict())
+    if kept:
+        cash_messages.append(Message(MessageCode.BANK_BALANCE_KEPT, {"accounts": ", ".join(kept)}).as_dict())
+    if parsed.open_positions and not parsed.free_cash:
+        cash_messages.append(
+            Message(
+                MessageCode.XTB_FREE_CASH_MISSING,
+                {"metrics": ", ".join(parsed.summary_metrics) or "—"},
+            ).as_dict()
+        )
+    if cash_messages:
+        batch.warnings = [*batch.warnings, *cash_messages]
+
     # Unresolved symbols must be visible, not discovered by surprise. CFDs are left
     # out of the count: having no mapping is normal and expected for them, so flagging
     # it as a problem would only be noise.
@@ -422,6 +457,8 @@ def import_export_file(
         select(Instrument).where(
             Instrument.mapping_status == MappingStatus.UNRESOLVED,
             Instrument.category.is_distinct_from("CFD"),
+            # Cash (bank or broker) never gets a ticker: nothing to fix.
+            Instrument.category.is_distinct_from("CASH"),
         )
     ).scalars().all()
     if unresolved:
@@ -985,9 +1022,105 @@ def import_mintos_transactions_file(
             position.performance_note = Message(PerformanceNote.MINTOS_INTEREST_INCOME, {"since": since_text}).as_dict()
             batch.positions_found = 1
 
+        # The money lying uninvested on the account, as of the newest row.
+        figures: list[tuple[str, float, str]] = []
+        kept: list[str] = []
+        for currency, amount in parsed.free_cash.items():
+            held = _put_broker_cash(
+                db, overrides, batch,
+                broker="MINTOS", label="Mintos", account=MINTOS_CASH_ACCOUNT, amount=amount, currency=currency,
+                as_of=parsed.period_end,
+            )
+            if held:
+                kept.append(held)
+            else:
+                figures.append((MINTOS_CASH_ACCOUNT, amount, currency))
+                batch.positions_found += 1
+        extra = []
+        if figures:
+            extra.append(Message(MessageCode.BROKER_FREE_CASH, {"accounts": _broker_cash_text(figures)}).as_dict())
+        if kept:
+            extra.append(Message(MessageCode.BANK_BALANCE_KEPT, {"accounts": ", ".join(kept)}).as_dict())
+        if extra:
+            batch.warnings = [*batch.warnings, *extra]
+
     batch.transactions_inserted = inserted
 
     return _finish_import(db, batch, commit)
+
+
+# --- Free cash at a broker ------------------------------------------------------
+
+#: `Instrument.not_priceable_reason` of the cash left uninvested at a broker.
+#: Like a bank balance (`bank_account`), it counts in the total and is not a
+#: declared valuation. See DEVLOG "Step 3u.115".
+BROKER_CASH_REASON = "broker_cash"
+#: Mintos's free cash belongs to the whole account, neither to Core P2P nor
+#: to the ETF portfolio.
+MINTOS_CASH_ACCOUNT = "Mintos"
+
+
+def _broker_cash_symbol(broker: str, account: str, currency: str) -> str:
+    """``MINTOS-CASH-EUR``, ``XTB-MY-TRADES-CASH-EUR``."""
+    slug = _slugify(account)
+    return "-".join(part for part in (broker, "" if slug == broker else slug, "CASH", currency) if part)
+
+
+def _put_broker_cash(
+    db: Session,
+    overrides: dict[str, str],
+    batch: ImportBatch,
+    *,
+    broker: str,
+    label: str,
+    account: str,
+    amount: float,
+    currency: str,
+    as_of: date | None,
+) -> str | None:
+    """One CASH position per broker account and currency, valued at the free
+    cash the export reports, replacing the previous one. A figure already on
+    file from a more recent export is kept: the returned label says which."""
+    symbol = _broker_cash_symbol(broker, account, currency)
+    instrument = get_or_create_instrument(
+        db,
+        symbol,
+        overrides,
+        currency=currency,
+        name=f"{label} — fonds libres",
+        category="CASH",
+    )
+    if not instrument.not_priceable_reason:
+        instrument.not_priceable_reason = BROKER_CASH_REASON
+
+    existing = db.execute(
+        select(Position).where(Position.instrument_id == instrument.id, Position.source == Source.IMPORT)
+    ).scalars().all()
+    newer = [p for p in existing if p.value_as_of and as_of and p.value_as_of > as_of]
+    if newer:
+        return f"{account} {currency} ({newer[0].value_as_of.isoformat()})"
+    for position in existing:
+        db.delete(position)
+    db.flush()
+    db.add(
+        Position(
+            instrument_id=instrument.id,
+            source=Source.IMPORT,
+            account=account,
+            quantity=1,
+            # As for a bank balance: cash has no unit cost.
+            avg_price=amount,
+            broker_market_value=amount,
+            currency=currency,
+            value_as_of=as_of,
+            import_batch_id=batch.id,
+        )
+    )
+    return None
+
+
+def _broker_cash_text(figures: list[tuple[str, float, str]]) -> str:
+    return "; ".join(f"{account} {amount:.2f} {currency}" for account, amount, currency in figures)
 
 
 # --- Amundi ESR ----------------------------------------------------------------

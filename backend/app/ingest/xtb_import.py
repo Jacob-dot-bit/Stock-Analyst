@@ -17,6 +17,10 @@ Real structure observed on 2026 production exports — one sheet per section::
         My Trades | ASML       | ASML.NL | STOCK |      | 1.0 | ...   <- aggregate row
         My Trades | 1900000201 | ASML.NL |       | BUY  | 1.0 | ...   <- lot
 
+The small summary table is read on its own (Step 3u.115): when one of its
+metrics is the cash left uninvested on the account ("Free funds", "Free
+margin", "Balance"...), that figure becomes the account's free cash.
+
 Four traps this module handles explicitly, each found the hard way on real files:
 
 1. **Wrong XLSX dimension.** These workbooks declare ``A1:A1``. In ``read_only`` mode
@@ -126,6 +130,72 @@ def _match_column(header: Any) -> str | None:
     return _ALIAS_LOOKUP.get(_normalize(header))
 
 
+# --- Summary table: free cash ------------------------------------------------
+
+#: Summary-table metrics that give the uninvested cash of an account, best
+#: first. "Free funds" / "free margin" is what can be spent right now; a plain
+#: balance is the same thing on an account without leverage, so it is only
+#: the fallback.
+FREE_CASH_METRICS: tuple[tuple[str, ...], ...] = (
+    ("freefunds", "fondslibres", "freemargin", "margelibre", "availablefunds", "fondsdisponibles",
+     "availablecash", "freecash", "wolnesrodki"),
+    ("balance", "solde", "cashbalance", "cash", "saldo"),
+)
+
+
+def _free_cash_rank(metric: str) -> int | None:
+    key = _normalize(metric)
+    for rank, names in enumerate(FREE_CASH_METRICS):
+        if key in names:
+            return rank
+    return None
+
+
+def _read_summaries(rows: list[list[Any]], result: "ParsedExport", found: dict[tuple[str, str], tuple[int, float]]) -> None:
+    """Collects every ``Product | Metric | Amount | Currency`` row of a sheet,
+    and the report time of its preamble. ``found`` keeps, per (account,
+    currency), the best-ranked free-cash metric seen so far."""
+    index = 0
+    while index < len(rows):
+        row = rows[index]
+        cells = [_normalize(cell) for cell in row]
+        if cells and "generated" in cells[0] and len(row) > 1 and result.report_time is None:
+            result.report_time = parse_datetime(row[1])
+        positions = {name: i for i, name in enumerate(cells) if name}
+        metric_at = positions.get("metric", positions.get("metrique"))
+        amount_at = positions.get("amount", positions.get("montant"))
+        if metric_at is None or amount_at is None:
+            index += 1
+            continue
+        product_at = positions.get("product", positions.get("produit"))
+        currency_at = positions.get("currency", positions.get("devise"))
+        index += 1
+        # The block ends at a blank row or at the header of the real table,
+        # which can follow it directly.
+        while (
+            index < len(rows)
+            and not _is_blank(rows[index])
+            and sum(1 for cell in rows[index] if _match_column(cell)) < 4
+        ):
+            line = rows[index]
+            index += 1
+            cell = lambda i: line[i] if i is not None and i < len(line) else None  # noqa: E731
+            metric = _clean(cell(metric_at))
+            if not metric:
+                continue
+            if metric not in result.summary_metrics:
+                result.summary_metrics.append(metric)
+            rank = _free_cash_rank(metric)
+            amount = parse_number(cell(amount_at))
+            if rank is None or amount is None:
+                continue
+            account = _clean(cell(product_at)) or ""
+            currency = (_clean(cell(currency_at)) or "").upper()
+            best = found.get((account, currency))
+            if best is None or rank < best[0]:
+                found[(account, currency)] = (rank, amount)
+
+
 # --- Cash operation classification -------------------------------------------
 # Order matters: "Free funds interest tax" must land on TAX, not INTEREST.
 
@@ -186,6 +256,14 @@ class ParsedExport:
     #: Accounts (the "Product" column) present in the open positions. Used to replace
     #: only the snapshot of the accounts actually re-imported.
     accounts: list[str] = field(default_factory=list)
+    #: Uninvested cash read from the summary table: one
+    #: ``{"account", "amount", "currency"}`` per account and currency.
+    free_cash: list[dict[str, Any]] = field(default_factory=list)
+    #: Every metric name the summary tables carried, to tell what a real
+    #: export offers when no free-cash figure was found.
+    summary_metrics: list[str] = field(default_factory=list)
+    #: "Data as of report generated": the moment the figures are valid at.
+    report_time: datetime | None = None
 
     @property
     def is_empty(self) -> bool:
@@ -324,8 +402,14 @@ def parse_xtb_export(content: bytes, filename: str) -> ParsedExport:
         return result
 
     tables: list[ParsedTable] = []
+    free_cash: dict[tuple[str, str], tuple[int, float]] = {}
     for sheet_name, rows in sheets:
         tables.extend(_extract_tables(sheet_name, rows))
+        _read_summaries(rows, result, free_cash)
+    result.free_cash = [
+        {"account": account or None, "amount": round(amount, 2), "currency": currency or None}
+        for (account, currency), (_, amount) in sorted(free_cash.items())
+    ]
 
     if not tables:
         result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
