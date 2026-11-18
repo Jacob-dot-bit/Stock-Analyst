@@ -13,6 +13,10 @@ invested value — it is the free cash cycling through auto-invest
 reinvestment, staying in the tens-to-low-thousands of euros even across
 20 months of real activity on a much larger portfolio.
 
+That running "Solde" is still worth keeping for what it is: the money
+lying uninvested on the account. The balance on the newest row, one per
+currency, is read as the account's free cash (Step 3u.115).
+
 What this file *is* good for: a real, complete picture of income and cost
 transactions — interest, bonuses, late fees received, platform fees, tax
 withheld. Unlike a cost basis derived from deposits (which needs a
@@ -38,9 +42,9 @@ only.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 
-from app.ingest.cells import cell_date, parse_number
+from app.ingest.cells import cell_date, parse_datetime, parse_number
 from app.ingest.readers import header_cells, looks_like_xlsx, text_rows, xlsx_first_sheet
 from app.messages import Message, MessageCode
 
@@ -86,6 +90,9 @@ class ParsedMintosTransactionsExport:
     #: since a file usually spans more than one year.
     by_year: dict[int, tuple[float, float]] = field(default_factory=dict)
     transaction_count: int = 0
+    #: Uninvested cash per currency: the "Solde" of the newest row in that
+    #: currency. Empty when the export has no "Solde" column.
+    free_cash: dict[str, float] = field(default_factory=dict)
     warnings: list[Message] = field(default_factory=list)
 
     @property
@@ -119,6 +126,9 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     except ValueError:
         result.warnings.append(Message(MessageCode.NO_TABLE_RECOGNISED))
         return result
+    # Optional: older exports and hand-made files may lack them.
+    idx_balance = header.index("Solde") if "Solde" in header else None
+    idx_currency = header.index("Devise") if "Devise" in header else None
 
     earliest: date | None = None
     latest: date | None = None
@@ -127,6 +137,11 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     cost_total = 0.0
     deposits_total = 0.0
     by_year: dict[int, tuple[float, float]] = {}
+    #: Per currency: the newest timestamp seen, and the balances of the rows
+    #: carrying it, in file order (several rows can share one second).
+    newest: dict[str, tuple[datetime, list[float]]] = {}
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
 
     for row in rows:
         if len(row) <= max(idx_date, idx_amount, idx_type):
@@ -140,6 +155,21 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
         earliest = when if earliest is None or when < earliest else earliest
         latest = when if latest is None or when > latest else latest
         count += 1
+
+        if idx_balance is not None and len(row) > idx_balance:
+            balance = parse_number(row[idx_balance])
+            moment = parse_datetime(row[idx_date]) or datetime.combine(when, datetime.min.time())
+            first_seen = first_seen or moment
+            last_seen = moment
+            if balance is not None:
+                currency = "EUR"
+                if idx_currency is not None and len(row) > idx_currency and row[idx_currency]:
+                    currency = str(row[idx_currency]).strip().upper()
+                held = newest.get(currency)
+                if held is None or moment > held[0]:
+                    newest[currency] = (moment, [balance])
+                elif moment == held[0]:
+                    held[1].append(balance)
 
         year_income, year_cost = by_year.get(when.year, (0.0, 0.0))
         if payment_type in _INCOME_TYPES:
@@ -162,4 +192,12 @@ def parse_mintos_transactions_export(content: bytes, filename: str) -> ParsedMin
     result.deposits_total = round(deposits_total, 2)
     result.by_year = {year: (round(i, 2), round(c, 2)) for year, (i, c) in sorted(by_year.items())}
     result.transaction_count = count
+    # Whichever way the file is sorted: among rows sharing the newest
+    # second, the balance after all of them is the first one when the file
+    # runs newest first, the last one otherwise.
+    newest_first = first_seen is not None and last_seen is not None and first_seen > last_seen
+    result.free_cash = {
+        currency: round(balances[0] if newest_first else balances[-1], 2)
+        for currency, (_, balances) in sorted(newest.items())
+    }
     return result

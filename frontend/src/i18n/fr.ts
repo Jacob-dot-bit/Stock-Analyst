@@ -166,6 +166,9 @@ export const fr: Catalogue = {
     'Solde déjà à jour depuis un export plus récent, laissé tel quel : {accounts}.',
   'import.bankOperationsKept':
     '{count} lignes de compte gardées pour la page Budget ({inserted} nouvelles).',
+  'import.brokerFreeCash': 'Fonds libres (non investis) enregistrés : {accounts}.',
+  'import.xtbFreeCashMissing':
+    "Aucun montant de fonds libres dans le tableau récapitulatif de cet export XTB (indicateurs présents : {metrics}). Les fonds libres déjà enregistrés sont gardés.",
   'import.amundiOperationsNotApplied':
     "Gain non recalculé pour : {funds}. Soit le fonds n'a pas encore de position (importez la Synthèse), soit le journal ne couvre pas tout son historique (ses parts ne correspondent pas aux parts détenues) : exportez une période plus longue.",
   'import.amundiPositionsUpdatedFromOperations':
@@ -1290,6 +1293,8 @@ export const fr: Catalogue = {
     "Agrégat de prêts P2P Mintos — des dizaines de fragments de prêts sans cours individuel, valorisés uniquement par un solde global déclaré par Mintos.",
   'positionDetail.notPriceableReasonValue.employee_savings_fund':
     "Fonds d'épargne salariale Amundi — pas de cotation de marché, sa valeur provient uniquement du relevé annuel Amundi.",
+  'positionDetail.notPriceableReasonValue.broker_cash':
+    "Fonds libres chez un courtier — de l'argent non investi, sans cours : sa valeur est le montant indiqué par le dernier export.",
   // --- Cette semaine (DEVLOG "Decision 3u.80") ------------------------------
   'weekly.title': 'Cette semaine',
   'weekly.subtitle': 'Vos limites, cibles d\'allocation, scores, liste de suivi et journal au même endroit, au {date}.',

@@ -911,7 +911,7 @@ class PositionConcentrationOut(BaseModel):
 
 
 class DeclaredValuationSourceOut(BaseModel):
-    #: `Instrument.not_priceable_reason` — "p2p_aggregate" | "employee_savings_fund".
+    #: `Instrument.not_priceable_reason` — "p2p_aggregate" | "employee_savings_fund" | "bank_account" | "broker_cash".
     reason: str
     provider_name: str
     value: float

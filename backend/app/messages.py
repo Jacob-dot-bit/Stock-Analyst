@@ -72,6 +72,14 @@ class MessageCode:
     #: {count} were not already on file from an earlier export.
     BANK_OPERATIONS_KEPT = "import.bankOperationsKept"  # {count, inserted}
 
+    # --- Free cash at a broker (Step 3u.115) -----------------------------------
+    #: Uninvested cash read from a broker export and kept as a CASH position.
+    #: {accounts} = "Mintos 123.45 EUR; My Trades 67.89 EUR".
+    BROKER_FREE_CASH = "import.brokerFreeCash"  # {accounts}
+    #: An XTB export with open positions but no free-cash figure in its summary
+    #: table; {metrics} lists the ones it does carry.
+    XTB_FREE_CASH_MISSING = "import.xtbFreeCashMissing"  # {metrics}
+
     # --- Income tax notice (`ingest/tax_notice_import.py`) -----------------------
     #: The notice of income year {year} kept, {lines} amount lines.
     TAX_NOTICE_KEPT = "import.taxNoticeKept"  # {year, lines}

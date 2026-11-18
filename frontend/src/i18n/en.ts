@@ -173,6 +173,9 @@ export const en: Catalogue = {
     'Balance already up to date from a more recent export, left as is: {accounts}.',
   'import.bankOperationsKept':
     '{count} account lines kept for the Budget page ({inserted} new).',
+  'import.brokerFreeCash': 'Free (uninvested) cash recorded: {accounts}.',
+  'import.xtbFreeCashMissing':
+    'No free-cash figure in the summary table of this XTB export (metrics found: {metrics}). Free cash already on file is kept.',
   'import.amundiOperationsNotApplied':
     "Gain not recomputed for: {funds}. Either the fund has no position yet (import the Synthèse), or the journal does not cover its whole history (its units don't match the units held): export a longer period.",
   'import.amundiPositionsUpdatedFromOperations':
@@ -1280,6 +1283,8 @@ export const en: Catalogue = {
     'Mintos P2P loan aggregate — dozens of loan fragments with no individual quote, valued only as one overall balance declared by Mintos.',
   'positionDetail.notPriceableReasonValue.employee_savings_fund':
     "Amundi employee savings fund — no market quote; its value comes only from Amundi's annual statement.",
+  'positionDetail.notPriceableReasonValue.broker_cash':
+    'Free cash at a broker — uninvested money with no quote: its value is the amount the latest export reports.',
   // --- This week (DEVLOG "Decision 3u.80") ---------------------------------
   'weekly.title': 'This week',
   'weekly.subtitle': 'Your limits, allocation targets, scores, watchlist and journal in one place, as of {date}.',
