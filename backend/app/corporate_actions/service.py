@@ -98,7 +98,15 @@ ECONOMIC_FACTOR_RELATIVE_TOLERANCE = 0.005
 #: "active"` — see `_classify_group`. EODHD is never in this set: it stays
 #: a targeted, on-demand-only source (`detect_one`), never part of the
 #: automatic cross-source engine.
-_ALWAYS_ACTIVE_PROVIDERS = {"alpha_vantage", "polygon"}
+#:
+#: `yahoo` and `sec_shares` only ever write rows through
+#: `corporate_actions/corroboration.py`, on demand, for instruments that
+#: already carry an outstanding candidate — never from the bulk scan. Yahoo
+#: is the one free split source that covers Euronext; `sec_shares` is not a
+#: vendor at all but the share count on the company's own SEC cover pages,
+#: recorded only when it moved by the candidate's ratio. See DEVLOG "Step
+#: 3u.116".
+_ALWAYS_ACTIVE_PROVIDERS = {"alpha_vantage", "polygon", "yahoo", "sec_shares"}
 
 
 def detect_price_history_status(
@@ -351,6 +359,79 @@ class OutstandingCandidate:
     denominator: float
     confidence: str
     providers: list[str]
+    #: Sources that did answer for this instrument without reporting this
+    #: event (within `CROSS_SOURCE_DATE_TOLERANCE_DAYS`), plus `sec_shares`
+    #: when the cover-page share count stayed flat across the date. Not proof
+    #: on its own: a vendor's history can start after an old event.
+    not_reported_by: list[str] = field(default_factory=list)
+    #: The ratio is not a small whole-number one (2:1, 3:2, 1:10...). Rights
+    #: issues and stock dividends get booked as "splits" with factors like
+    #: 1043:1000 — ArcelorMittal 2016 is the case that showed it.
+    atypical_ratio: bool = False
+
+
+def is_atypical_ratio(numerator: float, denominator: float) -> bool:
+    """True when no b in 1..5 makes `max(f, 1/f) * b` a whole number other
+    than b itself (0.5% slack, so GOOGL's 999:500 still reads as 2:1)."""
+    if not numerator or not denominator:
+        return False
+    factor = numerator / denominator
+    g = max(factor, 1 / factor)
+    for b in range(1, 6):
+        a = round(g * b)
+        if a != b and abs(a / b - g) <= ECONOMIC_FACTOR_RELATIVE_TOLERANCE * g:
+            return False
+    return True
+
+
+def _answered_ok(db: Session) -> dict[int, set[str]]:
+    """Which providers gave a usable answer for each instrument, events or not."""
+    answered: dict[int, set[str]] = defaultdict(set)
+    for instrument_id, provider in db.execute(
+        select(ProviderCorporateActionCandidate.instrument_id, ProviderCorporateActionCandidate.provider).where(
+            ProviderCorporateActionCandidate.provider_status == ProviderCorporateActionCandidateStatus.OK
+        )
+    ):
+        answered[instrument_id].add(provider)
+    return answered
+
+
+def _shares_contradictions(db: Session) -> dict[int, set[date]]:
+    """Dates at which the SEC cover-page count stayed flat — kept by the
+    corroboration step in the `sec_shares` status row's payload."""
+    flat: dict[int, set[date]] = defaultdict(set)
+    for row in db.execute(
+        select(ProviderCorporateActionCandidate).where(
+            ProviderCorporateActionCandidate.provider == "sec_shares",
+            ProviderCorporateActionCandidate.event_date.is_(None),
+        )
+    ).scalars():
+        for entry in (row.raw_payload or {}).get("flat", []):
+            try:
+                flat[row.instrument_id].add(date.fromisoformat(entry["event_date"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return flat
+
+
+def _not_reported_by(
+    group: _MergedGroup,
+    observations: list[tuple[str, SplitEvent, str]],
+    answered: set[str],
+    flat_dates: set[date],
+) -> list[str]:
+    reporters = {provider for provider, _ in group.members}
+    silent = set()
+    for provider in answered - reporters - {"sec_shares"}:
+        near = any(
+            p == provider and abs((e.effective_date - group.effective_date).days) <= CROSS_SOURCE_DATE_TOLERANCE_DAYS
+            for p, e, _ in observations
+        )
+        if not near:
+            silent.add(provider)
+    if group.effective_date in flat_dates:
+        silent.add("sec_shares")
+    return sorted(silent)
 
 
 def list_outstanding_candidates(db: Session) -> list[OutstandingCandidate]:
@@ -397,6 +478,8 @@ def list_outstanding_candidates(db: Session) -> list[OutstandingCandidate]:
             (row.provider, SplitEvent(row.event_date, row.numerator, row.denominator), row.event_type)
         )
 
+    answered = _answered_ok(db)
+    flat = _shares_contradictions(db)
     outstanding: list[OutstandingCandidate] = []
     for instrument_id, observations in by_instrument.items():
         groups = _merge_events_for_instrument(observations)
@@ -445,6 +528,10 @@ def list_outstanding_candidates(db: Session) -> list[OutstandingCandidate]:
                     denominator=group.denominator,
                     confidence=confidence,
                     providers=sorted({provider for provider, _ in group.members}),
+                    not_reported_by=_not_reported_by(
+                        group, observations, answered.get(instrument_id, set()), flat.get(instrument_id, set())
+                    ),
+                    atypical_ratio=is_atypical_ratio(group.numerator, group.denominator),
                 )
             )
     db.commit()

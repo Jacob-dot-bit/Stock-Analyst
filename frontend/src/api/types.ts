@@ -1100,6 +1100,37 @@ export interface OutstandingCandidate {
   ratio_denominator: number
   confidence: CorporateActionConfidence
   providers: string[]
+  /** Sources that answered for this instrument without this event, plus
+   * `sec_shares` when the SEC share count stayed flat across the date. */
+  not_reported_by: string[]
+  /** Not a small whole-number ratio: likely a rights issue or a stock
+   * dividend booked as a split. */
+  atypical_ratio: boolean
+}
+
+/** One event looked at by `POST /api/corporate-actions/corroborate`. */
+export interface CorroborationTarget {
+  instrument_id: number
+  symbol: string | null
+  effective_date: string
+  action_type: 'split' | 'reverse_split'
+  ratio_numerator: number
+  ratio_denominator: number
+  kind: 'outstanding' | 'applied'
+  yahoo: 'reported' | 'other_ratio' | 'not_reported' | 'rate_limited' | 'not_found' | 'failed' | 'not_checked'
+  sec_shares: 'confirms' | 'flat' | 'inconclusive' | 'no_data' | 'not_applicable' | 'too_small' | 'rate_limited' | 'failed'
+  sec_detail: { before_date: string; before: number; after_date: string; after: number; ratio: number } | null
+  applied_now: boolean
+}
+
+export interface CorroborationResult {
+  instruments_checked: number
+  instruments_remaining: number
+  applied: number
+  still_outstanding: number
+  yahoo_rate_limited: boolean
+  edgar_enabled: boolean
+  targets: CorroborationTarget[]
 }
 
 /** One execution of the targeted Alpha Vantage resume job — see

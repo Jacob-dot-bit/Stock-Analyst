@@ -749,6 +749,49 @@ class OutstandingCandidateOut(BaseModel):
     #: verified confidences — surfaced rather than hidden).
     confidence: str
     providers: list[str]
+    #: Sources that answered for this instrument without this event, and
+    #: `sec_shares` when the SEC share count stayed flat across the date.
+    not_reported_by: list[str] = []
+    #: Not a small whole-number ratio: more likely a rights issue or a stock
+    #: dividend booked as a split than a real split.
+    atypical_ratio: bool = False
+
+
+class CorroborateIn(BaseModel):
+    """`POST /api/corporate-actions/corroborate`. `limit` instruments per
+    call; `force` re-asks Yahoo even if it answered within the recheck
+    window."""
+
+    limit: int = Field(8, ge=1, le=25)
+    force: bool = False
+    instrument_ids: list[int] | None = None
+
+
+class CorroborationTargetOut(BaseModel):
+    instrument_id: int
+    symbol: str | None
+    effective_date: date
+    action_type: str
+    ratio_numerator: float
+    ratio_denominator: float
+    #: "outstanding" | "applied" (already applied with no second source; reported only)
+    kind: str
+    yahoo: str
+    sec_shares: str
+    sec_detail: dict | None
+    applied_now: bool
+
+
+class CorroborationOut(BaseModel):
+    """See `app/corporate_actions/corroboration.py::CorroborationSummary`."""
+
+    instruments_checked: int
+    instruments_remaining: int
+    applied: int
+    still_outstanding: int
+    yahoo_rate_limited: bool
+    edgar_enabled: bool
+    targets: list[CorroborationTargetOut]
 
 
 class DetectOneIn(BaseModel):

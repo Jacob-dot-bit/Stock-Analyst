@@ -3,8 +3,9 @@ for detection and the read-time adjustment this data drives. Manual entry
 plus an automatic cross-source detector (Alpha Vantage + Polygon, joined
 conditionally by FMP once readmitted — DEVLOG "Decision 3u.41"; originally
 Yahoo, then FMP alone — DEVLOG "Decision 3u.34") plus a targeted, on-demand
-EODHD check (`detect-one`); `PriceBar`/`Lot` are never mutated by anything
-here. See DEVLOG "Decision 3u.30".
+EODHD check (`detect-one`), plus a second opinion from Yahoo and SEC share
+counts for what only one source reported (`corroborate`, DEVLOG "Step
+3u.116"); `PriceBar`/`Lot` are never mutated by anything here. See DEVLOG "Decision 3u.30".
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.corporate_actions.corroboration import corroborate
 from app.corporate_actions.service import (
     ALPHA_VANTAGE_RESUME_DAILY_LIMIT,
     compute_coverage_summary,
@@ -35,6 +37,9 @@ from app.schemas import (
     CorporateActionOut,
     CorporateActionResumeRunOut,
     CorporateActionResumeStatusOut,
+    CorroborateIn,
+    CorroborationOut,
+    CorroborationTargetOut,
     CoverageSummaryOut,
     DetectOneIn,
     DetectOneOut,
@@ -226,9 +231,46 @@ def get_outstanding_candidates(db: Session = Depends(get_db)) -> list[Outstandin
             ratio_denominator=o.denominator,
             confidence=o.confidence,
             providers=o.providers,
+            not_reported_by=o.not_reported_by,
+            atypical_ratio=o.atypical_ratio,
         )
         for o in sorted(outstanding, key=lambda o: o.effective_date, reverse=True)
     ]
+
+
+@router.post("/corroborate", response_model=CorroborationOut)
+def corroborate_candidates(payload: CorroborateIn | None = None, db: Session = Depends(get_db)) -> CorroborationOut:
+    """Asks Yahoo (splits) and, for US filers, the SEC cover-page share
+    counts about every outstanding candidate and every applied action no
+    second source backed, `limit` instruments at a time. A candidate a
+    second voting source agrees with is applied; nothing is deleted or
+    rejected. See `app/corporate_actions/corroboration.py`."""
+    payload = payload or CorroborateIn()
+    summary = corroborate(db, limit=payload.limit, force=payload.force, instrument_ids=payload.instrument_ids)
+    return CorroborationOut(
+        instruments_checked=summary.instruments_checked,
+        instruments_remaining=summary.instruments_remaining,
+        applied=summary.applied,
+        still_outstanding=summary.still_outstanding,
+        yahoo_rate_limited=summary.yahoo_rate_limited,
+        edgar_enabled=summary.edgar_enabled,
+        targets=[
+            CorroborationTargetOut(
+                instrument_id=t.instrument_id,
+                symbol=t.symbol,
+                effective_date=t.effective_date,
+                action_type=t.action_type,
+                ratio_numerator=t.numerator,
+                ratio_denominator=t.denominator,
+                kind=t.kind,
+                yahoo=t.yahoo,
+                sec_shares=t.sec_shares,
+                sec_detail=t.sec_detail,
+                applied_now=t.applied_now,
+            )
+            for t in summary.targets
+        ],
+    )
 
 
 @router.get("/incomplete", response_model=list[int])

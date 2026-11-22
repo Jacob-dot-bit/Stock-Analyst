@@ -10221,3 +10221,64 @@ Verification: tests on made-up data (both sort orders, ties, currencies,
 fallback metric, a summary directly followed by the table, replacement,
 an older file, preview, XTB import leaving Mintos alone); full backend
 suite 1376 passed; `tsc -b` clean. Not yet run on the real exports.
+
+## Step 3u.116 — Second opinion on single-source splits (2026-11-23)
+
+Fourteen split/reverse-split candidates sat in "attention" with one source
+each. The cause is structural: the voting sources (Alpha Vantage, Polygon,
+FMP when readmitted) do not cover Euronext on a free plan, so every
+European candidate is single-source by construction. EODHD answers for
+them but has 20 calls a day and was wrong twice here: ArcelorMittal's 2016
+rights issue booked as a split, and a Dassault Systèmes reverse split on
+2026-02-23 that never happened (share count unchanged at the end of
+February).
+
+Free sources looked at, against the existing chain (16 price sources):
+
+| Source | What it adds | Verdict |
+|---|---|---|
+| Yahoo chart `events=split` | Splits worldwide, Euronext included, no key | **Used**, on demand only (its rate limit is why it left the bulk scan, 3u.34) |
+| SEC `companyconcept` `dei:EntityCommonStockSharesOutstanding` | The company's own share count per filing, not a vendor's reading | **Used**, US filers |
+| Polygon / Alpha Vantage / FMP | Already voting | US only on free plans |
+| Tiingo, Twelve Data, Marketstack, Finnhub | No split history on free plans, or US only | Not added |
+| Stooq, Euronext live | Bot challenge / encrypted payload (2.1, 2d.1) | Still excluded |
+| ESEF filings | Annual share counts only | Too coarse to date a split |
+
+What changed:
+
+- `providers/edgar.py`: `fetch_shares_outstanding(ticker)`, cover-page
+  counts oldest first, one per as-of date (an amendment wins), cached a day
+  per filer. Each cover states its own count and is never restated, so the
+  series stays raw across a split.
+- `corporate_actions/corroboration.py`: for each instrument with an
+  outstanding candidate or an applied, never-corroborated action
+  (`manual_promotion`/`manual`), asks Yahoo once and, for US filers, compares
+  the last cover count before the date with the first one after it
+  (≤ 400 days each side). Moved by the ratio (±25 %) → a `sec_shares` row
+  with the candidate's ratio; flat (±15 %) → the date is listed as
+  contradicted; ratios under 1.25 are not judged from a share count.
+- `yahoo` and `sec_shares` join the always-voting sources. They only ever
+  write through this step, so the bulk scan is unchanged; once one of them
+  agrees with a candidate, `list_outstanding_candidates` applies it as it
+  does for any two-source agreement (`verified_cross_source`).
+- Outstanding rows say who answered without the event (`not_reported_by`)
+  and flag a ratio that is not a small whole-number one (`atypical_ratio`,
+  the rights-issue shape). Display only: nothing is rejected or deleted,
+  applied actions are reported and never touched.
+- Quotas: `limit` instruments per call (8, max 25), Yahoo not re-asked for
+  7 days unless `force`, dropped for the rest of the call at its first 429,
+  usage counted through `record_usage`.
+- UI: "Demander un second avis (Yahoo + SEC)" under the candidates, with a
+  result table per event, and a "Non signalé par" column. Three locales.
+
+A side effect worth knowing: Yahoo also returns events nobody else had
+(old European splits). They appear as new single-source candidates rather
+than being dropped, as any one-source finding does.
+
+Verification: tests on made-up data (agreement applies, silence keeps it
+outstanding, other ratio is a conflict, SEC confirm/flat/too small/no data,
+applied rows untouched, rate limit, recheck window, limit, endpoint);
+full backend suite 1407 passed; frontend lint (no new warning) and build.
+Not yet run against the live sources: the build machine has no route to
+Yahoo or the SEC.
+
