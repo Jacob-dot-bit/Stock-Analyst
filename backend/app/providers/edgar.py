@@ -43,6 +43,7 @@ Two consequences of accepting foreign filers, both learned the hard way:
 from __future__ import annotations
 
 import re
+import time
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -54,6 +55,12 @@ from app.providers.base import ProviderUnavailable, RateLimited, SymbolNotFound,
 
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+#: One concept for one filer: the share count printed on each filing's cover page.
+SHARES_URL = "https://data.sec.gov/api/xbrl/companyconcept/CIK{cik}/dei/EntityCommonStockSharesOutstanding.json"
+
+#: How long a filer's share-count series is kept in memory. Cover-page counts
+#: only change with a new 10-Q/10-K, so a day is plenty.
+SHARES_CACHE_SECONDS = 24 * 3600
 
 #: Ordered candidates per concept. First tag present in the filing wins.
 #: Order matters: the more specific, post-2018 revenue tag comes before the legacy
@@ -180,6 +187,7 @@ class EdgarProvider:
         self._timeout = timeout_seconds
         self._client = client
         self._ticker_index: dict[str, dict[str, Any]] | None = None
+        self._shares_cache: dict[str, tuple[float, list[SharesOutstanding]]] = {}
 
     def is_enabled(self) -> bool:
         # The SEC returns 403 to anonymous callers, so a missing contact header means
@@ -278,6 +286,37 @@ class EdgarProvider:
         payload = self._get(FACTS_URL.format(cik=cik))
         return _normalise(payload, cik)
 
+    def fetch_shares_outstanding(self, ticker: str, expected_name: str | None = None) -> list[SharesOutstanding]:
+        """Cover-page share counts (``dei:EntityCommonStockSharesOutstanding``),
+        oldest first, one per as-of date.
+
+        Used to check a split against something no data vendor produced: a
+        real 4-for-1 split multiplies the count on the next cover page by
+        four, a phantom one leaves it where it was. Each filing states the
+        count on its own cover date and later filings do not restate it, so
+        the series stays raw across a split.
+
+        Filers that report one count per share class (dimensional facts) have
+        no plain total here and return an empty list rather than a guess.
+        """
+        if not self.is_enabled():
+            raise ProviderUnavailable("SEC_USER_AGENT is not configured")
+
+        cik, _ = self.resolve(ticker, expected_name)
+        cached = self._shares_cache.get(cik)
+        if cached is not None and time.monotonic() - cached[0] < SHARES_CACHE_SECONDS:
+            return cached[1]
+
+        try:
+            payload = self._get(SHARES_URL.format(cik=cik))
+        except SymbolNotFound:
+            # The filer exists but never tagged the concept (older or foreign
+            # filers): no series, not an unknown company.
+            payload = {}
+        series = _parse_shares(payload)
+        self._shares_cache[cik] = (time.monotonic(), series)
+        return series
+
 
 #: Words that carry no identifying information when comparing company names.
 _NAME_NOISE = {
@@ -348,6 +387,38 @@ def find_by_name(index: dict[str, dict[str, Any]], expected: str) -> tuple[str, 
             return str(best["cik_str"]).zfill(10), str(best.get("title") or "")
 
     return None
+
+
+@dataclass(frozen=True)
+class SharesOutstanding:
+    as_of: date
+    shares: float
+    form: str
+    filed: date | None
+
+
+def _parse_shares(payload: dict) -> list[SharesOutstanding]:
+    """One value per as-of date. A date reported twice (a filing and its
+    amendment) keeps the most recently filed value."""
+    by_date: dict[date, SharesOutstanding] = {}
+    for entry in ((payload.get("units") or {}).get("shares") or []):
+        try:
+            as_of = date.fromisoformat(str(entry["end"]))
+            value = float(entry["val"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if value <= 0:
+            continue
+        filed = None
+        if entry.get("filed"):
+            try:
+                filed = date.fromisoformat(str(entry["filed"]))
+            except ValueError:
+                filed = None
+        current = by_date.get(as_of)
+        if current is None or (filed and (current.filed is None or filed > current.filed)):
+            by_date[as_of] = SharesOutstanding(as_of, value, str(entry.get("form") or ""), filed)
+    return [by_date[d] for d in sorted(by_date)]
 
 
 def _normalise(payload: dict, cik: str) -> Fundamentals:
