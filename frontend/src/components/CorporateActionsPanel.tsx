@@ -5,6 +5,7 @@ import type {
   CorporateActionCoverage,
   CorporateActionDetection,
   CorporateActionResumeStatus,
+  CorroborationResult,
   DetectOneResult,
   Instrument,
   OutstandingCandidate,
@@ -69,6 +70,9 @@ export function CorporateActionsPanel() {
   const [resumeError, setResumeError] = useState<string | null>(null)
   const [outstanding, setOutstanding] = useState<OutstandingCandidate[] | null>(null)
   const [expandedActionId, setExpandedActionId] = useState<number | null>(null)
+  const [corroborating, setCorroborating] = useState(false)
+  const [corroboration, setCorroboration] = useState<CorroborationResult | null>(null)
+  const [corroborationError, setCorroborationError] = useState<string | null>(null)
 
   function load() {
     setError(null)
@@ -115,6 +119,20 @@ export function CorporateActionsPanel() {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setDetecting(false)
+    }
+  }
+
+  async function handleCorroborate() {
+    setCorroborating(true)
+    setCorroborationError(null)
+    try {
+      setCorroboration(await api.corroborateCorporateActions())
+      load()
+      loadCoverage()
+    } catch (err) {
+      setCorroborationError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setCorroborating(false)
     }
   }
 
@@ -318,6 +336,7 @@ export function CorporateActionsPanel() {
                   <th>{t('corporateActions.date')}</th>
                   <th className="num">{t('corporateActions.ratio')}</th>
                   <th>{t('corporateActions.confidence')}</th>
+                  <th>{t('corporateActions.outstanding.notReportedBy')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -331,6 +350,16 @@ export function CorporateActionsPanel() {
                     </td>
                     <td title={t('corporateActions.outstanding.providers', { providers: candidate.providers.join(', ') })}>
                       <ConfidenceBadge confidence={candidate.confidence} />
+                      {candidate.atypical_ratio && (
+                        <span className="tag confidence-review" title={t('corporateActions.outstanding.atypicalRatioHint')}>
+                          {t('corporateActions.outstanding.atypicalRatio')}
+                        </span>
+                      )}
+                    </td>
+                    <td className="muted">
+                      {candidate.not_reported_by.length > 0
+                        ? candidate.not_reported_by.map((p) => t(`corporateActions.source.${p}`)).join(', ')
+                        : '—'}
                     </td>
                   </tr>
                 ))}
@@ -338,6 +367,85 @@ export function CorporateActionsPanel() {
             </table>
           </div>
         )}
+        <div style={{ marginTop: '0.8rem' }}>
+          <button onClick={() => void handleCorroborate()} disabled={corroborating}>
+            {corroborating ? t('corporateActions.corroborate.running') : t('corporateActions.corroborate.button')}
+          </button>
+          <p className="muted section-desc">{t('corporateActions.corroborate.description')}</p>
+          {corroborationError && <div className="notice error">{corroborationError}</div>}
+          {corroboration && (
+            <div>
+              <div>
+                {t('corporateActions.corroborate.summary', {
+                  checked: corroboration.instruments_checked,
+                  applied: corroboration.applied,
+                  outstanding: corroboration.still_outstanding,
+                })}
+              </div>
+              {corroboration.instruments_remaining > 0 && (
+                <div className="muted">
+                  {t('corporateActions.corroborate.remaining', { count: corroboration.instruments_remaining })}
+                </div>
+              )}
+              {corroboration.yahoo_rate_limited && (
+                <div className="notice warning">{t('corporateActions.corroborate.yahooRateLimited')}</div>
+              )}
+              {!corroboration.edgar_enabled && (
+                <div className="muted">{t('corporateActions.corroborate.edgarDisabled')}</div>
+              )}
+              {corroboration.targets.length > 0 && (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t('corporateActions.instrument')}</th>
+                        <th>{t('corporateActions.date')}</th>
+                        <th className="num">{t('corporateActions.ratio')}</th>
+                        <th>{t('corporateActions.source.yahoo')}</th>
+                        <th>{t('corporateActions.source.sec_shares')}</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {corroboration.targets.map((target, i) => (
+                        <tr key={`${target.instrument_id}-${target.effective_date}-${i}`}>
+                          <td>{target.symbol ?? target.instrument_id}</td>
+                          <td>{formatDate(target.effective_date)}</td>
+                          <td className="num">
+                            {target.ratio_numerator}:{target.ratio_denominator}
+                          </td>
+                          <td>{t(`corporateActions.corroborate.yahoo.${target.yahoo}`)}</td>
+                          <td
+                            title={
+                              target.sec_detail
+                                ? t('corporateActions.corroborate.secDetail', {
+                                    before: target.sec_detail.before.toLocaleString(),
+                                    beforeDate: formatDate(target.sec_detail.before_date),
+                                    after: target.sec_detail.after.toLocaleString(),
+                                    afterDate: formatDate(target.sec_detail.after_date),
+                                  })
+                                : undefined
+                            }
+                          >
+                            {t(`corporateActions.corroborate.sec.${target.sec_shares}`)}
+                          </td>
+                          <td>
+                            {target.applied_now && (
+                              <span className="tag confidence-confirmed">{t('corporateActions.corroborate.appliedNow')}</span>
+                            )}
+                            {target.kind === 'applied' && (
+                              <span className="tag confidence-neutral">{t('corporateActions.corroborate.alreadyApplied')}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="card-section">

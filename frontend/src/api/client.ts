@@ -40,6 +40,7 @@ import type {
   NewsSentiment,
   OnboardingStatus,
   OutstandingCandidate,
+  CorroborationResult,
   PersonalPolicy,
   PersonalPolicyDraft,
   PersonalPolicyGap,
@@ -322,6 +323,13 @@ export const api = {
 
   getCorporateActionsCoverage: () =>
     request<CorporateActionCoverage>('/api/corporate-actions/coverage'),
+
+  corroborateCorporateActions: (payload: { limit?: number; force?: boolean } = {}) =>
+    request<CorroborationResult>('/api/corporate-actions/corroborate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
 
   getOutstandingCorporateActionCandidates: () =>
     request<OutstandingCandidate[]>('/api/corporate-actions/outstanding'),
