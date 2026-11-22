@@ -689,6 +689,10 @@ class ProviderCorporateActionCandidateStatus:
     PLAN_LIMITED = "plan_limited"
     NOT_SUPPORTED = "not_supported"  # e.g. Polygon on a non-US listing, never even asked
     FAILED = "failed"
+    #: `sec_shares` only: the share-count series was read. Not `OK`, which
+    #: would count the SEC as a source that "answered without the event"
+    #: even for ratios too small to judge from a share count.
+    CHECKED = "checked"
 
 
 class CorporateActionConfidence:
