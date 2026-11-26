@@ -20,6 +20,20 @@ between the two observations, not a wrong column. ``Principal restant``
 checked too and does *not* match — evidently some narrower
 figure than "this investment's current value" — deliberately left unused.
 See DEVLOG "Decision 3u.43".
+
+Revised by Step 3u.117 against the Mintos site itself (Loans → Dashboard,
+2026-11-26): the site's own "Montant investi" equals this export's
+``Principal restant`` to the cent, while the export's ``Montant investi``
+(the amount first put into each note, before any repayment came back and
+was reinvested elsewhere) appears nowhere on the site and ran ~45 % above
+it. The quarterly PDFs agree: rebuilding the loan book from the account
+statement lands on the PDF closing balances to the cent, and on
+``Principal restant`` + arrears today. ``Principal restant`` is the value
+now; ``Montant investi`` is only the fallback for an export without it.
+
+The "Finished investments" export (closed notes) carries ``Montant
+investi`` too, but no ``Principal restant``: it is refused, since summing
+it would value loans that are already repaid.
 """
 
 from __future__ import annotations
@@ -38,7 +52,14 @@ _FILENAME_DMY_RE = re.compile(r"(?<!\d)(\d{2})-(\d{2})-(\d{4})(?!\d)")
 #: Accepted here too so a site-side rename doesn't block the import again.
 _FILENAME_YMD_RE = re.compile(r"(?<!\d)(\d{4})-?(\d{2})-?(\d{2})(?!\d)")
 
-_VALUE_COLUMN = "Montant investi"
+#: Outstanding principal of each note: what the Mintos site shows as the
+#: amount invested (Step 3u.117).
+_VALUE_COLUMN = "Principal restant"
+#: Amount first put into each note. Only used when an export lacks the
+#: column above, never added to it.
+_FALLBACK_VALUE_COLUMN = "Montant investi"
+#: Only the "Finished investments" export (closed notes) has this column.
+_FINISHED_COLUMN = "Terminés"
 
 #: Columns of the "account-statement" export (every transaction, see
 #: `mintos_transactions_import.py`). Both exports are .xlsx and sit next to
@@ -77,9 +98,10 @@ def _extract_filename_date(filename: str) -> date | None:
 
 
 def parse_mintos_investments_export(content: bytes, filename: str) -> ParsedMintosInvestmentsSnapshot:
-    """Sums the ``Montant investi`` column across every row of the first
-    worksheet — that total is this account's current Mintos Core P2P
-    portfolio value as of the filename's date. A row missing or non-numeric
+    """Sums the ``Principal restant`` column (``Montant investi`` when the
+    export has none) across every row of the first worksheet — that total
+    is this account's current Mintos Core P2P portfolio value as of the
+    filename's date. A row missing or non-numeric
     in that column is silently skipped (never crashes the whole import over
     one malformed row), and simply doesn't contribute to the total."""
     result = ParsedMintosInvestmentsSnapshot()
@@ -91,7 +113,11 @@ def parse_mintos_investments_export(content: bytes, filename: str) -> ParsedMint
         return result
 
     header = header_cells(header)
-    if _VALUE_COLUMN not in header:
+    if _FINISHED_COLUMN in header and _VALUE_COLUMN not in header:
+        result.warnings.append(Message(MessageCode.MINTOS_FINISHED_NOT_INVESTMENTS, {"filename": filename}))
+        return result
+    column = _VALUE_COLUMN if _VALUE_COLUMN in header else _FALLBACK_VALUE_COLUMN
+    if column not in header:
         if _ACCOUNT_STATEMENT_COLUMNS & set(header):
             result.warnings.append(Message(MessageCode.MINTOS_ACCOUNT_STATEMENT_NOT_INVESTMENTS, {"filename": filename}))
         else:
@@ -104,7 +130,7 @@ def parse_mintos_investments_export(content: bytes, filename: str) -> ParsedMint
         return result
     result.as_of = as_of
 
-    idx = header.index(_VALUE_COLUMN)
+    idx = header.index(column)
     total = 0.0
     count = 0
     for row in rows:

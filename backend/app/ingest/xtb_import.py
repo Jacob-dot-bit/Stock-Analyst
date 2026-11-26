@@ -161,6 +161,10 @@ def _read_summaries(rows: list[list[Any]], result: "ParsedExport", found: dict[t
         cells = [_normalize(cell) for cell in row]
         if cells and "generated" in cells[0] and len(row) > 1 and result.report_time is None:
             result.report_time = parse_datetime(row[1])
+        if cells and cells[0].startswith("datefrom") and len(row) > 1:
+            start = parse_datetime(row[1])
+            if start is not None and (result.period_start is None or start < result.period_start):
+                result.period_start = start
         positions = {name: i for i, name in enumerate(cells) if name}
         metric_at = positions.get("metric", positions.get("metrique"))
         amount_at = positions.get("amount", positions.get("montant"))
@@ -264,6 +268,11 @@ class ParsedExport:
     summary_metrics: list[str] = field(default_factory=list)
     #: "Data as of report generated": the moment the figures are valid at.
     report_time: datetime | None = None
+    #: "Date from" of the report's preamble: the start of the period covered.
+    period_start: datetime | None = None
+    #: True when `free_cash` was rebuilt from the cash operations rather than
+    #: read from the summary table.
+    free_cash_from_operations: bool = False
 
     @property
     def is_empty(self) -> bool:
@@ -449,10 +458,41 @@ def parse_xtb_export(content: bytes, filename: str) -> ParsedExport:
 
     result.accounts = sorted({p["account"] for p in result.open_positions if p.get("account")})
 
+    if not result.free_cash and result.cash_operations and _covers_whole_history(result.period_start):
+        result.free_cash = _free_cash_from_operations(result.cash_operations)
+        result.free_cash_from_operations = bool(result.free_cash)
+
     if result.is_empty:
         result.warnings.append(Message(MessageCode.NOTHING_IMPORTABLE))
 
     return result
+
+
+#: xStation's "All" period starts here, before any XTB account existed.
+_WHOLE_HISTORY_START = datetime(2006, 1, 2)
+
+
+def _covers_whole_history(start: datetime | None) -> bool:
+    return start is not None and start.replace(tzinfo=None) < _WHOLE_HISTORY_START
+
+
+def _free_cash_from_operations(operations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The balance of an account is the sum of every cash operation since it
+    was opened: deposits, buys, sells, dividends, fees, taxes, withdrawals.
+    Recent xStation exports carry no free-cash metric (only "Open position
+    value" / "Open position profit"), so this is the only source left for
+    it. Only valid for a report whose period starts before the account
+    existed ("All"), which the caller checks. See DEVLOG "Step 3u.117"."""
+    totals: dict[str, float] = {}
+    for op in operations:
+        if op.get("amount") is None:
+            continue
+        account = op.get("account") or ""
+        totals[account] = totals.get(account, 0.0) + op["amount"]
+    return [
+        {"account": account or None, "amount": round(amount, 2), "currency": "EUR"}
+        for account, amount in sorted(totals.items())
+    ]
 
 
 def _clean(value: Any) -> str | None:

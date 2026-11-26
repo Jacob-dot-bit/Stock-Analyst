@@ -10282,3 +10282,41 @@ full backend suite 1407 passed; frontend lint (no new warning) and build.
 Not yet run against the live sources: the build machine has no route to
 Yahoo or the SEC.
 
+
+## Step 3u.117 — Values checked against the raw exports (2026-11-26)
+
+Every export on file (XTB both accounts, Mintos statements, quarterly PDFs
+and investments, Amundi Synthèse and journal, bank "Vos comptes") was read
+again outside the app and compared with what a fresh import shows. XTB
+holdings, Amundi funds, bank balances and Mintos free cash matched to the
+cent. Three figures did not.
+
+1. **Realised P&L counted CFD closes twice.** XTB lists a closed CFD both in
+   "Closed Positions" (net of swaps) and as a "Close trade" cash operation;
+   both become `CLOSED_TRADE` rows. The tax view already kept one
+   (`tax/gains.py::broker_closed_trades`); the portfolio total and the
+   transactions summary summed both. They now go through the same function.
+2. **Mintos Core was valued on the wrong column.** Decision 3u.43 picked
+   `Montant investi`. The Mintos site (Loans → Dashboard) shows as
+   "Montant investi" the export's `Principal restant`, to the cent, and its
+   total value is that plus pending payments and arrears. The export's
+   `Montant investi` is what first went into each note before repayments
+   came back and were reinvested, well above the real book. Rebuilding the
+   book from the account statement lands on the quarterly PDF closing
+   balances to the cent, then on `Principal restant` + arrears today.
+   `Principal restant` is now the value; `Montant investi` only a fallback
+   for an export without it. The "Finished investments" export (closed
+   notes, same columns but no `Principal restant`) was detected as the live
+   one and valued; it is now refused with its own message.
+3. **XTB free cash never appeared.** Recent xStation exports have no
+   free-funds metric, only "Open position value" / "Open position profit".
+   When the report covers the whole history ("Date from" 2006-01-01, the
+   "All" period), the balance is the sum of every cash operation, so that
+   is what is kept, per account. A shorter period gives nothing, as before.
+
+Verification: tests on made-up data (each closed position once in both
+totals, `Principal restant` preferred, fallback, Finished refused, cash
+from operations, shorter period ignored); full backend suite 1413 passed;
+a fresh import of the real 2026-11-26 exports gives the export's realised
+P&L, Mintos Core equal to the site's figure and the XTB cash equal to the sum
+of each account's operations.

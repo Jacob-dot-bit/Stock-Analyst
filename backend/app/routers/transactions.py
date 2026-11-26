@@ -23,6 +23,7 @@ from app.dividends.service import _is_dividend_withholding
 from app.ingest.service import get_or_create_instrument
 from app.ingest.xtb_import import _match_column
 from app.models import Lot, LotType, Transaction, TxType
+from app.tax.gains import broker_closed_trades
 from app.schemas import (
     BackfillAccountsOut,
     ManualTransactionIn,
@@ -194,11 +195,16 @@ def _compute_summary(
     page's "Retenue à la source" doesn't disagree with that one's.
     """
     lots_by_external_id = lots_by_external_id or {}
+    # A CFD close is on file twice (closed position + "Close trade" cash
+    # operation): count each closed position once, as the tax view does.
+    counted_closes = {id(tx) for tx in broker_closed_trades(rows)}
     totals: dict[str, float] = defaultdict(float)
     instrument_total = currency_total = 0.0
     closed_trades_total = closed_trades_with_effect = 0
     for row in rows:
         if row.type == TxType.TAX and not _is_dividend_withholding(row):
+            continue
+        if row.type == TxType.CLOSED_TRADE and id(row) not in counted_closes:
             continue
         if row.type in (TxType.DIVIDEND, TxType.TAX, TxType.FEE, TxType.CLOSED_TRADE) and row.amount:
             totals[row.type] += row.amount

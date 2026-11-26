@@ -5,10 +5,9 @@ Deliberately does not commit a copy of the user's real Mintos "Investments"
 export as a test fixture — like the quarterly PDF (see
 `test_mintos_import.py`'s module docstring), it carries real personal loan
 data. The real file was instead cross-checked manually during development
-(see DEVLOG "Decision 3u.43"): summing its `Montant investi` column matched
-the account's real total (reported by the user directly from the Mintos
-site) closely — the small remaining gap explained by interest/repayments
-settling continuously between the two observations. Tests here use a
+(see DEVLOG "Decision 3u.43", revised in "Step 3u.117"): its `Principal
+restant` column sums to the "Montant investi" the Mintos site shows, to
+the cent. Tests here use a
 small synthetic workbook built in-memory
 with openpyxl instead.
 """
@@ -67,16 +66,19 @@ _REAL_HEADER = [
 ]
 
 
-def _real_shaped_row(montant_investi: float) -> list[object]:
+def _real_shaped_row(principal_restant: float | None) -> list[object]:
+    # "Montant investi" is what first went into the note: always more than
+    # what is still outstanding once repayments have come back.
+    montant_investi = None if principal_restant is None else principal_restant * 1.5
     return [
         "id-1", "LVX0000TEST1", "30.04.2031", 10.90, 56, "Prêt personnel", "yes", "16.10.2023",
-        0.01, 0.01, 1.0, 123456, 5.1, "EUR", 2.0, montant_investi, "30.04.2024", "Kenya",
+        0.01, 0.01, 1.0, 123456, 5.1, "EUR", principal_restant, montant_investi, "30.04.2024", "Kenya",
         "Lender", "MS investment", 999999, None, None, 0.0, 0.0, "12345-01",
     ]
 
 
 class TestParseMintosInvestmentsExport:
-    def test_sums_montant_investi_across_all_rows(self):
+    def test_sums_principal_restant_across_all_rows(self):
         content = _workbook(_REAL_HEADER, [_real_shaped_row(100.0), _real_shaped_row(50.5)])
 
         result = parse_mintos_investments_export(content, "Investments-08-09-2026.xlsx")
@@ -93,6 +95,29 @@ class TestParseMintosInvestmentsExport:
 
         assert result.total_invested == pytest.approx(100.0)
         assert result.positions_found == 1
+
+    def test_montant_investi_is_only_the_fallback(self):
+        header = [c for c in _REAL_HEADER if c != "Principal restant"]
+        row = _real_shaped_row(100.0)
+        del row[_REAL_HEADER.index("Principal restant")]
+        content = _workbook(header, [row])
+
+        result = parse_mintos_investments_export(content, "Investments-08-09-2026.xlsx")
+
+        assert result.total_invested == pytest.approx(150.0)
+
+    def test_finished_investments_export_is_refused(self):
+        header = [
+            "ISIN", "Date d'échéance prévue", "Taux d'intérêt", "Type", "Montant investi",
+            "Date d'achat", "Terminés", "Paiements en attente",
+        ]
+        rows = [["LVX0000TEST1", "20.07.2025", 9.0, "Prêt automobile", 40.0, "03.11.2024", "20.07.2025", 0.0]]
+        content = _workbook(header, rows)
+
+        result = parse_mintos_investments_export(content, "Finished-Investments-26-11-2026.xlsx")
+
+        assert result.is_empty
+        assert [w.code for w in result.warnings] == ["import.mintosFinishedNotInvestments"]
 
     def test_no_date_in_filename_is_a_warning_not_a_crash(self):
         content = _workbook(_REAL_HEADER, [_real_shaped_row(100.0)])

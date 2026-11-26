@@ -18,7 +18,7 @@ from app.ingest.service import import_export_file, import_mintos_transactions_fi
 from app.ingest.xtb_import import parse_xtb_export
 from app.messages import MessageCode
 from app.models import Instrument, Position
-from tests.conftest import OPEN_HEADERS, build_xtb_workbook
+from tests.conftest import CASH_HEADERS, OPEN_HEADERS, build_xtb_workbook
 
 
 @pytest.fixture
@@ -240,3 +240,61 @@ class TestXtbImport:
         import_export_file(db, _xtb([["My Trades", "Free funds", 45.67, "EUR"]]), "EUR_1234567.xlsx")
 
         assert set(_cash_positions(db)) == {"MINTOS-CASH-EUR", "XTB-MY-TRADES-CASH-EUR"}
+
+
+def _xtb_with_cash_operations(date_from: str, amounts: list[float]) -> bytes:
+    """A recent xStation layout: no free-cash metric in the summary, only
+    "Open position value" / "Open position profit", and a cash sheet."""
+    operations = [
+        ["Deposit" if amount > 0 else "Stock purchase", None, None, None, f"2025-0{i + 1}-01 10:00:00",
+         amount, 1900000400 + i, "made up", "My Trades", None]
+        for i, amount in enumerate(amounts)
+    ]
+    return build_xtb_workbook(
+        [
+            (
+                "Cash Operations",
+                [["Account number", 1234567], ["Cash Operations"], ["Date from (UTC)", date_from]],
+                CASH_HEADERS,
+                operations,
+            ),
+            (
+                "Open Positions",
+                [
+                    ["Account number", 1234567],
+                    ["Open Positions"],
+                    ["Data as of report generated", "2026-11-26 16:45:35"],
+                    ["Product", "Metric", "Amount", "Currency"],
+                    ["My Trades", "Open position value", 100.0, "EUR"],
+                    ["My Trades", "Open position profit", 1.0, "EUR"],
+                    [],
+                ],
+                OPEN_HEADERS,
+                [
+                    ["My Trades", "ASML", "ASML.NL", "STOCK", None, 1.0, 100.0, None,
+                     99.0, None, None, None, 1.0, 1.0, 1.0, None, None, None],
+                    ["My Trades", 1900000201, "ASML.NL", None, "BUY", 1.0, 100.0, 100.0,
+                     99.0, "2025-01-31 13:33:28", None, None, 1.0, 1.0, 1.0, None, None, None],
+                ],
+            ),
+        ]
+    )
+
+
+class TestXtbCashFromOperations:
+    def test_a_whole_history_export_gives_the_sum_of_its_operations(self):
+        parsed = parse_xtb_export(_xtb_with_cash_operations("2006-01-01 00:00:00", [500.0, -99.0, -396.12]), "EUR_1234567.xlsx")
+
+        assert parsed.free_cash == [{"account": "My Trades", "amount": 4.88, "currency": "EUR"}]
+        assert parsed.free_cash_from_operations is True
+
+    def test_a_shorter_period_gives_nothing(self):
+        parsed = parse_xtb_export(_xtb_with_cash_operations("2025-01-01 00:00:00", [500.0, -99.0]), "EUR_1234567.xlsx")
+
+        assert parsed.free_cash == []
+
+    def test_it_becomes_the_cash_position(self, db):
+        batch = import_export_file(db, _xtb_with_cash_operations("2006-01-01 00:00:00", [500.0, -99.0, -396.12]), "EUR_1234567.xlsx")
+
+        assert _cash_positions(db)["XTB-MY-TRADES-CASH-EUR"].broker_market_value == pytest.approx(4.88)
+        assert MessageCode.XTB_FREE_CASH_MISSING not in _codes(batch)

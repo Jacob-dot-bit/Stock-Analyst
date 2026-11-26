@@ -843,7 +843,7 @@ def import_mintos_investments_file(
             executed_at=datetime.combine(parsed.as_of, datetime.min.time()),
             account=MINTOS_CORE_ACCOUNT,
             amount=parsed.total_invested,
-            comment=f"Valeur totale investie déclarée par Mintos au {parsed.as_of.isoformat()} "
+            comment=f"Encours (principal restant) déclaré par Mintos au {parsed.as_of.isoformat()} "
             f"(export « Investments », {parsed.positions_found} prêts fractionnés)",
             raw={"as_of": parsed.as_of.isoformat(), "positions_found": parsed.positions_found, "source": "investments_export"},
         )

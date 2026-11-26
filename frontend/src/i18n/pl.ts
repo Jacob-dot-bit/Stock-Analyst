@@ -153,6 +153,8 @@ export const pl: Catalogue = {
   'import.fileUnreadable': 'Nie można odczytać pliku: {error}',
   'import.mintosAccountStatementNotInvestments':
     '„{filename}” to wyciąg z konta Mintos (wszystkie operacje), a nie eksport My investments: nie zawiera wartości portfela. Wrzuć go w „Zaimportuj plik”, tam zostanie rozpoznany.',
+  'import.mintosFinishedNotInvestments':
+    '„{filename}” zawiera zakończone pożyczki Mintos (Finished investments), a nie bieżące: nie został zaimportowany. Wyeksportuj „Bieżące inwestycje” (Portfel → Pożyczki).',
   'import.detected.xtb': 'Rozpoznano: raport XTB (xStation).',
   'import.detected.mintos_statement': 'Rozpoznano: kwartalny wyciąg Mintos (PDF).',
   'import.detected.mintos_investments': 'Rozpoznano: eksport Mintos My investments (wartość portfela pożyczek).',

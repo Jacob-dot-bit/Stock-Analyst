@@ -101,6 +101,7 @@ from app.schemas import (
     ValueHistoryOut,
     ValueHistoryPointOut,
 )
+from app.tax.gains import broker_closed_trades
 from app.symbols.duplicates import backfill_figis, backfill_isins, find_figi_duplicates
 
 #: Dimensions the breakdown endpoint can group by, and the Instrument attribute each
@@ -124,9 +125,10 @@ def _build_portfolio_out(
     base_currency = get_settings().base_currency
     figures = compute_figures(db, positions, base_currency, live_quotes)
     totals = compute_totals(positions, base_currency, figures)
-    totals.realized_pl = db.execute(
-        select(func.sum(Transaction.amount)).where(Transaction.type == TxType.CLOSED_TRADE)
-    ).scalar()
+    # Each closed position once: XTB lists a CFD's close both as a closed
+    # position and as a "Close trade" cash operation (Step 3u.117).
+    closed = db.execute(select(Transaction).where(Transaction.type == TxType.CLOSED_TRADE)).scalars().all()
+    totals.realized_pl = round(sum(tx.amount for tx in broker_closed_trades(closed)), 2) if closed else None
 
     positions_out = []
     any_stale_declared_valuation = False
