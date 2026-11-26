@@ -144,6 +144,8 @@ export const fr: Catalogue = {
   'import.fileUnreadable': 'Fichier illisible : {error}',
   'import.mintosAccountStatementNotInvestments':
     "« {filename} » est le relevé de compte Mintos (toutes les opérations), pas l'export My investments : il ne contient pas la valeur du portefeuille. Déposez-le dans « Importer un fichier », il y sera reconnu.",
+  'import.mintosFinishedNotInvestments':
+    "« {filename} » liste les prêts Mintos terminés (Finished investments), pas les prêts en cours : il n'a pas été importé. Exportez « Investissements en cours » (Portefeuille → Prêts).",
   'import.detected.xtb': 'Fichier reconnu : relevé XTB (xStation).',
   'import.detected.mintos_statement': 'Fichier reconnu : relevé trimestriel Mintos (PDF).',
   'import.detected.mintos_investments': 'Fichier reconnu : export Mintos My investments (valeur du portefeuille de prêts).',

@@ -151,6 +151,8 @@ export const en: Catalogue = {
   'import.fileUnreadable': 'Unreadable file: {error}',
   'import.mintosAccountStatementNotInvestments':
     '“{filename}” is the Mintos account statement (every transaction), not the My investments export: it does not hold the portfolio value. Drop it in “Import a file”, where it is recognised.',
+  'import.mintosFinishedNotInvestments':
+    '“{filename}” lists closed Mintos loans (Finished investments), not the current ones: it was not imported. Export “Current investments” (Portfolio → Loans).',
   'import.detected.xtb': 'Recognised: XTB report (xStation).',
   'import.detected.mintos_statement': 'Recognised: Mintos quarterly statement (PDF).',
   'import.detected.mintos_investments': 'Recognised: Mintos My investments export (loan portfolio value).',

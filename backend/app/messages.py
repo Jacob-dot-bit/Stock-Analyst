@@ -50,6 +50,10 @@ class MessageCode:
     #: "My investments" export was expected — both are .xlsx files offered on
     #: the same site, and the first one carries no portfolio value at all.
     MINTOS_ACCOUNT_STATEMENT_NOT_INVESTMENTS = "import.mintosAccountStatementNotInvestments"  # {filename}
+    #: The "Finished investments" export (closed notes) dropped where "My
+    #: investments" was expected: it has the same columns, but valuing it
+    #: would count loans already repaid.
+    MINTOS_FINISHED_NOT_INVESTMENTS = "import.mintosFinishedNotInvestments"  # {filename}
 
     #: Funds of the Amundi operations journal whose cost could not be
     #: applied: no matching position yet, or units that don't add up to the
