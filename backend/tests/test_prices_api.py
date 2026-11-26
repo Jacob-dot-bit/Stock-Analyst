@@ -87,7 +87,9 @@ class TestRefreshEndpoint:
         assert report["remaining"] == 0
 
         # The mapping is only proven right once a provider answers with real data.
-        positions = client.get("/api/portfolio").json()["positions"]
+        positions = [
+            p for p in client.get("/api/portfolio").json()["positions"] if p["instrument"]["category"] != "CASH"
+        ]
         assert all(p["instrument"]["mapping_status"] == "VERIFIED" for p in positions)
         assert all(p["instrument"]["verified_provider"] == "yahoo" for p in positions)
 

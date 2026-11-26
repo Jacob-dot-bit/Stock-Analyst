@@ -45,7 +45,8 @@ class TestImport:
 
         assert batch.positions_found == 2
         positions = db.execute(select(Position)).scalars().all()
-        assert {p.instrument.broker_symbol for p in positions} == {"ASML.NL", "NVDA.US"}
+        # The cash is the sum of the export's cash operations (Step 3u.117).
+        assert {p.instrument.broker_symbol for p in positions} == {"ASML.NL", "NVDA.US", "XTB-MY-TRADES-CASH-EUR"}
 
     def test_company_name_and_category_are_stored(self, db, xtb_export):
         import_export_file(db, xtb_export, "EUR_1234567.xlsx")
@@ -117,7 +118,7 @@ class TestIdempotency:
         import_export_file(db, xtb_export, "EUR_1234567.xlsx")
         import_export_file(db, xtb_export, "EUR_1234567.xlsx")
 
-        assert len(db.execute(select(Position)).scalars().all()) == 2
+        assert len(db.execute(select(Position)).scalars().all()) == 3  # two holdings + cash
 
     def test_manual_positions_survive_a_new_import(self, db, xtb_export):
         instrument = Instrument(broker_symbol="MC.FR", provider_symbol="MC.PA")
@@ -195,7 +196,7 @@ class TestMultipleAccounts:
             by_account.setdefault(position.account, []).append(position)
 
         assert set(by_account) == {"My Trades", "PEA"}
-        assert len(by_account["My Trades"]) == 2
+        assert len(by_account["My Trades"]) == 3  # two holdings + cash
         assert len(by_account["PEA"]) == 1
 
     def test_reimporting_one_account_leaves_the_other_intact(
@@ -209,7 +210,7 @@ class TestMultipleAccounts:
         accounts = [p.account for p in positions]
 
         assert accounts.count("PEA") == 1
-        assert accounts.count("My Trades") == 2
+        assert accounts.count("My Trades") == 3  # two holdings + cash
 
 
 class TestCategoryDrivenMapping:

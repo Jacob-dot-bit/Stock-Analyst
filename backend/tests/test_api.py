@@ -91,12 +91,18 @@ class TestImportEndpoint:
         portfolio = client.get("/api/portfolio").json()
         totals = portfolio["totals"]
 
-        assert len(portfolio["positions"]) == 2
-        # Market values: 1558.00 + 1312.08; P&L: 834.30 + 614.27.
-        assert totals["market_value"] == pytest.approx(2870.08)
+        holdings = [p for p in portfolio["positions"] if p["instrument"]["category"] != "CASH"]
+        assert len(holdings) == 2
+        # The account's cash: the sum of every cash operation of this
+        # whole-history export (Step 3u.117), counted in the total.
+        cash = [p for p in portfolio["positions"] if p["instrument"]["category"] == "CASH"]
+        assert [p["instrument"]["broker_symbol"] for p in cash] == ["XTB-MY-TRADES-CASH-EUR"]
+        # Market values: 1558.00 + 1312.08 + the cash; P&L: 834.30 + 614.27.
+        assert totals["market_value"] == pytest.approx(2870.08 + cash[0]["current_value"])
         assert totals["unrealized_pl"] == pytest.approx(1448.57)
         # Purchase value follows exactly from market value and P&L.
-        assert totals["invested_value"] == pytest.approx(1421.51)
+        # Cash is invested at its own value, as for a bank balance.
+        assert totals["invested_value"] == pytest.approx(1421.51 + cash[0]["current_value"])
         assert totals["has_incomplete_data"] is False
 
     def test_accounts_are_broken_down(self, client, xtb_export, xtb_pea_export):
@@ -107,7 +113,8 @@ class TestImportEndpoint:
 
         assert set(accounts) == {"My Trades", "PEA"}
         assert accounts["PEA"]["market_value"] == pytest.approx(620.0)
-        assert accounts["My Trades"]["positions_count"] == 2
+        # ASML, NVDA and the account's cash.
+        assert accounts["My Trades"]["positions_count"] == 3
 
     def test_empty_file_is_rejected(self, client):
         response = client.post("/api/imports/auto", files={"file": ("empty.xlsx", b"", "application/octet-stream")})
@@ -820,3 +827,48 @@ class TestBackfillIsins:
         response = client.post("/api/portfolio/backfill-isins")
 
         assert response.json() == {"checked": 1, "updated": 0}
+
+
+class TestRealizedPl:
+    """A CFD close is in an XTB export twice: as a closed position (net of
+    swaps) and as a "Close trade" cash operation. The realised P&L counts
+    the closed position once (Step 3u.117). Amounts are made up."""
+
+    @staticmethod
+    def _export() -> bytes:
+        from tests.conftest import CASH_HEADERS, CLOSED_HEADERS, build_xtb_workbook, closed_row
+
+        cfd = closed_row("NATGAS", "NATGAS", 0.01, 2.943, "2023-08-09 14:03:35",
+                         2.785, "2023-08-11 08:07:24", -43.54, 1044991893.0)
+        cfd[2] = "CFD"
+        stock = closed_row("Eramet", "ERA.FR", 1.0, 67.95, "2024-03-20 10:52:43",
+                           90.75, "2024-05-03 07:25:04", 22.8, 1300000000.0)
+        return build_xtb_workbook(
+            [
+                (
+                    "Closed Positions",
+                    [["Account number", 1234567], ["Closed Positions"], ["Date from (UTC)", "2006-01-01 00:00:00"]],
+                    CLOSED_HEADERS,
+                    [cfd, stock],
+                ),
+                (
+                    "Cash Operations",
+                    [["Account number", 1234567], ["Cash Operations"], ["Date from (UTC)", "2006-01-01 00:00:00"]],
+                    CASH_HEADERS,
+                    [
+                        ["Close trade", "NATGAS", "NATGAS", "CFD", "2023-08-11 08:07:24",
+                         -43.11, 426754734, "Profit of position #1044991893", "My Trades", 1044991893],
+                        ["Swap", "NATGAS", "NATGAS", "CFD", "2023-08-11 08:07:24",
+                         -0.43, 426754735, "Swap of position #1044991893", "My Trades", 1044991893],
+                    ],
+                ),
+            ]
+        )
+
+    def test_each_closed_position_counts_once(self, client):
+        client.post("/api/imports/auto", files={"file": ("EUR.xlsx", self._export(), "application/octet-stream")})
+
+        assert client.get("/api/portfolio").json()["totals"]["realized_pl"] == pytest.approx(-43.54 + 22.8)
+        summary = client.get("/api/transactions").json()["summary"]
+        assert summary["total_realized_pl"] == pytest.approx(-43.54 + 22.8)
+        assert summary["closed_trades_total"] == 2
